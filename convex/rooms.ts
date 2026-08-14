@@ -217,3 +217,66 @@ export const assignTeamToRoom = mutation({
     });
   },
 });
+
+/**
+ * Henter alle registrerte FPL-lag
+ */
+export const getAllFplTeams = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("fpl_teams").collect();
+  },
+});
+
+/**
+ * Batch-lagrer romtilhørighet for FPL-lag (brukes fra Admin drag & drop)
+ */
+export const batchSaveRoomAssignments = mutation({
+  args: {
+    assignments: v.array(
+      v.object({
+        entryId: v.number(),
+        teamName: v.string(),
+        managerName: v.string(),
+        roomId: v.id("rooms"),
+        totalPoints: v.optional(v.number()),
+        currentGwPoints: v.optional(v.number()),
+        currentGwTransfersCost: v.optional(v.number()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    for (const item of args.assignments) {
+      const existing = await ctx.db
+        .query("fpl_teams")
+        .withIndex("by_entryId", (q) => q.eq("entryId", item.entryId))
+        .first();
+
+      if (existing) {
+        await ctx.db.patch(existing._id, {
+          roomId: item.roomId,
+          teamName: item.teamName,
+          managerName: item.managerName,
+          totalPoints: item.totalPoints ?? existing.totalPoints,
+          currentGwPoints: item.currentGwPoints ?? existing.currentGwPoints,
+          currentGwTransfersCost:
+            item.currentGwTransfersCost ?? existing.currentGwTransfersCost,
+          lastUpdated: Date.now(),
+        });
+      } else {
+        await ctx.db.insert("fpl_teams", {
+          entryId: item.entryId,
+          teamName: item.teamName,
+          managerName: item.managerName,
+          roomId: item.roomId,
+          active: true,
+          totalPoints: item.totalPoints ?? 0,
+          currentGwPoints: item.currentGwPoints ?? 0,
+          currentGwTransfersCost: item.currentGwTransfersCost ?? 0,
+          lastUpdated: Date.now(),
+        });
+      }
+    }
+  },
+});
+

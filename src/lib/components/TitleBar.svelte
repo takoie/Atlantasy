@@ -6,8 +6,10 @@
     Trophy,
     RefreshCw,
     Shield,
-    Sparkles,
+    MessageSquare,
     Wifi,
+    Crown,
+    KeyRound,
   } from "lucide-svelte";
   import { onMount } from "svelte";
 
@@ -15,14 +17,26 @@
     currentGw = 26,
     isConvexConnected = true,
     isSyncing = false,
+    unreadCount = 0,
+    activeView = "leaderboard",
+    currentUser = null,
     onOpenAdmin = () => {},
     onRefreshFpl = () => {},
+    onToggleChat = () => {},
+    onToggleWallOfFame = () => {},
+    onOpenRegister = () => {},
   }: {
     currentGw?: number;
     isConvexConnected?: boolean;
     isSyncing?: boolean;
+    unreadCount?: number;
+    activeView?: string;
+    currentUser?: any;
     onOpenAdmin?: () => void;
     onRefreshFpl?: () => void;
+    onToggleChat?: () => void;
+    onToggleWallOfFame?: () => void;
+    onOpenRegister?: () => void;
   } = $props();
 
   let isMaximized = $state(false);
@@ -37,13 +51,12 @@
           tauriWindow = getCurrentWindow();
           isMaximized = await tauriWindow.isMaximized();
 
-          // Lytt på vindusstørrelsesendringer
           unlisten = await tauriWindow.onResized(async () => {
             isMaximized = await tauriWindow.isMaximized();
           });
         }
       } catch {
-        // Fallback for standard nettleser
+        // Fallback
       }
     })();
 
@@ -72,12 +85,12 @@
   }
 </script>
 
-<div
-  class="h-10 w-full bg-[#0a0f1d] border-b border-slate-800/80 flex items-center justify-between select-none shrink-0 z-50 titlebar-drag-region"
+<header
+  class="h-11 w-full bg-[#0a0f1d] border-b border-slate-800 flex items-center justify-between select-none shrink-0 z-40 titlebar-drag-region"
   data-tauri-drag-region
 >
-  <!-- Venstre: App-branding & Status -->
-  <div class="flex items-center gap-3 px-3">
+  <!-- Venstre: App Branding & Status -->
+  <div class="flex items-center gap-3 px-3.5">
     <div class="flex items-center gap-2">
       <div
         class="w-6 h-6 rounded-md bg-gradient-to-br from-fpl-cyan to-emerald-500 flex items-center justify-center text-slate-950 font-black shadow-glow-cyan"
@@ -94,7 +107,7 @@
 
     <!-- Gameweek Live Badge -->
     <div
-      class="hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-900/90 border border-slate-700/60 text-[11px]"
+      class="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-900/90 border border-slate-700/60 text-[11px]"
     >
       <span class="relative flex h-2 w-2">
         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-fpl-cyan opacity-75"></span>
@@ -105,42 +118,85 @@
     </div>
   </div>
 
-  <!-- Midten: Subtil tittel / Drag indikator -->
-  <div class="hidden lg:flex items-center gap-2 text-xs text-slate-400 font-medium opacity-80 pointer-events-none">
-    <Sparkles class="w-3.5 h-3.5 text-fpl-cyan" />
-    <span>Atlantis FPL Bedriftsliga • 12 Rom</span>
+  <!-- Midten: Navigasjon & Raske Handlinger -->
+  <div class="flex items-center gap-1.5 titlebar-no-drag">
+    <!-- Skrytevegg / Månedsvinnere knapp -->
+    <button
+      onclick={onToggleWallOfFame}
+      class={`h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+        activeView === "wall_of_fame"
+          ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm"
+          : "text-slate-300 hover:text-white hover:bg-slate-800/60"
+      }`}
+    >
+      <Crown class="w-3.5 h-3.5 text-amber-400" />
+      <span class="hidden md:inline">Månedens Vinnere</span>
+    </button>
+
+    <!-- Registrer / Invitasjonskode -->
+    <button
+      onclick={onOpenRegister}
+      title="Bli med med invitasjonskode"
+      class="h-7 px-2.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors flex items-center gap-1.5"
+    >
+      <KeyRound class="w-3.5 h-3.5 text-indigo-400" />
+      <span class="hidden md:inline">Bli med</span>
+    </button>
+
+    <!-- Admin Panel -->
+    <button
+      onclick={onOpenAdmin}
+      title="Åpne Adminpanel & Rom-matching"
+      class="h-7 px-2.5 rounded-lg text-xs font-semibold text-indigo-300 hover:text-indigo-200 bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-800/50 transition-colors flex items-center gap-1.5"
+    >
+      <Shield class="w-3.5 h-3.5 text-indigo-400" />
+      <span>Admin</span>
+    </button>
   </div>
 
-  <!-- Høyre: Verktøy & Custom Windows Vinduskontroller -->
-  <div class="flex items-center gap-1 titlebar-no-drag">
-    <!-- Synkroniseringsknapp -->
+  <!-- Høyre: Chat Drawer Trigger & Windows Kontroller -->
+  <div class="flex items-center gap-1.5 titlebar-no-drag pr-0">
+    <!-- FPL Synk -->
     <button
       onclick={onRefreshFpl}
       title="Synkroniser live FPL-data"
       class="h-7 px-2 flex items-center gap-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 rounded transition-colors"
     >
       <RefreshCw class={`w-3.5 h-3.5 ${isSyncing ? "animate-spin text-fpl-cyan" : "text-slate-400"}`} />
-      <span class="hidden sm:inline text-[11px] font-medium">Synk</span>
     </button>
 
-    <!-- Admin Hurtigtilgang -->
+    <!-- Chat Drawer Knapp (Med varsel-badge) -->
     <button
-      onclick={onOpenAdmin}
-      title="Åpne Adminpanel"
-      class="h-7 px-2 flex items-center gap-1.5 text-xs text-indigo-300 hover:text-indigo-200 hover:bg-indigo-950/50 rounded border border-indigo-800/40 transition-colors mr-1"
+      onclick={onToggleChat}
+      title="Åpne Sanntids-Chat Drawer"
+      class="h-7 px-3 flex items-center gap-1.5 text-xs font-bold text-slate-950 bg-fpl-cyan hover:bg-emerald-400 rounded-lg transition-all shadow-glow-cyan"
     >
-      <Shield class="w-3.5 h-3.5 text-indigo-400" />
-      <span class="hidden sm:inline text-[11px] font-medium">Admin</span>
+      <MessageSquare class="w-3.5 h-3.5" />
+      <span>Chat</span>
+      {#if unreadCount > 0}
+        <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+      {/if}
     </button>
 
-    <!-- Tilkoblingsstatus -->
+    <!-- Brukerinfo -->
+    <div class="hidden lg:flex items-center gap-2 px-2 py-0.5 border-l border-slate-800 ml-1">
+      <img
+        src={currentUser?.avatar || "https://api.dicebear.com/7.x/bottts/svg?seed=AtlantisUser"}
+        alt="Avatar"
+        class="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 shrink-0"
+      />
+      <span class="text-xs font-semibold text-slate-200 truncate max-w-[120px]">
+        {currentUser?.username || "Admin"}
+      </span>
+    </div>
+
+    <!-- Statusindikator -->
     <div class="px-2 py-1 flex items-center gap-1 text-[11px] text-slate-400 border-r border-slate-800 mr-1">
       <Wifi class={`w-3 h-3 ${isConvexConnected ? "text-emerald-400" : "text-amber-400 animate-pulse"}`} />
     </div>
 
-    <!-- Ekte Windows Frameless Controls -->
+    <!-- Windows Vinduskontroller -->
     <div class="flex items-center h-full">
-      <!-- Minimer -->
       <button
         onclick={handleMinimize}
         title="Minimer"
@@ -150,7 +206,6 @@
         <Minus class="w-3.5 h-3.5" />
       </button>
 
-      <!-- Maksimer / Gjenopprett -->
       <button
         onclick={handleToggleMaximize}
         title={isMaximized ? "Gjenopprett" : "Maksimer"}
@@ -160,7 +215,6 @@
         <Square class="w-3 h-3" />
       </button>
 
-      <!-- Lukk -->
       <button
         onclick={handleClose}
         title="Lukk"
@@ -171,4 +225,4 @@
       </button>
     </div>
   </div>
-</div>
+</header>

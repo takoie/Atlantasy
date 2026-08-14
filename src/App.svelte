@@ -1,16 +1,15 @@
 <script lang="ts">
   import TitleBar from "$lib/components/TitleBar.svelte";
-  import NavigationSidebar from "$lib/components/NavigationSidebar.svelte";
   import WallOfFameBanner from "$lib/components/WallOfFameBanner.svelte";
   import Leaderboard from "$lib/components/Leaderboard.svelte";
-  import ChatPanel from "$lib/components/ChatPanel.svelte";
+  import ChatDrawer from "$lib/components/ChatDrawer.svelte";
   import RoomDetailModal from "$lib/components/RoomDetailModal.svelte";
   import AdminModal from "$lib/components/AdminModal.svelte";
   import RegisterModal from "$lib/components/RegisterModal.svelte";
 
   import { useQuery, useMutation } from "$lib/convex.svelte";
   import { api } from "../convex/_generated/api";
-  import { Trophy } from "lucide-svelte";
+  import { Trophy, ArrowLeft } from "lucide-svelte";
   import { onMount } from "svelte";
 
   // Reaktiv Convex Queries
@@ -31,11 +30,12 @@
 
   // Reaktiv State med Svelte 5 Runes
   let activeView = $state("leaderboard"); // "leaderboard" | "wall_of_fame"
-  let activeSort = $state("live");         // "live" | "season"
+  let activeSort = $state("live");         // "live" | "month" | "season"
   let selectedRoomId = $state<string | null>(null);
   let activeChatChannel = $state("banter"); // "banter" | "room"
   let activeUserId = $state<string | null>(null);
   let isSyncing = $state(false);
+  let isChatOpen = $state(false);
 
   // Modals state
   let isRoomModalOpen = $state(false);
@@ -45,12 +45,12 @@
 
   // Convex Mutations
   const sendMessageMutation = useMutation(api.chat.sendMessage);
-  const deleteMessageMutation = useMutation(api.chat.deleteMessage);
   const updateSettingsMutation = useMutation(api.admin.updateSettings);
   const createInviteMutation = useMutation(api.admin.createInviteCode);
   const declareWinnerMutation = useMutation(api.admin.declareMonthlyWinner);
   const seedDataMutation = useMutation(api.fpl.seedDefaultData);
   const registerMutation = useMutation(api.auth.registerWithInvite);
+  const batchAssignMutation = useMutation(api.rooms.batchSaveRoomAssignments);
 
   // Utledet data med fallback
   let rooms = $derived(roomsQuery.data ?? []);
@@ -130,129 +130,120 @@
 <main
   class="flex flex-col h-screen w-screen bg-[#070a12] text-slate-100 overflow-hidden font-sans select-none"
 >
-  <!-- Frameless Custom Titlebar (Tauri v2 + Drag Region + Window Controls) -->
+  <!-- Frameless Custom Titlebar -->
   <TitleBar
     currentGw={settings?.currentGameweek ?? 26}
     {isConvexConnected}
     {isSyncing}
+    {activeView}
+    {currentUser}
     onOpenAdmin={() => (isAdminModalOpen = true)}
     onRefreshFpl={handleRefreshFpl}
+    onToggleChat={() => (isChatOpen = !isChatOpen)}
+    onToggleWallOfFame={() => {
+      activeView = activeView === "wall_of_fame" ? "leaderboard" : "wall_of_fame";
+      selectedRoomId = null;
+    }}
+    onOpenRegister={() => (isRegisterModalOpen = true)}
   />
 
-  <!-- 3-Kolonners Desktop Layout optimalisert for 1080p -->
-  <div class="flex-1 flex overflow-hidden">
-    <!-- Venstre Kolonne: Navigasjon & Rom 1–12 (~260px) -->
-    <NavigationSidebar
-      {rooms}
-      {selectedRoomId}
-      {activeView}
-      {currentUser}
-      {users}
-      onSelectView={(view) => {
-        activeView = view;
-        selectedRoomId = null;
-      }}
-      onSelectRoom={(roomId) => {
-        selectedRoomId = roomId;
-        activeView = "leaderboard";
-      }}
-      onOpenAdmin={() => (isAdminModalOpen = true)}
-      onOpenRegister={() => (isRegisterModalOpen = true)}
-      onSwitchUser={(userId) => (activeUserId = userId)}
-    />
+  <!-- Hovedinnhold (Ren, ryddig full-bredde visning) -->
+  <div class="flex-1 flex flex-col p-4 space-y-3 overflow-hidden bg-[#070a12]">
+    <!-- Skrytevegg / Pinned Vinner-Banner øverst -->
+    {#if pinnedAnnouncement && activeView === "leaderboard"}
+      <WallOfFameBanner
+        announcement={pinnedAnnouncement}
+        onSelectRoom={(rId) => {
+          selectedRoomId = rId;
+          activeView = "leaderboard";
+        }}
+      />
+    {/if}
 
-    <!-- Midtre Kolonne: Hovedvisning (Ledertavle / Wall of Fame) (~900–1100px) -->
-    <section class="flex-1 flex flex-col min-w-0 p-4 space-y-3 overflow-hidden bg-[#090d16]/70">
-      <!-- Skrytevegg / Pinned Vinner-Banner øverst -->
-      {#if pinnedAnnouncement}
-        <WallOfFameBanner
-          announcement={pinnedAnnouncement}
-          onSelectRoom={(rId) => {
-            selectedRoomId = rId;
-            activeView = "leaderboard";
-          }}
-        />
-      {/if}
-
-      <!-- Hovedvisning: Enten Ledertavle eller Full Wall of Fame -->
-      {#if activeView === "leaderboard"}
-        <Leaderboard
-          {leaderboard}
-          {selectedRoomId}
-          currentGw={settings?.currentGameweek ?? 26}
-          deductHits={settings?.deductTransferHits ?? true}
-          sortBy={activeSort}
-          onSelectSort={(s: string) => (activeSort = s)}
-          onOpenRoomModal={handleOpenRoomModal}
-        />
-      {:else}
-        <!-- Dedikert Wall of Fame Side -->
-        <div class="flex-1 overflow-y-auto space-y-4 pr-1">
-          <div class="flex items-center gap-2 pb-2 border-b border-slate-800">
-            <Trophy class="w-5 h-5 text-amber-400" />
+    <!-- Hovedvisning -->
+    {#if activeView === "leaderboard"}
+      <Leaderboard
+        {leaderboard}
+        {selectedRoomId}
+        currentGw={settings?.currentGameweek ?? 26}
+        deductHits={settings?.deductTransferHits ?? true}
+        sortBy={activeSort}
+        onSelectSort={(s: string) => (activeSort = s)}
+        onOpenRoomModal={handleOpenRoomModal}
+      />
+    {:else}
+      <!-- Dedikert Wall of Fame Side -->
+      <div class="flex-1 overflow-y-auto space-y-4 pr-1">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="p-2 rounded-lg bg-amber-500/20 text-amber-300">
+              <Trophy class="w-5 h-5" />
+            </div>
             <div>
-              <h2 class="text-base font-bold text-white">Månedens Vinnere & Heder</h2>
-              <p class="text-xs text-slate-400">Offisiell hedersplass for de skarpeste FPL-rommene</p>
+              <h2 class="text-base font-bold text-white">Månedens Vinnere & Wall of Fame</h2>
+              <p class="text-xs text-slate-400">Hedersplass for de skarpeste FPL-rommene gjennom sesongen</p>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Januar Vinner -->
-            <div class="p-4 rounded-xl bg-gradient-to-br from-amber-950/30 to-slate-900 border border-amber-500/40 space-y-3 shadow-lg">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold uppercase tracking-wider text-amber-300">
-                  Januar 2025
-                </span>
-                <span class="text-xl">🏆</span>
-              </div>
-              <h3 class="text-lg font-black text-white">Rom 1 - The Devs</h3>
-              <p class="text-xs text-slate-300 leading-relaxed">
-                Vant med et spektakulært snitt på <strong class="text-amber-300">76.0 poeng</strong>. Stian Taknes og Magnus Carlsen dro lasset!
-              </p>
-              <div class="text-[11px] text-amber-400 font-medium">
-                Vinnende romsnitt: 76.0 pts
-              </div>
-            </div>
+          <button
+            onclick={() => (activeView = "leaderboard")}
+            class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition-colors flex items-center gap-1.5"
+          >
+            <ArrowLeft class="w-3.5 h-3.5" />
+            <span>Tilbake til Ledertavle</span>
+          </button>
+        </div>
 
-            <!-- Desember Vinner -->
-            <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Desember 2024
-                </span>
-                <span class="text-xl">🥈</span>
-              </div>
-              <h3 class="text-lg font-black text-white">Rom 6 - Data Wizards</h3>
-              <p class="text-xs text-slate-300 leading-relaxed">
-                Knuste motstanden i juleprogrammet med sitt dype prediksjonsoppsett.
-              </p>
-              <div class="text-[11px] text-fpl-cyan font-medium">
-                Vinnende romsnitt: 72.5 pts
-              </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Januar Vinner -->
+          <div class="p-4 rounded-xl bg-gradient-to-br from-amber-950/30 to-slate-900 border border-amber-500/40 space-y-3 shadow-lg">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-amber-300">
+                Januar 2025
+              </span>
+              <span class="text-2xl">🏆</span>
+            </div>
+            <h3 class="text-lg font-black text-white">Rom 1 - The Devs</h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Vant med et spektakulært snitt på <strong class="text-amber-300">76.0 poeng</strong>. Stian Taknes og Magnus Carlsen dro lasset!
+            </p>
+            <div class="text-[11px] text-amber-400 font-mono font-bold">
+              Vinnende romsnitt: 76.0 pts
+            </div>
+          </div>
+
+          <!-- Desember Vinner -->
+          <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Desember 2024
+              </span>
+              <span class="text-2xl">🥈</span>
+            </div>
+            <h3 class="text-lg font-black text-white">Rom 6 - Data Wizards</h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Knuste motstanden i juleprogrammet med sitt dype prediksjonsoppsett.
+            </p>
+            <div class="text-[11px] text-fpl-cyan font-mono font-bold">
+              Vinnende romsnitt: 72.5 pts
             </div>
           </div>
         </div>
-      {/if}
-    </section>
-
-    <!-- Høyre Kolonne: Sanntids-Chat (Banter & Mitt Rom) (~360–400px) -->
-    <ChatPanel
-      {messages}
-      {currentUser}
-      {currentRoom}
-      activeChannel={activeChatChannel}
-      onSelectChannel={(ch) => (activeChatChannel = ch)}
-      onSendMessage={handleSendMessage}
-      onDeleteMessage={(msgId) => {
-        if (currentUser) {
-          deleteMessageMutation.mutate({
-            messageId: msgId as any,
-            userId: currentUser._id,
-          });
-        }
-      }}
-    />
+      </div>
+    {/if}
   </div>
+
+  <!-- Chat Drawer (Slide-over fra høyre) -->
+  <ChatDrawer
+    isOpen={isChatOpen}
+    {messages}
+    {currentUser}
+    {currentRoom}
+    activeChannel={activeChatChannel}
+    onClose={() => (isChatOpen = false)}
+    onSelectChannel={(ch: string) => (activeChatChannel = ch)}
+    onSendMessage={handleSendMessage}
+  />
 
   <!-- Modaler -->
   <RoomDetailModal
@@ -272,6 +263,7 @@
     onCreateInviteCode={(c) => createInviteMutation.mutate(c)}
     onDeclareWinner={(w) => declareWinnerMutation.mutate(w)}
     onSeedData={() => seedDataMutation.mutate({})}
+    onBatchSaveAssignments={(assignments) => batchAssignMutation.mutate({ assignments })}
   />
 
   <RegisterModal
