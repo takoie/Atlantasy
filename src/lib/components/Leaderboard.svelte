@@ -17,6 +17,7 @@
     sortBy = "live", // "live" | "month" | "season"
     onSelectSort = (_sort: string) => {},
     onOpenRoomModal = (_room: any) => {},
+    onOpenProfile = (_entryId: number) => {},
   }: {
     leaderboard?: any[];
     selectedRoomId?: string | null;
@@ -25,6 +26,7 @@
     sortBy?: string;
     onSelectSort?: (sort: string) => void;
     onOpenRoomModal?: (room: any) => void;
+    onOpenProfile?: (entryId: number) => void;
   } = $props();
 
   let expandedRooms = $state<Record<string, boolean>>({});
@@ -167,16 +169,26 @@
             {#if room.top1 || room.top2}
               <div class="flex items-center gap-3 px-3 py-1 rounded-lg bg-slate-950/70 border border-slate-800/80 text-xs">
                 {#if room.top1}
-                  <div class="flex items-center gap-1.5 truncate">
+                  <button
+                    type="button"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      onOpenProfile(room.top1.entryId);
+                    }}
+                    class="flex items-center gap-1.5 truncate hover:text-fpl-cyan transition-colors text-left"
+                    title={`Se profilen til ${room.top1.managerName}`}
+                  >
                     <span class="text-amber-400 font-bold text-[11px]">🥇</span>
-                    <span class="font-medium text-slate-200 truncate">{room.top1.managerName}:</span>
+                    <span class="font-medium text-slate-200 hover:text-white underline decoration-dotted truncate">
+                      {room.top1.managerName}:
+                    </span>
                     <span class="font-mono font-bold text-fpl-cyan">
                       {room.top1.effectivePoints}p
                     </span>
                     {#if room.top1.currentGwTransfersCost > 0 && deductHits}
                       <span class="text-[10px] text-rose-400 font-mono">(-{room.top1.currentGwTransfersCost})</span>
                     {/if}
-                  </div>
+                  </button>
                 {/if}
 
                 {#if room.top1 && room.top2}
@@ -184,16 +196,26 @@
                 {/if}
 
                 {#if room.top2}
-                  <div class="flex items-center gap-1.5 truncate">
+                  <button
+                    type="button"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      onOpenProfile(room.top2.entryId);
+                    }}
+                    class="flex items-center gap-1.5 truncate hover:text-emerald-400 transition-colors text-left"
+                    title={`Se profilen til ${room.top2.managerName}`}
+                  >
                     <span class="text-slate-300 font-bold text-[11px]">🥈</span>
-                    <span class="font-medium text-slate-200 truncate">{room.top2.managerName}:</span>
+                    <span class="font-medium text-slate-200 hover:text-white underline decoration-dotted truncate">
+                      {room.top2.managerName}:
+                    </span>
                     <span class="font-mono font-bold text-emerald-400">
                       {room.top2.effectivePoints}p
                     </span>
                     {#if room.top2.currentGwTransfersCost > 0 && deductHits}
                       <span class="text-[10px] text-rose-400 font-mono">(-{room.top2.currentGwTransfersCost})</span>
                     {/if}
-                  </div>
+                  </button>
                 {/if}
               </div>
             {/if}

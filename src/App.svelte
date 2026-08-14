@@ -10,6 +10,7 @@
   import RegisterModal from "$lib/components/RegisterModal.svelte";
   import WelcomeOnboarding from "$lib/components/WelcomeOnboarding.svelte";
   import NewsSection from "$lib/components/NewsSection.svelte";
+  import TeamProfileModal from "$lib/components/TeamProfileModal.svelte";
 
   import { useQuery, useMutation } from "$lib/convex.svelte";
   import { api } from "../convex/_generated/api";
@@ -47,6 +48,7 @@
   let modalRoom = $state<any>(null);
   let isAdminModalOpen = $state(false);
   let isRegisterModalOpen = $state(false);
+  let selectedProfileEntryId = $state<number | null>(null);
 
   // Convex Mutations
   const sendMessageMutation = useMutation(api.chat.sendMessage);
@@ -171,6 +173,10 @@
     isRoomModalOpen = true;
   }
 
+  function handleOpenProfile(entryId: number) {
+    selectedProfileEntryId = entryId;
+  }
+
   async function handleUpdateRoomName(roomId: string, newName: string) {
     try {
       await updateRoomMutation.mutate({
@@ -245,6 +251,7 @@
             sortBy={activeSort}
             onSelectSort={(s: string) => (activeSort = s)}
             onOpenRoomModal={handleOpenRoomModal}
+            onOpenProfile={handleOpenProfile}
           />
         </div>
 
@@ -256,12 +263,13 @@
             deductHits={settings?.deductTransferHits ?? true}
             sortBy={activeSort}
             onSelectSort={(s: string) => (activeSort = s)}
+            onOpenProfile={handleOpenProfile}
           />
         </div>
       </div>
 
       <!-- Innsiktsmoduler: Benkepoeng, Topp 10 Eierskap & Rundens Klatrere -->
-      <LeagueStatsPanel {funStats} />
+      <LeagueStatsPanel {funStats} onOpenProfile={handleOpenProfile} />
 
     {:else if activeView === "news"}
       <!-- 2. Avisen & Nyheter Modul -->
@@ -356,6 +364,14 @@
     deductHits={settings?.deductTransferHits ?? true}
     onClose={() => (isRoomModalOpen = false)}
     onUpdateRoomName={handleUpdateRoomName}
+    onOpenProfile={handleOpenProfile}
+  />
+
+  <!-- FPL Lag- & Manager Profilside Modal -->
+  <TeamProfileModal
+    entryId={selectedProfileEntryId}
+    isOpen={selectedProfileEntryId !== null}
+    onClose={() => (selectedProfileEntryId = null)}
   />
 
   <AdminModal

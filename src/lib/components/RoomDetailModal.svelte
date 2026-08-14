@@ -7,12 +7,14 @@
     deductHits: _deductHits = true,
     onClose = () => {},
     onUpdateRoomName = (_roomId: string, _newName: string) => {},
+    onOpenProfile = (_entryId: number) => {},
   }: {
     room?: any;
     isOpen?: boolean;
     deductHits?: boolean;
     onClose?: () => void;
     onUpdateRoomName?: (roomId: string, newName: string) => void;
+    onOpenProfile?: (entryId: number) => void;
   } = $props();
 
   let isEditingName = $state(false);
@@ -140,14 +142,18 @@
             <div class="space-y-2">
               {#each room.teams as team, idx (team.entryId)}
                 <div
-                  class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between hover:border-slate-700 transition-colors"
+                  role="button"
+                  tabindex="0"
+                  onclick={() => onOpenProfile(team.entryId)}
+                  onkeydown={(e) => (e.key === "Enter" || e.key === " ") && onOpenProfile(team.entryId)}
+                  class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between hover:border-fpl-cyan/50 hover:bg-slate-900/60 transition-all cursor-pointer group"
                 >
                   <div class="flex items-center gap-3">
                     <div class="w-6 h-6 rounded-md bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-400 font-mono">
                       #{idx + 1}
                     </div>
                     <div>
-                      <h4 class="text-xs font-bold text-white">{team.teamName}</h4>
+                      <h4 class="text-xs font-bold text-white group-hover:text-fpl-cyan transition-colors">{team.teamName}</h4>
                       <p class="text-[11px] text-slate-400">{team.managerName}</p>
                     </div>
                   </div>

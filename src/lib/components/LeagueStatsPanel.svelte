@@ -9,8 +9,10 @@
 
   let {
     funStats = null,
+    onOpenProfile = (_entryId: number) => {},
   }: {
     funStats?: any;
+    onOpenProfile?: (entryId: number) => void;
   } = $props();
 
   let activeTab = $state<"bench" | "ownership" | "climbers">("bench");
@@ -84,9 +86,15 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {#each (funStats?.benchNightmares || []) as item, idx (item.entryId + '-' + idx)}
-          <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/50 flex flex-col justify-between space-y-2 transition-colors shadow-sm">
+          <div
+            role="button"
+            tabindex="0"
+            onclick={() => onOpenProfile(item.entryId)}
+            onkeydown={(e) => (e.key === "Enter" || e.key === " ") && onOpenProfile(item.entryId)}
+            class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/50 flex flex-col justify-between space-y-2 transition-all shadow-sm cursor-pointer hover:scale-[1.02]"
+          >
             <div class="flex items-center justify-between gap-1">
-              <span class="font-bold text-white text-sm truncate">{item.managerName}</span>
+              <span class="font-bold text-white text-sm truncate hover:text-amber-400 transition-colors">{item.managerName}</span>
               <span class="text-xs font-black font-mono text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-800/60 shrink-0">
                 {item.benchPoints} pts
               </span>
@@ -160,9 +168,15 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {#each (funStats?.topClimbers || []) as climber, idx (climber.managerName + '-' + idx)}
-          <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-emerald-500/50 space-y-1.5 transition-colors shadow-sm">
+          <div
+            role="button"
+            tabindex="0"
+            onclick={() => onOpenProfile(climber.entryId)}
+            onkeydown={(e) => (e.key === "Enter" || e.key === " ") && onOpenProfile(climber.entryId)}
+            class="p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-emerald-500/50 space-y-1.5 transition-all shadow-sm cursor-pointer hover:scale-[1.02]"
+          >
             <div class="flex items-center justify-between">
-              <span class="font-bold text-white text-xs truncate">{climber.managerName}</span>
+              <span class="font-bold text-white text-xs truncate hover:text-emerald-400 transition-colors">{climber.managerName}</span>
               <span class="text-xs font-black font-mono text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/60 flex items-center gap-0.5">
                 <ArrowUpRight class="w-3.5 h-3.5" />
                 <span>+{climber.spotsClimbed}</span>

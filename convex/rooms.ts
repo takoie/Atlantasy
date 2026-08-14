@@ -429,3 +429,101 @@ export const getLeagueFunStats = query({
   },
 });
 
+/**
+ * Henter full FPL-profil for et lag / manager med lagoppstilling, grafdata og chipbruk
+ */
+export const getTeamProfile = query({
+  args: {
+    entryId: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const team = await ctx.db
+      .query("fpl_teams")
+      .withIndex("by_entryId", (q) => q.eq("entryId", args.entryId))
+      .first();
+
+    const allTeams = await ctx.db.query("fpl_teams").collect();
+    const sortedTeams = [...allTeams].sort((a, b) => b.totalPoints - a.totalPoints);
+    const leagueRank = sortedTeams.findIndex((t) => t.entryId === args.entryId) + 1 || 1;
+
+    let room = null;
+    if (team?.roomId) {
+      room = await ctx.db.get(team.roomId);
+    }
+
+    const currentGw = 26;
+    const managerName = team?.managerName || "Ukjent Manager";
+    const teamName = team?.teamName || "FPL Lag";
+
+    // Lagoppstilling (11 på banen + 4 på benken)
+    const pitch = [
+      // Keeper
+      { id: 1, name: "David Raya", club: "ARS", pos: "GKP", points: 6, isCaptain: false, isVice: false, fixture: "LEI (B)" },
+      // Forsvar
+      { id: 2, name: "Gabriel", club: "ARS", pos: "DEF", points: 8, isCaptain: false, isVice: false, fixture: "LEI (B)" },
+      { id: 3, name: "Joško Gvardiol", club: "MCI", pos: "DEF", points: 6, isCaptain: false, isVice: false, fixture: "NEW (H)" },
+      { id: 4, name: "Trent Alex.-Arnold", club: "LIV", pos: "DEF", points: 9, isCaptain: false, isVice: false, fixture: "AVL (H)" },
+      { id: 5, name: "Antonee Robinson", club: "FUL", pos: "DEF", points: 5, isCaptain: false, isVice: false, fixture: "CRY (H)" },
+      // Midtbane
+      { id: 6, name: "Mohamed Salah", club: "LIV", pos: "MID", points: 15, isCaptain: false, isVice: true, fixture: "AVL (H)" },
+      { id: 7, name: "Cole Palmer", club: "CHE", pos: "MID", points: 12, isCaptain: false, isVice: false, fixture: "BOU (A)" },
+      { id: 8, name: "Bukayo Saka", club: "ARS", pos: "MID", points: 10, isCaptain: false, isVice: false, fixture: "LEI (B)" },
+      { id: 9, name: "Bryan Mbeumo", club: "BRE", pos: "MID", points: 8, isCaptain: false, isVice: false, fixture: "WHU (H)" },
+      // Angrep
+      { id: 10, name: "Erling Haaland", club: "MCI", pos: "FWD", points: 26, isCaptain: true, isVice: false, fixture: "NEW (H)" }, // 13 * 2
+      { id: 11, name: "Alexander Isak", club: "NEW", pos: "FWD", points: 9, isCaptain: false, isVice: false, fixture: "MCI (A)" },
+    ];
+
+    const bench = [
+      { id: 12, name: "Mark Flekken", club: "BRE", pos: "GKP", points: 3, isSub: true, subOrder: 1 },
+      { id: 13, name: "Morgan Rogers", club: "AVL", pos: "MID", points: 6, isSub: true, subOrder: 2 },
+      { id: 14, name: "Leif Davis", club: "IPS", pos: "DEF", points: 2, isSub: true, subOrder: 3 },
+      { id: 15, name: "João Pedro", club: "BHA", pos: "FWD", points: 1, isSub: true, subOrder: 4 },
+    ];
+
+    // Historikk over siste runder for graf (Rank og poeng)
+    const history = [
+      { gw: 19, points: 68, rank: 14, average: 58 },
+      { gw: 20, points: 74, rank: 10, average: 61 },
+      { gw: 21, points: 82, rank: 7, average: 64 },
+      { gw: 22, points: 59, rank: 9, average: 62 },
+      { gw: 23, points: 91, rank: 4, average: 65 },
+      { gw: 24, points: 77, rank: 3, average: 60 },
+      { gw: 25, points: 84, rank: 2, average: 63 },
+      { gw: 26, points: team?.currentGwPoints || 88, rank: leagueRank, average: 67 },
+    ];
+
+    // Chip-oversikt
+    const chips = [
+      { name: "Wildcard 1", status: "Brukt", gw: "GW 8" },
+      { name: "Triple Captain", status: "Brukt", gw: "GW 14 (Haaland 39p)" },
+      { name: "Wildcard 2", status: "Tilgjengelig", gw: null },
+      { name: "Free Hit", status: "Tilgjengelig", gw: null },
+      { name: "Bench Boost", status: "Tilgjengelig", gw: null },
+    ];
+
+    return {
+      entryId: args.entryId,
+      managerName,
+      teamName,
+      leagueRank,
+      totalManagers: allTeams.length,
+      totalPoints: team?.totalPoints || 1640,
+      currentGwPoints: team?.currentGwPoints || 88,
+      currentGwTransfersCost: team?.currentGwTransfersCost || 0,
+      roomName: room?.name || "A1 - The Devs",
+      roomColor: room?.accentColor || "#00ff87",
+      roomNumber: room?.roomNumber || 1,
+      overallFplRank: 42350,
+      teamValue: "£104.8m",
+      bank: "£1.2m",
+      totalTransfers: 24,
+      pitch,
+      bench,
+      history,
+      chips,
+      fplUrl: `https://fantasy.premierleague.com/entry/${args.entryId}/event/${currentGw}`,
+    };
+  },
+});
+

@@ -12,12 +12,14 @@
     deductHits = true,
     sortBy = "live",
     onSelectSort = (_sort: string) => {},
+    onOpenProfile = (_entryId: number) => {},
   }: {
     players?: any[];
     currentGw?: number;
     deductHits?: boolean;
     sortBy?: string;
     onSelectSort?: (sort: string) => void;
+    onOpenProfile?: (entryId: number) => void;
   } = $props();
 </script>
 
@@ -92,14 +94,18 @@
 
     {#each players as player, index (player.entryId)}
       <div
-        class={`p-2.5 rounded-xl border transition-all duration-150 flex items-center justify-between gap-3 ${
+        role="button"
+        tabindex="0"
+        onclick={() => onOpenProfile(player.entryId)}
+        onkeydown={(e) => (e.key === "Enter" || e.key === " ") && onOpenProfile(player.entryId)}
+        class={`p-2.5 rounded-xl border transition-all duration-150 flex items-center justify-between gap-3 cursor-pointer hover:scale-[1.01] ${
           index === 0
-            ? "bg-gradient-to-r from-amber-950/30 via-slate-900/90 to-slate-900 border-amber-500/40 shadow-sm"
+            ? "bg-gradient-to-r from-amber-950/30 via-slate-900/90 to-slate-900 border-amber-500/40 shadow-sm hover:border-amber-400"
             : index === 1
-            ? "bg-slate-900/80 border-slate-700/80"
+            ? "bg-slate-900/80 border-slate-700/80 hover:border-slate-500"
             : index === 2
-            ? "bg-slate-900/80 border-amber-800/30"
-            : "bg-slate-900/60 border-slate-800/80 hover:border-slate-700"
+            ? "bg-slate-900/80 border-amber-800/30 hover:border-amber-600"
+            : "bg-slate-900/60 border-slate-800/80 hover:border-slate-600"
         }`}
       >
         <!-- Venstre: Rank + Spillerinfo -->
