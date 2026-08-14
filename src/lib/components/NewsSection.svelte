@@ -124,27 +124,27 @@
   <!-- Header Bar -->
   <div class="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
     <div class="flex items-center gap-3">
-      <div class="p-2 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30">
+      <div class="p-2 rounded-xl bg-purple-500/15 text-purple-300 border border-purple-500/20">
         <Newspaper class="w-5 h-5" />
       </div>
       <div>
         <h2 class="text-base font-bold text-white flex items-center gap-2">
-          <span>Atlantasy Nyheter & Avisen</span>
+          <span>Atlantasy nyheter og avisen</span>
           <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-800/60 font-mono">
             {articles.length} artikler
           </span>
         </h2>
-        <p class="text-xs text-slate-400">Runderapporter, taktiske analyser, overganger og liga-banter</p>
+        <p class="text-xs text-slate-400">Runderapporter, taktiske analyser, overganger og ligabanter</p>
       </div>
     </div>
 
     <div class="flex items-center gap-2">
       <button
         onclick={() => (isCreateModalOpen = true)}
-        class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-fpl-cyan to-emerald-400 hover:from-fpl-cyan hover:to-emerald-300 text-slate-950 text-xs font-bold transition-all shadow-glow-cyan flex items-center gap-1.5"
+        class="px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
       >
         <Plus class="w-4 h-4" />
-        <span>Skriv Ny Artikkel</span>
+        <span>Skriv ny artikkel</span>
       </button>
 
       <button
@@ -309,12 +309,12 @@
             <select
               id="news-tag"
               bind:value={articleTag}
-              class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white focus:border-fpl-cyan focus:outline-none"
+              class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white focus:border-emerald-500 focus:outline-none"
             >
               <option value="Runderapport">Runderapport</option>
-              <option value="Taktikk">Taktikk & Byttediskusjon</option>
-              <option value="Banter">Banter & Rivalisering</option>
-              <option value="Nyhet">Offisiell Nyhet</option>
+              <option value="Taktikk">Taktikk og byttediskusjon</option>
+              <option value="Banter">Banter og rivalisering</option>
+              <option value="Nyhet">Offisiell nyhet</option>
             </select>
           </div>
         </div>
@@ -330,15 +330,15 @@
             bind:value={articleContent}
             onpaste={handleImagePaste}
             placeholder="Skriv artikkelen her... (Tips: Du kan trykke Ctrl+V for å lime inn bilder direkte fra utklippstavlen!)"
-            class="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-white leading-relaxed focus:border-fpl-cyan focus:outline-none"
+            class="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-white leading-relaxed focus:border-emerald-500 focus:outline-none"
           ></textarea>
         </div>
 
         <!-- Bildeopplasting / Clipboard Paste Sone -->
         <div>
           <label class="block font-semibold text-slate-300 mb-1 flex items-center justify-between">
-            <span>Artikkelbilde (Valgfritt)</span>
-            <span class="text-[10px] text-fpl-cyan">Støtter Ctrl+V / Paste fra clipboard</span>
+            <span>Artikkelbilde (valgfritt)</span>
+            <span class="text-[10px] text-emerald-400">Støtter Ctrl+V / lim inn fra utklippstavlen</span>
           </label>
 
           {#if articleImageUrl}
@@ -364,13 +364,13 @@
               ondragleave={() => (isDraggingImage = false)}
               ondrop={handleImageDrop}
               class={`border-2 border-dashed rounded-xl p-4 text-center transition-colors flex flex-col items-center justify-center space-y-2 cursor-pointer ${
-                isDraggingImage ? "border-fpl-cyan bg-fpl-cyan/10" : "border-slate-800 bg-slate-950/50 hover:border-slate-700"
+                isDraggingImage ? "border-emerald-500 bg-emerald-500/10" : "border-slate-800 bg-slate-950/50 hover:border-slate-700"
               }`}
             >
               <Image class="w-8 h-8 text-slate-500" />
               <div class="text-[11px] text-slate-400">
                 <span>Dra og slipp et bilde her, eller </span>
-                <label class="text-fpl-cyan hover:underline cursor-pointer font-semibold">
+                <label class="text-emerald-400 hover:underline cursor-pointer font-semibold">
                   velg en fil
                   <input type="file" accept="image/*" onchange={handleImageFileSelect} class="hidden" />
                 </label>
@@ -392,10 +392,10 @@
         <button
           onclick={handleSubmitArticle}
           disabled={isSubmitting || !articleTitle.trim() || !articleContent.trim()}
-          class="px-5 py-2 rounded-lg bg-fpl-cyan hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold text-xs transition-all shadow-glow-cyan flex items-center gap-1.5"
+          class="px-5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold text-xs transition-all shadow-sm flex items-center gap-1.5"
         >
           <Send class="w-3.5 h-3.5" />
-          <span>{isSubmitting ? "Publiserer..." : "Publiser Artikkel"}</span>
+          <span>{isSubmitting ? "Publiserer..." : "Publiser artikkel"}</span>
         </button>
       </div>
     </div>

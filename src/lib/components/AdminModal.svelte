@@ -375,18 +375,18 @@
             }`}
           >
             <RotateCcw class="w-3.5 h-3.5" />
-            <span>Ny Sesong & År</span>
+            <span>Ny sesong</span>
           </button>
 
           <button
             onclick={() => (activeTab = "settings")}
             class={`px-4 py-3 border-b-2 transition-colors ${
               activeTab === "settings"
-                ? "border-fpl-cyan text-fpl-cyan font-bold"
+                ? "border-emerald-500 text-emerald-400 font-bold"
                 : "border-transparent text-slate-400 hover:text-slate-200"
             }`}
           >
-            Ligainnstillinger & Hits
+            Ligainnstillinger og hits
           </button>
 
           <button
@@ -397,7 +397,7 @@
                 : "border-transparent text-slate-400 hover:text-slate-200"
             }`}
           >
-            Kår Månedsvinner (Skrytevegg)
+            Kår månedsvinner (skrytevegg)
           </button>
 
           <button
@@ -409,7 +409,7 @@
             }`}
           >
             <Shield class="w-3.5 h-3.5" />
-            <span>Admins & Brukere ({users.length})</span>
+            <span>Admins og brukere ({users.length})</span>
           </button>
 
           <button
@@ -431,7 +431,7 @@
                 : "border-transparent text-slate-400 hover:text-slate-200"
             }`}
           >
-            Seed / Nullstill
+            Seed og databasetest
           </button>
         </div>
 

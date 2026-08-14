@@ -9,7 +9,6 @@
     MessageSquare,
     Wifi,
     Crown,
-    KeyRound,
     Newspaper,
   } from "lucide-svelte";
   import { onMount } from "svelte";
@@ -26,7 +25,6 @@
     onToggleChat = () => {},
     onToggleWallOfFame = () => {},
     onToggleNews = () => {},
-    onOpenRegister = () => {},
   }: {
     currentGw?: number;
     isConvexConnected?: boolean;
@@ -39,33 +37,25 @@
     onToggleChat?: () => void;
     onToggleWallOfFame?: () => void;
     onToggleNews?: () => void;
-    onOpenRegister?: () => void;
   } = $props();
 
   let isMaximized = $state(false);
-  let tauriWindow: any = null;
+  let tauriWindow = $state<any>(null);
 
-  onMount(() => {
-    let unlisten: (() => void) | undefined;
-    (async () => {
-      try {
-        if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
-          const { getCurrentWindow } = await import("@tauri-apps/api/window");
-          tauriWindow = getCurrentWindow();
-          isMaximized = await tauriWindow.isMaximized();
+  onMount(async () => {
+    try {
+      // Sjekk om appen kjører i Tauri Desktop
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      tauriWindow = getCurrentWindow();
+      isMaximized = await tauriWindow.isMaximized();
 
-          unlisten = await tauriWindow.onResized(async () => {
-            isMaximized = await tauriWindow.isMaximized();
-          });
-        }
-      } catch {
-        // Fallback
-      }
-    })();
-
-    return () => {
-      if (unlisten) unlisten();
-    };
+      // Lytt på vindusendringer
+      await tauriWindow.onResized(async () => {
+        isMaximized = await tauriWindow.isMaximized();
+      });
+    } catch {
+      // Nettlesermodus
+    }
   });
 
   async function handleMinimize() {
@@ -89,35 +79,35 @@
 </script>
 
 <header
-  class="h-11 w-full bg-[#0a0f1d] border-b border-slate-800 flex items-center justify-between select-none shrink-0 z-40 titlebar-drag-region"
+  class="h-11 w-full bg-[#111827] border-b border-slate-800 flex items-center justify-between select-none shrink-0 z-40 titlebar-drag-region"
   data-tauri-drag-region
 >
   <!-- Venstre: App Branding & Status -->
   <div class="flex items-center gap-3 px-3.5">
     <div class="flex items-center gap-2">
       <div
-        class="w-6 h-6 rounded-md bg-gradient-to-br from-fpl-cyan to-emerald-500 flex items-center justify-center text-slate-950 font-black shadow-glow-cyan"
+        class="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-slate-950 font-black shadow-sm"
       >
-        <Trophy class="w-3.5 h-3.5 text-[#070a12]" />
+        <Trophy class="w-3.5 h-3.5 text-slate-950" />
       </div>
-      <span class="font-bold text-xs tracking-wider text-white uppercase flex items-center gap-1.5">
+      <span class="font-bold text-xs tracking-wide text-white flex items-center gap-1.5">
         Atlantasy
-        <span class="text-[9px] font-mono text-fpl-cyan bg-fpl-cyan/10 px-1 py-0.2 rounded border border-fpl-cyan/30">
-          DESKTOP
+        <span class="text-[9px] font-mono text-emerald-400 bg-emerald-950/40 px-1.5 py-0.2 rounded border border-emerald-800/40">
+          Desktop
         </span>
       </span>
     </div>
 
     <!-- Gameweek Live Badge -->
     <div
-      class="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-900/90 border border-slate-700/60 text-[11px]"
+      class="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900 border border-slate-700/60 text-[11px]"
     >
       <span class="relative flex h-2 w-2">
-        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-fpl-cyan opacity-75"></span>
-        <span class="relative inline-flex rounded-full h-2 w-2 bg-fpl-cyan"></span>
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
       </span>
       <span class="text-slate-300 font-medium">Gameweek {currentGw}</span>
-      <span class="text-[10px] text-fpl-cyan font-bold uppercase tracking-wider">Live</span>
+      <span class="text-[10px] text-emerald-400 font-semibold lowercase">live</span>
     </div>
   </div>
 
@@ -126,98 +116,100 @@
     <!-- Skrytevegg / Månedsvinnere knapp -->
     <button
       onclick={onToggleWallOfFame}
-      class={`h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+      class={`h-7 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
         activeView === "wall_of_fame"
           ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm"
           : "text-slate-300 hover:text-white hover:bg-slate-800/60"
       }`}
     >
       <Crown class="w-3.5 h-3.5 text-amber-400" />
-      <span class="hidden md:inline">Månedens Vinnere</span>
+      <span class="hidden md:inline">Månedens vinnere</span>
     </button>
 
-    <!-- Avisen & Nyheter -->
+    <!-- Avisen og nyheter -->
     <button
       onclick={onToggleNews}
-      class={`h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+      class={`h-7 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
         activeView === "news"
           ? "bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm"
           : "text-slate-300 hover:text-white hover:bg-slate-800/60"
       }`}
     >
       <Newspaper class="w-3.5 h-3.5 text-purple-400" />
-      <span class="hidden md:inline">Avisen & Nyheter</span>
-    </button>
-
-    <!-- Registrer / Invitasjonskode -->
-    <button
-      onclick={onOpenRegister}
-      title="Bli med med invitasjonskode"
-      class="h-7 px-2.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors flex items-center gap-1.5"
-    >
-      <KeyRound class="w-3.5 h-3.5 text-indigo-400" />
-      <span class="hidden md:inline">Bli med</span>
+      <span class="hidden md:inline">Avisen og nyheter</span>
     </button>
 
     <!-- Admin Panel -->
-    <button
-      onclick={onOpenAdmin}
-      title="Åpne Adminpanel & Rom-matching"
-      class="h-7 px-2.5 rounded-lg text-xs font-semibold text-indigo-300 hover:text-indigo-200 bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-800/50 transition-colors flex items-center gap-1.5"
-    >
-      <Shield class="w-3.5 h-3.5 text-indigo-400" />
-      <span>Admin</span>
-    </button>
-  </div>
+    {#if currentUser?.role === "admin"}
+      <button
+        onclick={onOpenAdmin}
+        title="Åpne administratorpanel og rom-matching"
+        class="h-7 px-2.5 rounded-lg text-xs font-semibold text-indigo-300 hover:text-indigo-200 bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-800/50 transition-colors flex items-center gap-1.5"
+      >
+        <Shield class="w-3.5 h-3.5 text-indigo-400" />
+        <span class="hidden lg:inline">Admin</span>
+      </button>
+    {/if}
 
-  <!-- Høyre: Chat Drawer Trigger & Windows Kontroller -->
-  <div class="flex items-center gap-1.5 titlebar-no-drag pr-0">
-    <!-- FPL Synk -->
+    <!-- Manuell FPL Refresh -->
     <button
       onclick={onRefreshFpl}
-      title="Synkroniser live FPL-data"
-      class="h-7 px-2 flex items-center gap-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 rounded transition-colors"
+      disabled={isSyncing}
+      title="Synkroniser FPL-poeng"
+      class="h-7 px-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors flex items-center gap-1 text-xs"
     >
-      <RefreshCw class={`w-3.5 h-3.5 ${isSyncing ? "animate-spin text-fpl-cyan" : "text-slate-400"}`} />
-    </button>
-
-    <!-- Chat Drawer Knapp (Med varsel-badge) -->
-    <button
-      onclick={onToggleChat}
-      title="Åpne Sanntids-Chat Drawer"
-      class="h-7 px-3 flex items-center gap-1.5 text-xs font-bold text-slate-950 bg-fpl-cyan hover:bg-emerald-400 rounded-lg transition-all shadow-glow-cyan"
-    >
-      <MessageSquare class="w-3.5 h-3.5" />
-      <span>Chat</span>
-      {#if unreadCount > 0}
-        <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+      <RefreshCw class={`w-3.5 h-3.5 ${isSyncing ? "animate-spin text-emerald-400" : ""}`} />
+      {#if isSyncing}
+        <span class="hidden sm:inline text-[11px] text-emerald-400">Synkroniserer...</span>
       {/if}
     </button>
 
+    <!-- Chat Drawer Toggle -->
+    <button
+      onclick={onToggleChat}
+      title="Åpne banter og rom-chat"
+      class="h-7 px-2.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors flex items-center gap-1.5 relative"
+    >
+      <MessageSquare class="w-3.5 h-3.5 text-slate-300" />
+      <span class="hidden md:inline">Chat</span>
+      {#if unreadCount > 0}
+        <span
+          class="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center -ml-0.5"
+        >
+          {unreadCount}
+        </span>
+      {/if}
+    </button>
+  </div>
+
+  <!-- Høyre: Brukerinfo, Forbindelse & Windows Vinduskontroller -->
+  <div class="flex items-center gap-2 titlebar-no-drag">
     <!-- Brukerinfo -->
-    <div class="hidden lg:flex items-center gap-2 px-2 py-0.5 border-l border-slate-800 ml-1">
-      <img
-        src={currentUser?.avatar || "https://api.dicebear.com/7.x/bottts/svg?seed=AtlantisUser"}
-        alt="Avatar"
-        class="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 shrink-0"
-      />
-      <span class="text-xs font-semibold text-slate-200 truncate max-w-[120px]">
-        {currentUser?.username || "Admin"}
-      </span>
+    {#if currentUser}
+      <div class="hidden sm:flex items-center gap-2 px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-xs">
+        <img
+          src={currentUser.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${currentUser.username}`}
+          alt="Avatar"
+          class="w-4 h-4 rounded-full bg-slate-800"
+        />
+        <span class="font-semibold text-white truncate max-w-[100px]">{currentUser.username}</span>
+      </div>
+    {/if}
+
+    <!-- Convex Status Indikator -->
+    <div
+      class="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-slate-400"
+      title={isConvexConnected ? "Tilkoblet Convex sanntidsdatabase" : "Frakoblet"}
+    >
+      <Wifi class={`w-3 h-3 ${isConvexConnected ? "text-emerald-400" : "text-rose-500"}`} />
     </div>
 
-    <!-- Statusindikator -->
-    <div class="px-2 py-1 flex items-center gap-1 text-[11px] text-slate-400 border-r border-slate-800 mr-1">
-      <Wifi class={`w-3 h-3 ${isConvexConnected ? "text-emerald-400" : "text-amber-400 animate-pulse"}`} />
-    </div>
-
-    <!-- Windows Vinduskontroller -->
-    <div class="flex items-center h-full">
+    <!-- Windows Window Controls -->
+    <div class="flex items-center">
       <button
         onclick={handleMinimize}
         title="Minimer"
-        aria-label="Minimer vindu"
-        class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors"
+        class="h-11 w-11 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
       >
         <Minus class="w-3.5 h-3.5" />
       </button>
@@ -225,8 +217,7 @@
       <button
         onclick={handleToggleMaximize}
         title={isMaximized ? "Gjenopprett" : "Maksimer"}
-        aria-label="Maksimer vindu"
-        class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors"
+        class="h-11 w-11 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
       >
         <Square class="w-3 h-3" />
       </button>
@@ -234,8 +225,7 @@
       <button
         onclick={handleClose}
         title="Lukk"
-        aria-label="Lukk applikasjon"
-        class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-rose-600 transition-colors"
+        class="h-11 w-11 flex items-center justify-center text-slate-400 hover:text-white hover:bg-rose-600 transition-colors"
       >
         <X class="w-4 h-4" />
       </button>

@@ -105,8 +105,8 @@
 
       <!-- Hurtigtall / Nøkkeltall Stripe -->
       <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2 p-3 bg-slate-950/60 border-b border-slate-800 text-xs shrink-0 font-mono">
-        <div class="p-2 rounded-xl bg-slate-900/90 border border-slate-800">
-          <span class="text-[10px] text-slate-400 uppercase font-sans block">Liga Plassering</span>
+        <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+          <span class="text-[10px] text-slate-400 uppercase font-sans block">Liga-plassering</span>
           <div class="text-base font-black text-amber-400 flex items-center gap-1">
             <Trophy class="w-4 h-4" />
             <span>#{profile?.leagueRank || 1}</span>
@@ -114,15 +114,15 @@
           </div>
         </div>
 
-        <div class="p-2 rounded-xl bg-slate-900/90 border border-slate-800">
-          <span class="text-[10px] text-slate-400 uppercase font-sans block">Sesong Totalt</span>
-          <span class="text-base font-black text-fpl-cyan">
+        <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+          <span class="text-[10px] text-slate-400 uppercase font-sans block">Sesong totalt</span>
+          <span class="text-base font-black text-emerald-400">
             {profile?.totalPoints || 0} <span class="text-[10px] text-slate-400 font-normal">pts</span>
           </span>
         </div>
 
-        <div class="p-2 rounded-xl bg-slate-900/90 border border-slate-800">
-          <span class="text-[10px] text-slate-400 uppercase font-sans block">GW26 Live</span>
+        <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+          <span class="text-[10px] text-slate-400 uppercase font-sans block">GW26 live</span>
           <span class="text-base font-black text-white">
             {profile?.currentGwPoints || 0} <span class="text-[10px] text-slate-400 font-normal">pts</span>
             {#if profile && profile.currentGwTransfersCost > 0}
@@ -131,15 +131,15 @@
           </span>
         </div>
 
-        <div class="p-2 rounded-xl bg-slate-900/90 border border-slate-800">
-          <span class="text-[10px] text-slate-400 uppercase font-sans block">Total FPL Rank</span>
+        <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+          <span class="text-[10px] text-slate-400 uppercase font-sans block">Total FPL-rank</span>
           <span class="text-base font-black text-slate-200">
-            {profile?.overallFplRank?.toLocaleString() || "42,350"}
+            {profile?.overallFplRank?.toLocaleString() || "42 350"}
           </span>
         </div>
 
-        <div class="p-2 rounded-xl bg-slate-900/90 border border-slate-800 col-span-2 sm:col-span-1">
-          <span class="text-[10px] text-slate-400 uppercase font-sans block">Lagverdi / Bank</span>
+        <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 col-span-2 sm:col-span-1">
+          <span class="text-[10px] text-slate-400 uppercase font-sans block">Lagverdi og bank</span>
           <span class="text-sm font-bold text-emerald-400">
             {profile?.teamValue || "£104.8m"}
             <span class="text-[10px] text-slate-400">({profile?.bank || "£1.2m"})</span>
@@ -147,42 +147,42 @@
         </div>
       </div>
 
-      <!-- Faner: Lagoppstilling, Statistikk & Graf, Chips -->
+      <!-- Faner: Lagoppstilling, Statistikk og graf, Chips -->
       <div class="flex items-center gap-2 px-4 pt-3 border-b border-slate-800 bg-slate-900 shrink-0">
         <button
           onclick={() => (activeTab = "pitch")}
           class={`pb-2.5 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 ${
             activeTab === "pitch"
-              ? "border-fpl-cyan text-fpl-cyan"
+              ? "border-emerald-500 text-emerald-400"
               : "border-transparent text-slate-400 hover:text-slate-200"
           }`}
         >
           <Shirt class="w-3.5 h-3.5" />
-          <span>Lagoppstilling & Poeng</span>
+          <span>Lagoppstilling og poeng</span>
         </button>
 
         <button
           onclick={() => (activeTab = "stats")}
           class={`pb-2.5 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 ${
             activeTab === "stats"
-              ? "border-fpl-cyan text-fpl-cyan"
+              ? "border-emerald-500 text-emerald-400"
               : "border-transparent text-slate-400 hover:text-slate-200"
           }`}
         >
           <TrendingUp class="w-3.5 h-3.5" />
-          <span>Plassering & Klatregraf</span>
+          <span>Plassering og klatregraf</span>
         </button>
 
         <button
           onclick={() => (activeTab = "chips")}
           class={`pb-2.5 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 ${
             activeTab === "chips"
-              ? "border-fpl-cyan text-fpl-cyan"
+              ? "border-emerald-500 text-emerald-400"
               : "border-transparent text-slate-400 hover:text-slate-200"
           }`}
         >
           <Sparkles class="w-3.5 h-3.5" />
-          <span>Chips & Bytter</span>
+          <span>Chips og bytter</span>
         </button>
       </div>
 

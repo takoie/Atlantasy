@@ -23,17 +23,17 @@
   } = $props();
 </script>
 
-<div class="flex-1 flex flex-col h-full overflow-hidden bg-slate-900/40 rounded-2xl border border-slate-800/80 p-3.5 backdrop-blur-md">
+<div class="flex-1 flex flex-col h-full overflow-hidden bg-[#111827] rounded-2xl border border-slate-800 p-3.5 shadow-soft">
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800 shrink-0">
     <div class="flex items-center gap-2">
-      <div class="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400">
+      <div class="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
         <Users class="w-4 h-4" />
       </div>
       <div>
         <h2 class="text-sm font-bold text-white flex items-center gap-1.5">
-          <span>Individuell Ledertavle</span>
-          <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">
+          <span>Individuell ledertavle</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-900 text-slate-400 font-mono border border-slate-800">
             {players.length} spillere
           </span>
         </h2>
@@ -43,13 +43,13 @@
       </div>
     </div>
 
-    <!-- 3-veis Sorterings-knapper (Live | Måned | Total) -->
-    <div class="flex items-center gap-0.5 p-0.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px]">
+    <!-- 3-veis sorterings-knapper (Live | Måned | Total) -->
+    <div class="flex items-center gap-0.5 p-0.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px]">
       <button
         onclick={() => onSelectSort("live")}
-        class={`px-2 py-1 rounded font-semibold transition-colors flex items-center gap-1 ${
+        class={`px-2.5 py-1 rounded-md font-semibold transition-colors flex items-center gap-1 ${
           sortBy === "live"
-            ? "bg-fpl-cyan text-slate-950 font-bold shadow-glow-cyan"
+            ? "bg-emerald-500 text-slate-950 font-bold shadow-sm"
             : "text-slate-400 hover:text-white"
         }`}
       >
@@ -59,9 +59,9 @@
 
       <button
         onclick={() => onSelectSort("month")}
-        class={`px-2 py-1 rounded font-semibold transition-colors flex items-center gap-1 ${
+        class={`px-2.5 py-1 rounded-md font-semibold transition-colors flex items-center gap-1 ${
           sortBy === "month"
-            ? "bg-fpl-cyan text-slate-950 font-bold shadow-glow-cyan"
+            ? "bg-emerald-500 text-slate-950 font-bold shadow-sm"
             : "text-slate-400 hover:text-white"
         }`}
       >
@@ -71,9 +71,9 @@
 
       <button
         onclick={() => onSelectSort("season")}
-        class={`px-2 py-1 rounded font-semibold transition-colors flex items-center gap-1 ${
+        class={`px-2.5 py-1 rounded-md font-semibold transition-colors flex items-center gap-1 ${
           sortBy === "season"
-            ? "bg-fpl-cyan text-slate-950 font-bold shadow-glow-cyan"
+            ? "bg-emerald-500 text-slate-950 font-bold shadow-sm"
             : "text-slate-400 hover:text-white"
         }`}
       >
@@ -98,14 +98,14 @@
         tabindex="0"
         onclick={() => onOpenProfile(player.entryId)}
         onkeydown={(e) => (e.key === "Enter" || e.key === " ") && onOpenProfile(player.entryId)}
-        class={`p-2.5 rounded-xl border transition-all duration-150 flex items-center justify-between gap-3 cursor-pointer hover:scale-[1.01] ${
+        class={`p-2.5 rounded-xl border transition-all duration-150 flex items-center justify-between gap-3 cursor-pointer ${
           index === 0
-            ? "bg-gradient-to-r from-amber-950/30 via-slate-900/90 to-slate-900 border-amber-500/40 shadow-sm hover:border-amber-400"
+            ? "bg-gradient-to-r from-amber-950/20 via-slate-900 to-slate-900 border-amber-500/40 shadow-sm hover:border-amber-400"
             : index === 1
-            ? "bg-slate-900/80 border-slate-700/80 hover:border-slate-500"
+            ? "bg-slate-900/90 border-slate-750 hover:border-slate-600"
             : index === 2
-            ? "bg-slate-900/80 border-amber-800/30 hover:border-amber-600"
-            : "bg-slate-900/60 border-slate-800/80 hover:border-slate-600"
+            ? "bg-slate-900/90 border-amber-800/30 hover:border-amber-600"
+            : "bg-slate-900/70 border-slate-800 hover:border-slate-700"
         }`}
       >
         <!-- Venstre: Rank + Spillerinfo -->
@@ -128,7 +128,7 @@
               <!-- Rom-badge -->
               <span
                 class="text-[9px] px-1.5 py-0.2 rounded font-bold uppercase tracking-wider shrink-0 border"
-                style={`border-color: ${player.roomColor || "#00ff87"}40; color: ${player.roomColor || "#00ff87"}; background-color: ${player.roomColor || "#00ff87"}15;`}
+                style={`border-color: ${player.roomColor || "#10b981"}40; color: ${player.roomColor || "#10b981"}; background-color: ${player.roomColor || "#10b981"}15;`}
               >
                 A{player.roomNumber}
               </span>
@@ -139,7 +139,7 @@
 
         <!-- Høyre: Poeng -->
         <div class="text-right shrink-0">
-          <div class="font-mono font-black text-sm text-fpl-cyan">
+          <div class="font-mono font-black text-sm text-emerald-400">
             {sortBy === "season" ? player.totalPoints : sortBy === "month" ? player.monthPoints : player.effectivePoints}
             <span class="text-[10px] font-normal text-slate-400">pts</span>
           </div>

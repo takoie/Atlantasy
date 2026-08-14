@@ -192,8 +192,16 @@ export const updateRoom = mutation({
     name: v.string(),
     description: v.optional(v.string()),
     accentColor: v.optional(v.string()),
+    userId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
+    if (args.userId) {
+      const user = await ctx.db.get(args.userId);
+      if (user && user.role !== "admin" && user.roomId !== args.roomId) {
+        throw new Error("Kun rom-leder eller administrator kan endre navnet på dette rommet.");
+      }
+    }
+
     await ctx.db.patch(args.roomId, {
       name: args.name.trim(),
       description: args.description?.trim(),

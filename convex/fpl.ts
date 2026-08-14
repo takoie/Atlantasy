@@ -47,8 +47,8 @@ export const seedDefaultData = mutation({
 
     // 1. Opprett standard ligainnstillinger
     await ctx.db.insert("league_settings", {
-      leagueId: 442981,
-      leagueName: "Atlantis Bedriftsliga 2024/25",
+      leagueId: 464734,
+      leagueName: "Atlantasy FPL Bedriftsliga",
       currentGameweek: 26,
       deductTransferHits: true, // Standard: trekk fra transfer hits
       autoSyncEnabled: true,

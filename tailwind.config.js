@@ -5,25 +5,25 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#070a12',
+        background: '#0d1117',
         surface: {
-          50: '#1b2333',
-          100: '#141c2b',
-          200: '#0f1624',
-          300: '#0a0f1a',
-          card: 'rgba(15, 22, 36, 0.75)',
+          50: '#212c3f',
+          100: '#1b2434',
+          200: '#151d2c',
+          300: '#0f1724',
+          card: 'rgba(21, 29, 44, 0.85)',
         },
         fpl: {
-          cyan: '#00ff87',     // Ikonisk FPL Cyan / Neon Green
-          green: '#02efad',    // Live poeng / suksess
-          purple: '#38003c',   // Ikonisk FPL Mørk Lilla
-          accent: '#e90052',   // FPL Magenta / Pink
-          violet: '#7c3aed',   // Desktop aksent
-          indigo: '#6366f1',   // Subtil UI-aksent
-          gold: '#fbbf24',     // 1. plass / Månedsvinner
+          cyan: '#10b981',     // Myk, moderne smaragdgrønn (daisyUI accent)
+          green: '#059669',    // Live poeng / suksess
+          purple: '#3b0764',   // Elegant dyp lilla
+          accent: '#f43f5e',   // Rose / Pink
+          violet: '#6366f1',   // Desktop aksent
+          indigo: '#4f46e5',   // Subtil UI-aksent
+          gold: '#f59e0b',     // 1. plass / Månedsvinner
           silver: '#94a3b8',   // 2. plass
           bronze: '#d97706',   // 3. plass
-          danger: '#ef4444',   // Transfer hits / -4
+          danger: '#f43f5e',   // Transfer hits / -4
         },
         brand: {
           50: '#eef2ff',
@@ -45,10 +45,10 @@ export default {
         mono: ['"JetBrains Mono"', 'Consolas', 'monospace'],
       },
       boxShadow: {
-        'glow-cyan': '0 0 20px -3px rgba(0, 255, 135, 0.3)',
-        'glow-purple': '0 0 20px -3px rgba(124, 58, 237, 0.35)',
-        'glow-magenta': '0 0 20px -3px rgba(233, 0, 82, 0.35)',
-        'glass-card': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.25)',
+        'glow-cyan': '0 0 12px -2px rgba(16, 185, 129, 0.25)',
+        'glow-purple': '0 0 12px -2px rgba(99, 102, 241, 0.25)',
+        'glass-card': '0 8px 30px 0 rgba(0, 0, 0, 0.28)',
       },
     },
   },

@@ -182,15 +182,16 @@
       await updateRoomMutation.mutate({
         roomId: roomId as any,
         name: newName,
+        userId: currentUser?._id as any,
       });
-    } catch (err) {
-      console.error("Kunne ikke oppdatere romnavn:", err);
+    } catch (err: any) {
+      alert(err.message || "Kunne ikke oppdatere romnavn.");
     }
   }
 </script>
 
 <main
-  class="flex flex-col h-screen w-screen bg-[#070a12] text-slate-100 overflow-hidden font-sans select-none"
+  class="flex flex-col h-screen w-screen bg-[#0f172a] text-slate-100 overflow-hidden font-sans select-none"
 >
   <!-- Velkomstside for førstegangsbrukere -->
   {#if showOnboarding}
@@ -221,11 +222,10 @@
       activeView = activeView === "news" ? "leaderboard" : "news";
       selectedRoomId = null;
     }}
-    onOpenRegister={() => (isRegisterModalOpen = true)}
   />
 
   <!-- Hovedinnhold (Ren, dynamisk full-bredde visning) -->
-  <div class="flex-1 flex flex-col p-3.5 space-y-3 overflow-hidden bg-[#070a12]">
+  <div class="flex-1 flex flex-col p-3.5 space-y-3 overflow-hidden bg-[#0f172a]">
     <!-- Skrytevegg / Pinned Vinner-Banner øverst -->
     {#if pinnedAnnouncement && activeView === "leaderboard"}
       <WallOfFameBanner
@@ -237,12 +237,12 @@
       />
     {/if}
 
-    <!-- 1. Hovedvisning: Parallelle Ledertavler (Rom + Individuell) & Liga-stats -->
+    <!-- 1. Hovedvisning: Parallelle ledertavler (Rom + Individuell) & Liga-stats -->
     {#if activeView === "leaderboard"}
-      <!-- Parallelle Ledertavler: Rom vs. Individuell -->
+      <!-- Parallelle ledertavler: Rom vs. Individuell -->
       <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3.5 min-h-0 overflow-hidden">
-        <!-- Venstre: Offisiell Rom-ledertavle (A1–A12) (7 av 12 kolonner) -->
-        <div class="lg:col-span-7 flex flex-col min-h-0 overflow-hidden bg-slate-900/40 rounded-2xl border border-slate-800/80 p-3.5 backdrop-blur-md">
+        <!-- Venstre: Offisiell rom-ledertavle (A1–A12) (7 av 12 kolonner) -->
+        <div class="lg:col-span-7 flex flex-col min-h-0 overflow-hidden bg-[#111827] rounded-2xl border border-slate-800 p-3.5 shadow-soft">
           <Leaderboard
             {leaderboard}
             {selectedRoomId}
@@ -255,7 +255,7 @@
           />
         </div>
 
-        <!-- Høyre: Individuell Ledertavle (Alle spillere) (5 av 12 kolonner) -->
+        <!-- Høyre: Individuell ledertavle (Alle spillere) (5 av 12 kolonner) -->
         <div class="lg:col-span-5 flex flex-col min-h-0 overflow-hidden">
           <IndividualLeaderboard
             players={individualPlayers}
@@ -272,7 +272,7 @@
       <LeagueStatsPanel {funStats} onOpenProfile={handleOpenProfile} />
 
     {:else if activeView === "news"}
-      <!-- 2. Avisen & Nyheter Modul -->
+      <!-- 2. Avisen og nyheter modul -->
       <NewsSection
         {articles}
         {currentUser}
@@ -284,15 +284,15 @@
         onDeleteArticle={(id) => deleteArticleMutation.mutate({ articleId: id as any })}
       />
     {:else}
-      <!-- 3. Dedikert Wall of Fame Side -->
+      <!-- 3. Dedikert hedersvegg og månedens vinnere side -->
       <div class="flex-1 overflow-y-auto space-y-4 pr-1">
         <div class="flex items-center justify-between pb-3 border-b border-slate-800">
           <div class="flex items-center gap-2.5">
-            <div class="p-2 rounded-lg bg-amber-500/20 text-amber-300">
+            <div class="p-2 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/20">
               <Trophy class="w-5 h-5" />
             </div>
             <div>
-              <h2 class="text-base font-bold text-white">Månedens Vinnere & Wall of Fame</h2>
+              <h2 class="text-base font-bold text-white">Månedens vinnere og hedersvegg</h2>
               <p class="text-xs text-slate-400">Hedersplass for de skarpeste FPL-rommene gjennom sesongen</p>
             </div>
           </div>
@@ -302,13 +302,13 @@
             class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition-colors flex items-center gap-1.5"
           >
             <ArrowLeft class="w-3.5 h-3.5" />
-            <span>Tilbake til Ledertavle</span>
+            <span>Tilbake til ledertavle</span>
           </button>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <!-- Januar Vinner -->
-          <div class="p-4 rounded-xl bg-gradient-to-br from-amber-950/30 to-slate-900 border border-amber-500/40 space-y-3 shadow-lg">
+          <div class="p-4 rounded-xl bg-gradient-to-br from-amber-950/20 to-slate-900 border border-amber-500/40 space-y-3 shadow-md">
             <div class="flex items-center justify-between">
               <span class="text-xs font-bold uppercase tracking-wider text-amber-300">
                 Januar 2025
@@ -325,7 +325,7 @@
           </div>
 
           <!-- Desember Vinner -->
-          <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
+          <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3 shadow-md">
             <div class="flex items-center justify-between">
               <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
                 Desember 2024
@@ -336,7 +336,7 @@
             <p class="text-xs text-slate-300 leading-relaxed">
               Knuste motstanden i juleprogrammet med sitt dype prediksjonsoppsett.
             </p>
-            <div class="text-[11px] text-fpl-cyan font-mono font-bold">
+            <div class="text-[11px] text-emerald-400 font-mono font-bold">
               Vinnende romsnitt: 72.5 pts
             </div>
           </div>
@@ -361,6 +361,7 @@
   <RoomDetailModal
     room={modalRoom}
     isOpen={isRoomModalOpen}
+    {currentUser}
     deductHits={settings?.deductTransferHits ?? true}
     onClose={() => (isRoomModalOpen = false)}
     onUpdateRoomName={handleUpdateRoomName}
