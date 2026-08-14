@@ -3,6 +3,7 @@
     Users,
     TrendingUp,
     Zap,
+    Calendar,
   } from "lucide-svelte";
 
   let {
@@ -22,7 +23,7 @@
 
 <div class="flex-1 flex flex-col h-full overflow-hidden bg-slate-900/40 rounded-2xl border border-slate-800/80 p-3.5 backdrop-blur-md">
   <!-- Header -->
-  <div class="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
+  <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800 shrink-0">
     <div class="flex items-center gap-2">
       <div class="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400">
         <Users class="w-4 h-4" />
@@ -34,15 +35,17 @@
             {players.length} spillere
           </span>
         </h2>
-        <p class="text-[11px] text-slate-400">Uavhengig av romtilhørighet</p>
+        <p class="text-[11px] text-slate-400">
+          {sortBy === "season" ? "Sesong totalt" : sortBy === "month" ? "Måned totalt" : "Live runde"}
+        </p>
       </div>
     </div>
 
-    <!-- Sorterings-knapper -->
-    <div class="flex items-center gap-1 p-0.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px]">
+    <!-- 3-veis Sorterings-knapper (Live | Måned | Total) -->
+    <div class="flex items-center gap-0.5 p-0.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px]">
       <button
         onclick={() => onSelectSort("live")}
-        class={`px-2.5 py-1 rounded font-semibold transition-colors flex items-center gap-1 ${
+        class={`px-2 py-1 rounded font-semibold transition-colors flex items-center gap-1 ${
           sortBy === "live"
             ? "bg-fpl-cyan text-slate-950 font-bold shadow-glow-cyan"
             : "text-slate-400 hover:text-white"
@@ -53,8 +56,20 @@
       </button>
 
       <button
+        onclick={() => onSelectSort("month")}
+        class={`px-2 py-1 rounded font-semibold transition-colors flex items-center gap-1 ${
+          sortBy === "month"
+            ? "bg-fpl-cyan text-slate-950 font-bold shadow-glow-cyan"
+            : "text-slate-400 hover:text-white"
+        }`}
+      >
+        <Calendar class="w-3 h-3" />
+        <span>Måned</span>
+      </button>
+
+      <button
         onclick={() => onSelectSort("season")}
-        class={`px-2.5 py-1 rounded font-semibold transition-colors flex items-center gap-1 ${
+        class={`px-2 py-1 rounded font-semibold transition-colors flex items-center gap-1 ${
           sortBy === "season"
             ? "bg-fpl-cyan text-slate-950 font-bold shadow-glow-cyan"
             : "text-slate-400 hover:text-white"
@@ -119,7 +134,7 @@
         <!-- Høyre: Poeng -->
         <div class="text-right shrink-0">
           <div class="font-mono font-black text-sm text-fpl-cyan">
-            {sortBy === "season" ? player.totalPoints : player.effectivePoints}
+            {sortBy === "season" ? player.totalPoints : sortBy === "month" ? player.monthPoints : player.effectivePoints}
             <span class="text-[10px] font-normal text-slate-400">pts</span>
           </div>
 

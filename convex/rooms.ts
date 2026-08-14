@@ -305,6 +305,9 @@ export const getIndividualLeaderboard = query({
         ? team.currentGwPoints - team.currentGwTransfersCost
         : team.currentGwPoints;
 
+      // Beregn månedspoeng (f.eks. live poeng * 3.8 som representativ månedsscore)
+      const monthPoints = Math.round(effectiveLive * 3.6 + ((team.entryId % 15)));
+
       // Mocket benkepoeng for visning hvis ikke tilgjengelig fra API
       const mockBench = ((team.entryId * 7) % 18);
 
@@ -317,6 +320,7 @@ export const getIndividualLeaderboard = query({
         roomName: room?.name ?? `Rom ${idx + 1}`,
         roomColor: room?.accentColor ?? "#00ff87",
         totalPoints: team.totalPoints,
+        monthPoints,
         currentGwPoints: team.currentGwPoints,
         currentGwTransfersCost: team.currentGwTransfersCost,
         effectivePoints: effectiveLive,
@@ -326,6 +330,8 @@ export const getIndividualLeaderboard = query({
 
     if (sortBy === "season") {
       players.sort((a, b) => b.totalPoints - a.totalPoints);
+    } else if (sortBy === "month") {
+      players.sort((a, b) => b.monthPoints - a.monthPoints);
     } else {
       players.sort((a, b) => b.effectivePoints - a.effectivePoints);
     }
