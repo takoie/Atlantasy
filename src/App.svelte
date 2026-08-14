@@ -7,6 +7,7 @@
   import AdminModal from "$lib/components/AdminModal.svelte";
   import RegisterModal from "$lib/components/RegisterModal.svelte";
   import WelcomeOnboarding from "$lib/components/WelcomeOnboarding.svelte";
+  import NewsSection from "$lib/components/NewsSection.svelte";
 
   import { useQuery, useMutation } from "$lib/convex.svelte";
   import { api } from "../convex/_generated/api";
@@ -22,9 +23,11 @@
   const pinnedAnnQuery = useQuery(api.admin.getPinnedAnnouncement);
   const inviteCodesQuery = useQuery(api.admin.listInviteCodes);
   const usersQuery = useQuery(api.auth.listUsers);
+  const articlesQuery = useQuery(api.articles.listArticles);
+  const allTeamsQuery = useQuery(api.rooms.getAllFplTeams);
 
   // Reaktiv State med Svelte 5 Runes
-  let activeView = $state("leaderboard"); // "leaderboard" | "wall_of_fame"
+  let activeView = $state("leaderboard"); // "leaderboard" | "wall_of_fame" | "news"
   let activeSort = $state("live");         // "live" | "month" | "season"
   let selectedRoomId = $state<string | null>(null);
   let activeChatChannel = $state("banter"); // "banter" | "room"
@@ -46,9 +49,14 @@
   const declareWinnerMutation = useMutation(api.admin.declareMonthlyWinner);
   const seedDataMutation = useMutation(api.fpl.seedDefaultData);
   const registerMutation = useMutation(api.auth.registerWithInvite);
+  const loginOrRegisterMutation = useMutation(api.auth.loginOrRegister);
+  const setUserRoleMutation = useMutation(api.auth.setUserRole);
   const batchAssignMutation = useMutation(api.rooms.batchSaveRoomAssignments);
   const updateRoomMutation = useMutation(api.rooms.updateRoom);
   const startNewSeasonMutation = useMutation(api.admin.startNewSeason);
+  const createArticleMutation = useMutation(api.articles.createArticle);
+  const likeArticleMutation = useMutation(api.articles.likeArticle);
+  const deleteArticleMutation = useMutation(api.articles.deleteArticle);
 
   // Utledet data med fallback
   let rooms = $derived(roomsQuery.data ?? []);
@@ -57,6 +65,8 @@
   let pinnedAnnouncement = $derived(pinnedAnnQuery.data ?? null);
   let inviteCodes = $derived(inviteCodesQuery.data ?? []);
   let users = $derived(usersQuery.data ?? []);
+  let articles = $derived(articlesQuery.data ?? []);
+  let fplTeams = $derived(allTeamsQuery.data ?? []);
 
   // Nåværende aktiv bruker
   let currentUser = $derived(
@@ -95,7 +105,6 @@
       activeUserId = savedUserId;
       showOnboarding = false;
     } else if (!hasOnboarded) {
-      // Førstegangsbruker: Vis velkomstside
       showOnboarding = true;
     }
 
@@ -173,9 +182,10 @@
   {#if showOnboarding}
     <WelcomeOnboarding
       {rooms}
+      {fplTeams}
       onComplete={handleOnboardingComplete}
       onAdminBypass={handleAdminBypass}
-      onRegisterWithInvite={(data) => registerMutation.mutate(data)}
+      onLoginOrRegister={(data) => loginOrRegisterMutation.mutate(data)}
     />
   {/if}
 
@@ -191,6 +201,10 @@
     onToggleChat={() => (isChatOpen = !isChatOpen)}
     onToggleWallOfFame={() => {
       activeView = activeView === "wall_of_fame" ? "leaderboard" : "wall_of_fame";
+      selectedRoomId = null;
+    }}
+    onToggleNews={() => {
+      activeView = activeView === "news" ? "leaderboard" : "news";
       selectedRoomId = null;
     }}
     onOpenRegister={() => (isRegisterModalOpen = true)}
@@ -209,7 +223,7 @@
       />
     {/if}
 
-    <!-- Hovedvisning -->
+    <!-- 1. Hovedvisning: Ledertavle -->
     {#if activeView === "leaderboard"}
       <Leaderboard
         {leaderboard}
@@ -220,8 +234,20 @@
         onSelectSort={(s: string) => (activeSort = s)}
         onOpenRoomModal={handleOpenRoomModal}
       />
+    {:else if activeView === "news"}
+      <!-- 2. Avisen & Nyheter Modul -->
+      <NewsSection
+        {articles}
+        {currentUser}
+        onBack={() => (activeView = "leaderboard")}
+        onCreateArticle={(data) => {
+          createArticleMutation.mutate(data);
+        }}
+        onLikeArticle={(id) => likeArticleMutation.mutate({ articleId: id as any })}
+        onDeleteArticle={(id) => deleteArticleMutation.mutate({ articleId: id as any })}
+      />
     {:else}
-      <!-- Dedikert Wall of Fame Side -->
+      <!-- 3. Dedikert Wall of Fame Side -->
       <div class="flex-1 overflow-y-auto space-y-4 pr-1">
         <div class="flex items-center justify-between pb-3 border-b border-slate-800">
           <div class="flex items-center gap-2.5">
@@ -308,6 +334,7 @@
     {settings}
     {rooms}
     {inviteCodes}
+    {users}
     onClose={() => (isAdminModalOpen = false)}
     onUpdateSettings={(s) => updateSettingsMutation.mutate(s)}
     onCreateInviteCode={(c) => createInviteMutation.mutate(c)}
@@ -315,6 +342,7 @@
     onSeedData={() => seedDataMutation.mutate({})}
     onBatchSaveAssignments={(assignments) => batchAssignMutation.mutate({ assignments })}
     onStartNewSeason={(params) => startNewSeasonMutation.mutate(params)}
+    onSetUserRole={(uId, role) => setUserRoleMutation.mutate({ userId: uId as any, role })}
   />
 
   <RegisterModal

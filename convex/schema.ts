@@ -2,10 +2,11 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  // Brukere og tilknyttede profiler
+  // Brukere og tilknyttede profiler (Enkel pålogging med brukernavn + passord, epost er valgfri)
   users: defineTable({
     username: v.string(),
-    email: v.string(),
+    password: v.optional(v.string()), // Enkelt passord for innlogging
+    email: v.optional(v.string()),    // Valgfri epost
     fplEntryId: v.optional(v.number()),
     fplTeamName: v.optional(v.string()),
     fplManagerName: v.optional(v.string()),
@@ -14,15 +15,15 @@ export default defineSchema({
     avatar: v.optional(v.string()),
     createdAt: v.number(),
   })
-    .index("by_email", ["email"])
     .index("by_username", ["username"])
+    .index("by_role", ["role"])
     .index("by_roomId", ["roomId"])
     .index("by_fplEntryId", ["fplEntryId"]),
 
-  // Rom (Rom 1 - 12)
+  // Rom (Rom A1 - A12)
   rooms: defineTable({
     roomNumber: v.number(), // 1 - 12
-    name: v.string(),       // f.eks. "Rom 1 - Utvikling" eller "Rom 4"
+    name: v.string(),       // f.eks. "A1 - The Devs" eller "A1"
     description: v.optional(v.string()),
     accentColor: v.optional(v.string()), // Hex eller Tailwind farge
     avatar: v.optional(v.string()),
@@ -45,6 +46,18 @@ export default defineSchema({
     .index("by_entryId", ["entryId"])
     .index("by_roomId", ["roomId"])
     .index("by_totalPoints", ["totalPoints"]),
+
+  // Artikler, Runderapporter og Nyheter (med bildestøtte fra upload / clipboard paste)
+  articles: defineTable({
+    title: v.string(),
+    content: v.string(),
+    imageUrl: v.optional(v.string()), // URL eller Base64 Data URL fra clipboard/upload
+    authorName: v.string(),
+    authorAvatar: v.optional(v.string()),
+    tag: v.optional(v.string()),      // "Runderapport" | "Taktikk" | "Banter" | "Nyhet"
+    likes: v.number(),
+    createdAt: v.number(),
+  }).index("by_createdAt", ["createdAt"]),
 
   // Gameweek-score historikk per manager/lag
   gameweek_scores: defineTable({
@@ -81,7 +94,7 @@ export default defineSchema({
     monthName: v.string(),         // f.eks. "August", "September"
     gameweekStart: v.number(),
     gameweekEnd: v.number(),
-    customGwList: v.optional(v.array(v.number())), // Hvis admin overstyrer Gameweeks
+    customGwList: v.optional(v.array(v.number())),
     winningRoomId: v.optional(v.id("rooms")),
     winningScore: v.optional(v.number()),
     isCompleted: v.boolean(),
@@ -89,7 +102,7 @@ export default defineSchema({
 
   // Tidsbegrensede invitasjonskoder
   invite_codes: defineTable({
-    code: v.string(),              // F.eks. "ATL-2024-VIP"
+    code: v.string(),              // F.eks. "ATLANTIS-2025"
     targetRoomId: v.optional(v.id("rooms")),
     role: v.string(),              // "user" | "admin"
     expiresAt: v.number(),         // Unix timestamp (ms)
@@ -106,7 +119,7 @@ export default defineSchema({
     senderRole: v.string(),        // "admin" | "user"
     senderAvatar: v.optional(v.string()),
     channel: v.string(),           // "banter" | "room"
-    roomId: v.optional(v.id("rooms")), // Satt hvis channel === "room"
+    roomId: v.optional(v.id("rooms")),
     content: v.string(),
     type: v.string(),              // "chat" | "announcement" | "fpl_bot" | "banter"
     isPinned: v.optional(v.boolean()),
@@ -134,7 +147,7 @@ export default defineSchema({
     leagueId: v.number(),          // FPL Classic League ID
     leagueName: v.string(),
     currentGameweek: v.number(),
-    deductTransferHits: v.boolean(), // Rom-snitt toggle (true = trekk fra transfer hits)
+    deductTransferHits: v.boolean(),
     autoSyncEnabled: v.boolean(),
     syncIntervalMinutes: v.number(),
     lastSyncedAt: v.number(),

@@ -10,6 +10,7 @@
     Wifi,
     Crown,
     KeyRound,
+    Newspaper,
   } from "lucide-svelte";
   import { onMount } from "svelte";
 
@@ -24,6 +25,7 @@
     onRefreshFpl = () => {},
     onToggleChat = () => {},
     onToggleWallOfFame = () => {},
+    onToggleNews = () => {},
     onOpenRegister = () => {},
   }: {
     currentGw?: number;
@@ -36,6 +38,7 @@
     onRefreshFpl?: () => void;
     onToggleChat?: () => void;
     onToggleWallOfFame?: () => void;
+    onToggleNews?: () => void;
     onOpenRegister?: () => void;
   } = $props();
 
@@ -131,6 +134,19 @@
     >
       <Crown class="w-3.5 h-3.5 text-amber-400" />
       <span class="hidden md:inline">Månedens Vinnere</span>
+    </button>
+
+    <!-- Avisen & Nyheter -->
+    <button
+      onclick={onToggleNews}
+      class={`h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+        activeView === "news"
+          ? "bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm"
+          : "text-slate-300 hover:text-white hover:bg-slate-800/60"
+      }`}
+    >
+      <Newspaper class="w-3.5 h-3.5 text-purple-400" />
+      <span class="hidden md:inline">Avisen & Nyheter</span>
     </button>
 
     <!-- Registrer / Invitasjonskode -->

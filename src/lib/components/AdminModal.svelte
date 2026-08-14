@@ -20,6 +20,7 @@
     settings = null,
     rooms = [],
     inviteCodes = [],
+    users = [],
     onClose = () => {},
     onUpdateSettings = (_newSettings: any) => {},
     onCreateInviteCode = (_params: any) => {},
@@ -27,11 +28,13 @@
     onSeedData = () => {},
     onBatchSaveAssignments = (_assignments: any[]) => {},
     onStartNewSeason = (_params: any) => {},
+    onSetUserRole = (_userId: string, _role: string) => {},
   }: {
     isOpen?: boolean;
     settings?: any;
     rooms?: any[];
     inviteCodes?: any[];
+    users?: any[];
     onClose?: () => void;
     onUpdateSettings?: (newSettings: any) => void;
     onCreateInviteCode?: (params: any) => void;
@@ -39,6 +42,7 @@
     onSeedData?: () => void;
     onBatchSaveAssignments?: (assignments: any[]) => void;
     onStartNewSeason?: (params: any) => void;
+    onSetUserRole?: (userId: string, role: string) => void;
   } = $props();
 
   let adminPinInput = $state("");
@@ -379,6 +383,18 @@
             }`}
           >
             Kår Månedsvinner (Skrytevegg)
+          </button>
+
+          <button
+            onclick={() => (activeTab = "users")}
+            class={`px-4 py-3 border-b-2 transition-colors flex items-center gap-1.5 ${
+              activeTab === "users"
+                ? "border-indigo-400 text-indigo-300 font-bold"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Shield class="w-3.5 h-3.5" />
+            <span>Admins & Brukere ({users.length})</span>
           </button>
 
           <button
@@ -834,6 +850,89 @@
                   </div>
                 {/each}
               </div>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Tab 5: Admins & Brukere -->
+        {#if activeTab === "users"}
+          <div class="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div>
+                <h4 class="font-bold text-white text-sm flex items-center gap-2">
+                  <Shield class="w-4 h-4 text-indigo-400" />
+                  <span>Brukeradministrasjon & Administrator-roller</span>
+                </h4>
+                <p class="text-[11px] text-slate-400 mt-0.5">
+                  Her kan du gi andre spillere administrator-rettigheter eller administrere profiler.
+                </p>
+              </div>
+              <span class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 font-mono text-[11px]">
+                {users.length} registrerte
+              </span>
+            </div>
+
+            <div class="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+              {#if users.length === 0}
+                <div class="p-6 text-center text-slate-500">Ingen brukere registrert enda.</div>
+              {/if}
+
+              {#each users as user (user._id)}
+                <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-3 hover:border-slate-700 transition-colors">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <img
+                      src={user.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`}
+                      alt="Avatar"
+                      class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 shrink-0"
+                    />
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="font-bold text-white text-xs truncate">{user.username}</span>
+                        {#if user.role === "admin"}
+                          <span class="text-[9px] px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold uppercase">
+                            Admin
+                          </span>
+                        {:else}
+                          <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">
+                            Spiller
+                          </span>
+                        {/if}
+                      </div>
+
+                      <p class="text-[10px] text-slate-400 truncate mt-0.5">
+                        {user.fplTeamName ? `Lag: ${user.fplTeamName}` : "Ingen lag tilknyttet"}
+                        {#if user.email} • {user.email}{/if}
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Rolle Endring -->
+                  <div class="flex items-center gap-2 shrink-0">
+                    {#if user.role === "admin"}
+                      <button
+                        onclick={() => {
+                          onSetUserRole(user._id, "user");
+                          showSuccess(`Fjernet admin-rettigheter fra ${user.username}`);
+                        }}
+                        class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold transition-colors"
+                      >
+                        Gjør til Bruker
+                      </button>
+                    {:else}
+                      <button
+                        onclick={() => {
+                          onSetUserRole(user._id, "admin");
+                          showSuccess(`Gjorde ${user.username} til Administrator!`);
+                        }}
+                        class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold transition-colors flex items-center gap-1 shadow-sm"
+                      >
+                        <Shield class="w-3 h-3" />
+                        <span>Gjør til Admin</span>
+                      </button>
+                    {/if}
+                  </div>
+                </div>
+              {/each}
             </div>
           </div>
         {/if}
