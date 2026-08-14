@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { Trophy, Crown, Sparkles, ChevronRight, X, Megaphone, Flame } from "lucide-svelte";
+  import { Crown, Sparkles, ChevronRight, X, Megaphone, Flame } from "lucide-svelte";
 
   let {
     announcement,
-    onSelectRoom = (roomId: string) => {},
+    onSelectRoom = (_roomId: string) => {},
   }: {
     announcement: any;
     onSelectRoom?: (roomId: string) => void;

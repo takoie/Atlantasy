@@ -8,7 +8,6 @@
     Shield,
     Sparkles,
     Wifi,
-    Radio,
   } from "lucide-svelte";
   import { onMount } from "svelte";
 
@@ -27,29 +26,30 @@
   } = $props();
 
   let isMaximized = $state(false);
-  let isTauriEnv = $state(false);
   let tauriWindow: any = null;
 
-  onMount(async () => {
-    try {
-      if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
-        isTauriEnv = true;
-        const { getCurrentWindow } = await import("@tauri-apps/api/window");
-        tauriWindow = getCurrentWindow();
-        isMaximized = await tauriWindow.isMaximized();
-
-        // Lytt på vindusstørrelsesendringer
-        const unlisten = await tauriWindow.onResized(async () => {
+  onMount(() => {
+    let unlisten: (() => void) | undefined;
+    (async () => {
+      try {
+        if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+          const { getCurrentWindow } = await import("@tauri-apps/api/window");
+          tauriWindow = getCurrentWindow();
           isMaximized = await tauriWindow.isMaximized();
-        });
 
-        return () => {
-          unlisten();
-        };
+          // Lytt på vindusstørrelsesendringer
+          unlisten = await tauriWindow.onResized(async () => {
+            isMaximized = await tauriWindow.isMaximized();
+          });
+        }
+      } catch {
+        // Fallback for standard nettleser
       }
-    } catch {
-      isTauriEnv = false;
-    }
+    })();
+
+    return () => {
+      if (unlisten) unlisten();
+    };
   });
 
   async function handleMinimize() {

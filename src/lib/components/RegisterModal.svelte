@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { X, KeyRound, User, Mail, Shield, Check, AlertCircle } from "lucide-svelte";
+  import { X, KeyRound, AlertCircle } from "lucide-svelte";
 
   let {
     isOpen = false,
     rooms = [],
     onClose = () => {},
-    onRegister = (data: any) => {},
+    onRegister = (_data: any) => {},
   }: {
     isOpen?: boolean;
     rooms?: any[];

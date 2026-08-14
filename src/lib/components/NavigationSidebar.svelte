@@ -3,13 +3,8 @@
     LayoutDashboard,
     Trophy,
     Shield,
-    Users,
     KeyRound,
-    Flame,
-    Building2,
     ChevronRight,
-    UserPlus,
-    UserCircle2,
     Sparkles,
   } from "lucide-svelte";
 
@@ -19,11 +14,11 @@
     activeView = "leaderboard", // "leaderboard" | "wall_of_fame" | "admin"
     currentUser = null,
     users = [],
-    onSelectView = (view: string) => {},
-    onSelectRoom = (roomId: string | null) => {},
+    onSelectView = (_view: string) => {},
+    onSelectRoom = (_roomId: string | null) => {},
     onOpenAdmin = () => {},
     onOpenRegister = () => {},
-    onSwitchUser = (userId: string) => {},
+    onSwitchUser = (_userId: string) => {},
   }: {
     rooms?: any[];
     selectedRoomId?: string | null;

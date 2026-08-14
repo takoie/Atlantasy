@@ -1,4 +1,4 @@
-import { action, mutation, query } from "./_generated/server";
+import { action, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -8,7 +8,7 @@ export const fetchFplLeagueStandings = action({
   args: {
     leagueId: v.number(),
   },
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     try {
       const response = await fetch(
         `https://fantasy.premierleague.com/api/leagues-classic/${args.leagueId}/standings/`

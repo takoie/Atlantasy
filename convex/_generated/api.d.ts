@@ -12,7 +12,6 @@ import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
 import type * as fpl from "../fpl.js";
-import type * as meldinger from "../meldinger.js";
 import type * as rooms from "../rooms.js";
 
 import type {
@@ -26,7 +25,6 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   chat: typeof chat;
   fpl: typeof fpl;
-  meldinger: typeof meldinger;
   rooms: typeof rooms;
 }>;
 

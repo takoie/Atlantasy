@@ -2,14 +2,9 @@
   import {
     Trophy,
     TrendingUp,
-    Users,
     ChevronDown,
     ChevronUp,
-    Shield,
-    Sparkles,
-    Flame,
     Zap,
-    ExternalLink,
     AlertCircle,
   } from "lucide-svelte";
 
@@ -19,8 +14,8 @@
     currentGw = 26,
     deductHits = true,
     sortBy = "live", // "live" | "season"
-    onSelectSort = (sort: string) => {},
-    onOpenRoomModal = (room: any) => {},
+    onSelectSort = (_sort: string) => {},
+    onOpenRoomModal = (_room: any) => {},
   }: {
     leaderboard?: any[];
     selectedRoomId?: string | null;
@@ -107,7 +102,7 @@
           Trykk på "Admin" i toppen for å seede standardrom og hente FPL-data.
         </p>
       </div>
-    {/each}
+    {/if}
 
     {#each displayedRooms as room, index (room._id)}
       <div

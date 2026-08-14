@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { X, Trophy, Users, Flame, Shield, TrendingUp, Sparkles } from "lucide-svelte";
+  import { X, Users } from "lucide-svelte";
 
   let {
     room = null,
     isOpen = false,
-    deductHits = true,
+    deductHits: _deductHits = true,
     onClose = () => {},
   }: {
     room?: any;

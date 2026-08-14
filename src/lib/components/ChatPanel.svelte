@@ -4,22 +4,17 @@
     MessageSquare,
     Lock,
     Users,
-    Sparkles,
-    Shield,
-    Bot,
-    Trash2,
-    Smile,
   } from "lucide-svelte";
   import { tick } from "svelte";
 
   let {
     messages = [],
-    currentUser = null,
+    currentUser: _currentUser = null,
     currentRoom = null,
     activeChannel = "banter", // "banter" | "room"
-    onSelectChannel = (channel: string) => {},
-    onSendMessage = (content: string, channel: string, roomId?: string) => {},
-    onDeleteMessage = (messageId: string) => {},
+    onSelectChannel = (_channel: string) => {},
+    onSendMessage = (_content: string, _channel: string, _roomId?: string) => {},
+    onDeleteMessage: _onDeleteMessage = (_messageId: string) => {},
   }: {
     messages?: any[];
     currentUser?: any;

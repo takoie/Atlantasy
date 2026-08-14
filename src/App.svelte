@@ -10,7 +10,7 @@
 
   import { useQuery, useMutation } from "$lib/convex.svelte";
   import { api } from "../convex/_generated/api";
-  import { Trophy, Sparkles, Flame, Shield, Users } from "lucide-svelte";
+  import { Trophy } from "lucide-svelte";
   import { onMount } from "svelte";
 
   // Reaktiv Convex Queries
@@ -182,7 +182,7 @@
           currentGw={settings?.currentGameweek ?? 26}
           deductHits={settings?.deductTransferHits ?? true}
           sortBy={activeSort}
-          onSelectSort={(s) => (activeSort = s)}
+          onSelectSort={(s: string) => (activeSort = s)}
           onOpenRoomModal={handleOpenRoomModal}
         />
       {:else}

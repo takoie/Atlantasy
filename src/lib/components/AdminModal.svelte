@@ -3,16 +3,12 @@
     X,
     Shield,
     KeyRound,
-    RefreshCw,
     ToggleLeft,
     ToggleRight,
     Trophy,
-    Users,
     Plus,
     Save,
-    Sparkles,
     Check,
-    AlertCircle,
     Database,
   } from "lucide-svelte";
 
@@ -22,9 +18,9 @@
     rooms = [],
     inviteCodes = [],
     onClose = () => {},
-    onUpdateSettings = (newSettings: any) => {},
-    onCreateInviteCode = (params: any) => {},
-    onDeclareWinner = (params: any) => {},
+    onUpdateSettings = (_newSettings: any) => {},
+    onCreateInviteCode = (_params: any) => {},
+    onDeclareWinner = (_params: any) => {},
     onSeedData = () => {},
   }: {
     isOpen?: boolean;

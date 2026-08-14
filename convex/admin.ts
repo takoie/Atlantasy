@@ -7,21 +7,7 @@ import { v } from "convex/values";
 export const getSettings = query({
   args: {},
   handler: async (ctx) => {
-    let settings = await ctx.db.query("league_settings").first();
-    if (!settings) {
-      // Opprett standardinnstillinger hvis de ikke finnes
-      const id = await ctx.db.insert("league_settings", {
-        leagueId: 123456,
-        leagueName: "Atlantis FPL Bedriftsliga",
-        currentGameweek: 1,
-        deductTransferHits: true,
-        autoSyncEnabled: true,
-        syncIntervalMinutes: 15,
-        lastSyncedAt: Date.now(),
-        adminPin: "1234",
-      });
-      settings = await ctx.db.get(id);
-    }
+    const settings = await ctx.db.query("league_settings").first();
     return settings;
   },
 });
@@ -41,7 +27,17 @@ export const updateSettings = mutation({
   handler: async (ctx, args) => {
     const settings = await ctx.db.query("league_settings").first();
     if (!settings) {
-      throw new Error("Ligainnstillinger finnes ikke.");
+      await ctx.db.insert("league_settings", {
+        leagueId: args.leagueId ?? 442981,
+        leagueName: args.leagueName?.trim() ?? "Atlantis FPL Bedriftsliga",
+        currentGameweek: args.currentGameweek ?? 26,
+        deductTransferHits: args.deductTransferHits ?? true,
+        autoSyncEnabled: args.autoSyncEnabled ?? true,
+        syncIntervalMinutes: 10,
+        lastSyncedAt: Date.now(),
+        adminPin: args.adminPin?.trim() ?? "1234",
+      });
+      return;
     }
 
     await ctx.db.patch(settings._id, {

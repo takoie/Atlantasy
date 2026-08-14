@@ -13,7 +13,6 @@ export const listRooms = query({
     // Hent ligainnstillinger for å vite om minuspoeng skal trekkes fra
     const settings = await ctx.db.query("league_settings").first();
     const deductHits = settings?.deductTransferHits ?? true;
-    const currentGw = settings?.currentGameweek ?? 1;
 
     // Hent alle lag
     const allTeams = await ctx.db.query("fpl_teams").collect();
