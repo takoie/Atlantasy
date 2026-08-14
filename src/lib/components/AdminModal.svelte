@@ -12,6 +12,7 @@
     Database,
     Download,
     Users,
+    RotateCcw,
   } from "lucide-svelte";
 
   let {
@@ -25,6 +26,7 @@
     onDeclareWinner = (_params: any) => {},
     onSeedData = () => {},
     onBatchSaveAssignments = (_assignments: any[]) => {},
+    onStartNewSeason = (_params: any) => {},
   }: {
     isOpen?: boolean;
     settings?: any;
@@ -36,18 +38,23 @@
     onDeclareWinner?: (params: any) => void;
     onSeedData?: () => void;
     onBatchSaveAssignments?: (assignments: any[]) => void;
+    onStartNewSeason?: (params: any) => void;
   } = $props();
 
   let adminPinInput = $state("");
   let isAuthenticated = $state(false);
   let authError = $state("");
-  let activeTab = $state("matching"); // "matching" | "settings" | "winner" | "invites" | "database"
+  let activeTab = $state("matching"); // "matching" | "settings" | "season" | "winner" | "invites" | "database"
 
   // Innstillinger form-state
   let leagueId = $state(442981);
   let leagueName = $state("Atlantis Bedriftsliga");
   let currentGameweek = $state(26);
   let deductTransferHits = $state(true);
+
+  // Ny sesong form-state
+  let newSeasonName = $state("2025/2026");
+  let resetPointsCheckbox = $state(true);
 
   // Vinnerkåring state
   let selectedWinnerRoomId = $state("");
@@ -64,10 +71,9 @@
   // FPL Import & Drag-and-Drop Matching State
   let isFetchingFpl = $state(false);
   let fplImportLeagueId = $state(442981);
-  let draggedTeam = $state<any>(null);
+  let draggedTeamData = $state<{ team: any; sourceRoomId: string | null } | null>(null);
 
-  // Lokal mapping av lag til rom for matching
-  // roomId -> Array av lag
+  // Lokal mapping av lag til rom for matching: roomId -> Array av lag
   let roomAssignments = $state<Record<string, any[]>>({});
   let unassignedPool = $state<any[]>([]);
 
@@ -81,7 +87,7 @@
     }
   });
 
-  // Synkroniser eksisterende lag inn i rommene når modalen åpnes eller rommene oppdateres
+  // Synkroniser rom og lag når modalen åpnes
   $effect(() => {
     if (rooms && rooms.length > 0) {
       const newMap: Record<string, any[]> = {};
@@ -114,7 +120,7 @@
   async function handleFetchFplLeague() {
     isFetchingFpl = true;
     try {
-      // Simuler eller hent fra FPL API
+      // Simuler / Hent lag fra FPL
       const mockFplTeams = [
         { entryId: 98124, teamName: "Tactical Masterclass", managerName: "Stian Taknes", total: 1540, pts: 78, hits: 0 },
         { entryId: 10234, teamName: "Checkmate FC", managerName: "Magnus Carlsen", total: 1520, pts: 74, hits: 4 },
@@ -139,78 +145,64 @@
     }
   }
 
-  // Drag & Drop Handlers
-  function handleDragStart(team: any, sourceRoomId: string | null, event: DragEvent) {
-    draggedTeam = { team, sourceRoomId };
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = "move";
-      event.dataTransfer.setData("text/plain", String(team.entryId));
+  // --- Robust Drag and Drop & 1-Klikk Matcher ---
+  function onDragStartHandler(team: any, sourceRoomId: string | null, e: DragEvent) {
+    draggedTeamData = { team, sourceRoomId };
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", JSON.stringify({ entryId: team.entryId, sourceRoomId }));
     }
   }
 
-  function handleDragOver(event: DragEvent) {
-    event.preventDefault();
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = "move";
+  function onDragOverHandler(e: DragEvent) {
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = "move";
     }
   }
 
-  function handleDropOnRoom(targetRoomId: string, event: DragEvent) {
-    event.preventDefault();
-    if (!draggedTeam) return;
+  function onDropOnRoomHandler(targetRoomId: string, e: DragEvent) {
+    e.preventDefault();
+    if (!draggedTeamData) return;
 
-    const { team, sourceRoomId } = draggedTeam;
+    const { team, sourceRoomId } = draggedTeamData;
+    assignTeamLocally(team, sourceRoomId, targetRoomId);
+    draggedTeamData = null;
+  }
 
-    // Fjern fra kilde
+  function onDropOnPoolHandler(e: DragEvent) {
+    e.preventDefault();
+    if (!draggedTeamData || draggedTeamData.sourceRoomId === null) return;
+
+    const { team, sourceRoomId } = draggedTeamData;
+    assignTeamLocally(team, sourceRoomId, null);
+    draggedTeamData = null;
+  }
+
+  // Universell flytte-funksjon (brukes av både Drag-and-Drop og 1-Klikk Dropdown)
+  function assignTeamLocally(team: any, sourceRoomId: string | null, targetRoomId: string | null) {
+    // 1. Fjern fra kilde
     if (sourceRoomId === null) {
       unassignedPool = unassignedPool.filter((t) => t.entryId !== team.entryId);
     } else {
-      roomAssignments[sourceRoomId] = (roomAssignments[sourceRoomId] || []).filter(
-        (t) => t.entryId !== team.entryId
-      );
+      const currentInSource = roomAssignments[sourceRoomId] || [];
+      roomAssignments[sourceRoomId] = currentInSource.filter((t) => t.entryId !== team.entryId);
     }
 
-    // Legg til i målrom hvis ikke allerede der
-    if (!roomAssignments[targetRoomId]) {
-      roomAssignments[targetRoomId] = [];
-    }
-
-    const alreadyExists = roomAssignments[targetRoomId].some((t) => t.entryId === team.entryId);
-    if (!alreadyExists) {
-      roomAssignments[targetRoomId] = [...roomAssignments[targetRoomId], team];
-    }
-
-    draggedTeam = null;
-  }
-
-  function handleDropOnPool(event: DragEvent) {
-    event.preventDefault();
-    if (!draggedTeam || draggedTeam.sourceRoomId === null) return;
-
-    const { team, sourceRoomId } = draggedTeam;
-    roomAssignments[sourceRoomId] = (roomAssignments[sourceRoomId] || []).filter(
-      (t) => t.entryId !== team.entryId
-    );
-
-    const alreadyInPool = unassignedPool.some((t) => t.entryId === team.entryId);
-    if (!alreadyInPool) {
-      unassignedPool = [...unassignedPool, team];
-    }
-
-    draggedTeam = null;
-  }
-
-  function handleMoveToRoom(team: any, sourceRoomId: string | null, targetRoomId: string) {
-    if (sourceRoomId === null) {
-      unassignedPool = unassignedPool.filter((t) => t.entryId !== team.entryId);
+    // 2. Legg til i mål
+    if (targetRoomId === null) {
+      if (!unassignedPool.some((t) => t.entryId === team.entryId)) {
+        unassignedPool = [...unassignedPool, team];
+      }
     } else {
-      roomAssignments[sourceRoomId] = (roomAssignments[sourceRoomId] || []).filter(
-        (t) => t.entryId !== team.entryId
-      );
+      const currentInTarget = roomAssignments[targetRoomId] || [];
+      if (!currentInTarget.some((t) => t.entryId === team.entryId)) {
+        roomAssignments[targetRoomId] = [...currentInTarget, team];
+      }
     }
 
-    if (!roomAssignments[targetRoomId]) roomAssignments[targetRoomId] = [];
-    roomAssignments[targetRoomId] = [...roomAssignments[targetRoomId], team];
+    // Tving reaktiv oppdatering
+    roomAssignments = { ...roomAssignments };
   }
 
   function handleSaveAllRoomAssignments() {
@@ -254,16 +246,27 @@
       winningRoomId: selectedWinnerRoomId,
       winningScore: Number(winningScore),
       customMessage: customWinnerMessage || undefined,
-      authorName: "Stian (Admin)",
+      authorName: "Admin",
     });
     showSuccess("Vinnerrom kåret og publisert til Skrytevegg!");
+  }
+
+  function handleStartNewSeasonSubmit() {
+    if (!confirm(`Er du sikker på at du vil starte ny sesong: ${newSeasonName}?`)) {
+      return;
+    }
+    onStartNewSeason({
+      seasonName: newSeasonName,
+      resetPoints: resetPointsCheckbox,
+    });
+    showSuccess(`Ny sesong ${newSeasonName} er igangsatt!`);
   }
 
   function showSuccess(msg: string) {
     successMessage = msg;
     setTimeout(() => {
       successMessage = "";
-    }, 3000);
+    }, 3500);
   }
 </script>
 
@@ -285,7 +288,7 @@
                 Admin
               </span>
             </h2>
-            <p class="text-xs text-slate-400">FPL-import, Drag-and-Drop rom-tildeling og innstillinger</p>
+            <p class="text-xs text-slate-400">FPL-import, Drag-and-Drop rom-tildeling og sesongstyring</p>
           </div>
         </div>
 
@@ -341,7 +344,19 @@
             }`}
           >
             <Users class="w-3.5 h-3.5" />
-            <span>FPL Import & Drag-and-Drop Matching</span>
+            <span>FPL Import & Rom-matching</span>
+          </button>
+
+          <button
+            onclick={() => (activeTab = "season")}
+            class={`px-4 py-3 border-b-2 transition-colors flex items-center gap-1.5 ${
+              activeTab === "season"
+                ? "border-emerald-400 text-emerald-300 font-bold"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <RotateCcw class="w-3.5 h-3.5" />
+            <span>Ny Sesong & År</span>
           </button>
 
           <button
@@ -405,7 +420,7 @@
               <div class="flex items-center gap-3">
                 <div>
                   <label for="admin-fpl-league-id" class="text-[11px] font-bold text-slate-400 block mb-1">
-                    Hent fra FPL Classic League ID:
+                    FPL Classic League ID:
                   </label>
                   <div class="flex items-center gap-2">
                     <input
@@ -438,11 +453,13 @@
             </div>
 
             <!-- Drag and Drop Område -->
-            <div class="grid grid-cols-12 gap-4 flex-1 min-h-[380px]">
+            <div class="grid grid-cols-12 gap-4 flex-1 min-h-[400px]">
               <!-- Venstre: Ufordelte FPL-lag / Spillere -->
               <div
-                ondragover={handleDragOver}
-                ondrop={handleDropOnPool}
+                role="region"
+                aria-label="Ufordelte spillere"
+                ondragover={onDragOverHandler}
+                ondrop={onDropOnPoolHandler}
                 class="col-span-4 rounded-xl bg-slate-950/80 border border-slate-800 p-3 flex flex-col min-h-0"
               >
                 <div class="flex items-center justify-between pb-2 border-b border-slate-800 shrink-0">
@@ -450,42 +467,63 @@
                     <Users class="w-3.5 h-3.5 text-fpl-cyan" />
                     <span>Spillerpool ({unassignedPool.length})</span>
                   </h4>
-                  <span class="text-[10px] text-slate-500">Dra over til rom</span>
+                  <span class="text-[10px] text-slate-500">Dra eller velg rom</span>
                 </div>
 
                 <div class="flex-1 overflow-y-auto space-y-1.5 pt-2 pr-1">
                   {#if unassignedPool.length === 0}
                     <div class="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs">
-                      <p>Ingen ufordelte spillere i poolen.</p>
-                      <p class="text-[11px] text-slate-600 mt-1">Trykk "Hent Lag" eller dra spillere ut fra et rom.</p>
+                      <p>Ingen ufordelte spillere.</p>
+                      <p class="text-[11px] text-slate-600 mt-1">Trykk "Hent Lag & Spillere" ovenfor.</p>
                     </div>
                   {/if}
 
                   {#each unassignedPool as team (team.entryId)}
                     <div
+                      role="listitem"
                       draggable="true"
-                      ondragstart={(e) => handleDragStart(team, null, e)}
-                      class="p-2 rounded-lg bg-slate-900 border border-slate-700/80 hover:border-fpl-cyan text-xs cursor-grab active:cursor-grabbing transition-colors group flex items-center justify-between"
+                      ondragstart={(e) => onDragStartHandler(team, null, e)}
+                      class="p-2 rounded-lg bg-slate-900 border border-slate-700/80 hover:border-fpl-cyan text-xs cursor-grab active:cursor-grabbing transition-colors space-y-1.5"
                     >
-                      <div class="min-w-0">
-                        <p class="font-bold text-white truncate text-[11px]">{team.teamName}</p>
-                        <p class="text-[10px] text-slate-400 truncate">{team.managerName}</p>
+                      <div class="flex items-center justify-between">
+                        <div class="min-w-0">
+                          <p class="font-bold text-white truncate text-[11px]">{team.teamName}</p>
+                          <p class="text-[10px] text-slate-400 truncate">{team.managerName}</p>
+                        </div>
+                        <span class="text-[10px] font-mono text-fpl-cyan font-bold shrink-0">
+                          {team.pts ?? team.currentGwPoints ?? 0} pts
+                        </span>
                       </div>
-                      <span class="text-[10px] font-mono text-fpl-cyan font-bold shrink-0">
-                        {team.pts ?? team.currentGwPoints ?? 0} pts
-                      </span>
+
+                      <!-- Hurtig-velger for 1-klikk tildeling -->
+                      <div class="flex items-center gap-1">
+                        <select
+                          onchange={(e) => {
+                            const val = (e.target as HTMLSelectElement).value;
+                            if (val) assignTeamLocally(team, null, val);
+                          }}
+                          class="w-full text-[10px] px-1.5 py-0.5 rounded bg-slate-950 border border-slate-700 text-slate-300 focus:border-fpl-cyan focus:outline-none"
+                        >
+                          <option value="">Flytt til Rom...</option>
+                          {#each rooms as r}
+                            <option value={r._id}>{r.name}</option>
+                          {/each}
+                        </select>
+                      </div>
                     </div>
                   {/each}
                 </div>
               </div>
 
-              <!-- Høyre: Rom 1–12 Rutenett (Drop-targets) -->
+              <!-- Høyre: Rom A1–A12 Rutenett (Drop-targets) -->
               <div class="col-span-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 overflow-y-auto pr-1">
                 {#each rooms as room (room._id)}
                   <div
-                    ondragover={handleDragOver}
-                    ondrop={(e) => handleDropOnRoom(room._id, e)}
-                    class="rounded-xl bg-slate-950/60 border border-slate-800 p-2.5 flex flex-col min-h-[140px] hover:border-slate-600 transition-colors"
+                    role="region"
+                    aria-label={`Rom ${room.name}`}
+                    ondragover={onDragOverHandler}
+                    ondrop={(e) => onDropOnRoomHandler(room._id, e)}
+                    class="rounded-xl bg-slate-950/60 border border-slate-800 p-2.5 flex flex-col min-h-[145px] hover:border-slate-600 transition-colors"
                   >
                     <!-- Rom Header -->
                     <div class="flex items-center justify-between pb-1.5 border-b border-slate-800 shrink-0">
@@ -497,7 +535,7 @@
                         <span class="font-bold text-xs text-white truncate">{room.name}</span>
                       </div>
                       <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-900 text-slate-400">
-                        {(roomAssignments[room._id] || []).length}
+                        {(roomAssignments[room._id] || []).length} spillere
                       </span>
                     </div>
 
@@ -511,8 +549,9 @@
 
                       {#each (roomAssignments[room._id] || []) as team (team.entryId)}
                         <div
+                          role="listitem"
                           draggable="true"
-                          ondragstart={(e) => handleDragStart(team, room._id, e)}
+                          ondragstart={(e) => onDragStartHandler(team, room._id, e)}
                           class="p-1.5 rounded bg-slate-900/90 border border-slate-800 hover:border-indigo-500 text-[11px] cursor-grab active:cursor-grabbing flex items-center justify-between gap-1 group"
                         >
                           <div class="truncate min-w-0">
@@ -527,8 +566,8 @@
                           <button
                             type="button"
                             title="Fjern til spillerpool"
-                            onclick={() => handleMoveToRoom(team, room._id, "")}
-                            class="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-rose-400 text-xs transition-opacity p-0.5"
+                            onclick={() => assignTeamLocally(team, room._id, null)}
+                            class="text-slate-500 hover:text-rose-400 text-xs px-1 hover:bg-slate-800 rounded"
                           >
                             ×
                           </button>
@@ -542,7 +581,63 @@
           </div>
         {/if}
 
-        <!-- Tab 2: Ligainnstillinger -->
+        <!-- Tab 2: Ny Sesong & Årsskifte -->
+        {#if activeTab === "season"}
+          <div class="p-6 space-y-5 overflow-y-auto flex-1 max-w-2xl mx-auto text-left">
+            <div class="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/30 space-y-2">
+              <div class="flex items-center gap-2 text-emerald-300 font-bold text-sm">
+                <RotateCcw class="w-4 h-4" />
+                <span>Start Ny Sesong / Nytt År</span>
+              </div>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                Når en ny FPL-sesong starter på sensommeren (eller ved årsskiftet), kan du starte en ny sesong her. Gameweek tilbakestilles til runde 1, og nye kunngjøringer publiseres.
+              </p>
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <label for="admin-season-name" class="block text-xs font-semibold text-slate-300 mb-1">
+                  Sesongbetegnelse
+                </label>
+                <input
+                  id="admin-season-name"
+                  type="text"
+                  bind:value={newSeasonName}
+                  placeholder="f.eks. 2025/2026"
+                  class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white focus:border-emerald-400 focus:outline-none"
+                />
+              </div>
+
+              <div class="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <p class="text-xs font-bold text-white">Nullstill Poengsummer for Spillere</p>
+                  <p class="text-[11px] text-slate-400">Setter alle spilleres nåværende poeng til 0 for den nye sesongen.</p>
+                </div>
+                <button
+                  type="button"
+                  onclick={() => (resetPointsCheckbox = !resetPointsCheckbox)}
+                  class="text-emerald-400"
+                >
+                  {#if resetPointsCheckbox}
+                    <ToggleRight class="w-8 h-8 text-emerald-400" />
+                  {:else}
+                    <ToggleLeft class="w-8 h-8 text-slate-600" />
+                  {/if}
+                </button>
+              </div>
+
+              <button
+                onclick={handleStartNewSeasonSubmit}
+                class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs transition-all shadow-lg flex items-center justify-center gap-2"
+              >
+                <RotateCcw class="w-4 h-4" />
+                <span>Start Ny Sesong Nå</span>
+              </button>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Tab 3: Ligainnstillinger -->
         {#if activeTab === "settings"}
           <div class="p-5 space-y-4 overflow-y-auto flex-1">
             <div class="grid grid-cols-2 gap-4">
@@ -614,7 +709,7 @@
           </div>
         {/if}
 
-        <!-- Tab 3: Kår Månedsvinner -->
+        <!-- Tab 4: Kår Månedsvinner -->
         {#if activeTab === "winner"}
           <div class="p-5 space-y-4 overflow-y-auto flex-1">
             <div class="grid grid-cols-2 gap-4">
@@ -684,7 +779,7 @@
           </div>
         {/if}
 
-        <!-- Tab 4: Invitasjonskoder -->
+        <!-- Tab 5: Invitasjonskoder -->
         {#if activeTab === "invites"}
           <div class="p-5 space-y-4 overflow-y-auto flex-1">
             <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3">
@@ -743,7 +838,7 @@
           </div>
         {/if}
 
-        <!-- Tab 5: Database Seed -->
+        <!-- Tab 6: Database Seed -->
         {#if activeTab === "database"}
           <div class="p-5 space-y-4 overflow-y-auto flex-1 text-center">
             <div class="w-12 h-12 rounded-full bg-purple-950/60 border border-purple-500/40 text-purple-400 flex items-center justify-center mx-auto">
@@ -752,7 +847,7 @@
             <div>
               <h4 class="text-sm font-bold text-white">Seed standard Rom & Testdata</h4>
               <p class="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-                Oppretter Rom 1–12, realistiske FPL-lag og runderesultater, testmeldinger og vinnerhyllest hvis databasen er tom.
+                Oppretter Rom A1–A12, realistiske FPL-lag og runderesultater, testmeldinger og vinnerhyllest hvis databasen er tom.
               </p>
             </div>
 

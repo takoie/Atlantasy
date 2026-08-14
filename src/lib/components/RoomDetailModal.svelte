@@ -1,17 +1,38 @@
 <script lang="ts">
-  import { X, Users } from "lucide-svelte";
+  import { X, Users, Edit2, Check } from "lucide-svelte";
 
   let {
     room = null,
     isOpen = false,
     deductHits: _deductHits = true,
     onClose = () => {},
+    onUpdateRoomName = (_roomId: string, _newName: string) => {},
   }: {
     room?: any;
     isOpen?: boolean;
     deductHits?: boolean;
     onClose?: () => void;
+    onUpdateRoomName?: (roomId: string, newName: string) => void;
   } = $props();
+
+  let isEditingName = $state(false);
+  let nicknameInput = $state("");
+
+  $effect(() => {
+    if (room) {
+      // Trekk ut kallenavnet hvis det er i format "A1 - Kallenavn"
+      const parts = room.name.split(" - ");
+      nicknameInput = parts.length > 1 ? parts.slice(1).join(" - ") : room.name;
+    }
+  });
+
+  function handleSaveNickname() {
+    if (!room) return;
+    const cleanNick = nicknameInput.trim();
+    const finalName = cleanNick ? `A${room.roomNumber} - ${cleanNick}` : `A${room.roomNumber}`;
+    onUpdateRoomName(room._id, finalName);
+    isEditingName = false;
+  }
 </script>
 
 {#if isOpen && room}
@@ -23,18 +44,43 @@
       <div class="p-5 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <span
-            class="w-4 h-4 rounded-full"
+            class="w-4 h-4 rounded-full shrink-0"
             style={`background-color: ${room.accentColor || "#00ff87"}`}
           ></span>
           <div>
-            <div class="flex items-center gap-2">
-              <h2 class="text-base font-bold text-white">{room.name}</h2>
-              <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
-                Rom #{room.roomNumber}
-              </span>
-            </div>
+            {#if !isEditingName}
+              <div class="flex items-center gap-2">
+                <h2 class="text-base font-bold text-white">{room.name}</h2>
+                <button
+                  onclick={() => (isEditingName = true)}
+                  title="Endre rommets kallenavn"
+                  class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-fpl-cyan transition-colors"
+                >
+                  <Edit2 class="w-3.5 h-3.5" />
+                </button>
+              </div>
+            {:else}
+              <!-- Kallenavn Redigering -->
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-bold text-fpl-cyan font-mono">A{room.roomNumber} -</span>
+                <input
+                  type="text"
+                  bind:value={nicknameInput}
+                  onkeydown={(e) => e.key === "Enter" && handleSaveNickname()}
+                  placeholder="Skriv kallenavn for rommet..."
+                  class="px-2.5 py-1 text-xs rounded-lg bg-slate-950 border border-fpl-cyan text-white focus:outline-none w-48 font-semibold"
+                />
+                <button
+                  onclick={handleSaveNickname}
+                  class="p-1.5 rounded-lg bg-fpl-cyan text-slate-950 font-bold hover:bg-emerald-400 text-xs transition-colors flex items-center gap-1"
+                >
+                  <Check class="w-3.5 h-3.5" />
+                </button>
+              </div>
+            {/if}
+
             <p class="text-xs text-slate-400 mt-0.5">
-              {room.description || "Offisielt liga-rom"}
+              Rom {room.roomNumber} • {room.description || "Offisielt liga-rom"}
             </p>
           </div>
         </div>
@@ -64,7 +110,7 @@
             <span class="text-[10px] text-slate-400 font-medium uppercase tracking-wider block mb-1">
               Sesong Totalt
             </span>
-            <span class="text-xl font-black text-white font-mono">
+            <span class="text-xl font-black text-amber-400 font-mono">
               {room.seasonTotal ?? "--"} <span class="text-xs text-slate-400">pts</span>
             </span>
           </div>
@@ -73,56 +119,54 @@
             <span class="text-[10px] text-slate-400 font-medium uppercase tracking-wider block mb-1">
               Antall Spillere
             </span>
-            <span class="text-xl font-black text-indigo-400 font-mono">
-              {room.teams?.length ?? 0}
+            <span class="text-xl font-black text-indigo-300 font-mono">
+              {room.teamCount ?? (room.teams?.length || 0)}
             </span>
           </div>
         </div>
 
-        <!-- Spillerstall -->
+        <!-- Spillerliste -->
         <div>
-          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-1.5">
+          <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2.5 flex items-center gap-2">
             <Users class="w-3.5 h-3.5 text-fpl-cyan" />
-            <span>Spillere & Resultater</span>
+            <span>Spillere i dette rommet</span>
           </h3>
 
-          <div class="space-y-2">
-            {#each (room.teams || []) as team, idx (team.entryId)}
-              <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 flex items-center justify-between gap-3">
-                <div class="flex items-center gap-3 min-w-0">
-                  <div class="w-6 h-6 rounded bg-slate-800 flex items-center justify-center font-bold text-xs text-slate-400 shrink-0">
-                    #{idx + 1}
-                  </div>
-                  <div class="min-w-0">
-                    <p class="font-bold text-xs text-white truncate">{team.teamName}</p>
-                    <p class="text-[11px] text-slate-400 truncate">{team.managerName} (ID: {team.entryId})</p>
-                  </div>
-                </div>
-
-                <div class="text-right shrink-0">
-                  <div class="font-mono font-bold text-sm text-fpl-cyan">
-                    {team.effectivePoints ?? team.currentGwPoints} pts
-                  </div>
-                  {#if team.currentGwTransfersCost > 0}
-                    <div class="text-[10px] text-rose-400">
-                      -{team.currentGwTransfersCost} hits ({team.currentGwPoints} brutto)
+          {#if !room.teams || room.teams.length === 0}
+            <div class="p-6 text-center bg-slate-950/40 rounded-xl border border-slate-800 text-slate-500 text-xs">
+              Ingen spillere er registrert i dette rommet enda.
+            </div>
+          {:else}
+            <div class="space-y-2">
+              {#each room.teams as team, idx (team.entryId)}
+                <div
+                  class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between hover:border-slate-700 transition-colors"
+                >
+                  <div class="flex items-center gap-3">
+                    <div class="w-6 h-6 rounded-md bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-400 font-mono">
+                      #{idx + 1}
                     </div>
-                  {/if}
-                </div>
-              </div>
-            {/each}
-          </div>
-        </div>
-      </div>
+                    <div>
+                      <h4 class="text-xs font-bold text-white">{team.teamName}</h4>
+                      <p class="text-[11px] text-slate-400">{team.managerName}</p>
+                    </div>
+                  </div>
 
-      <!-- Modal Footer -->
-      <div class="p-4 border-t border-slate-800 bg-slate-950/60 flex justify-end">
-        <button
-          onclick={onClose}
-          class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors"
-        >
-          Lukk
-        </button>
+                  <div class="text-right">
+                    <span class="text-sm font-black text-fpl-cyan font-mono">
+                      {team.effectivePoints} pts
+                    </span>
+                    {#if team.currentGwTransfersCost > 0}
+                      <span class="text-[10px] text-rose-400 block font-mono">
+                        -{team.currentGwTransfersCost} hits
+                      </span>
+                    {/if}
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
       </div>
     </div>
   </div>

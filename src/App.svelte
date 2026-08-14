@@ -6,6 +6,7 @@
   import RoomDetailModal from "$lib/components/RoomDetailModal.svelte";
   import AdminModal from "$lib/components/AdminModal.svelte";
   import RegisterModal from "$lib/components/RegisterModal.svelte";
+  import WelcomeOnboarding from "$lib/components/WelcomeOnboarding.svelte";
 
   import { useQuery, useMutation } from "$lib/convex.svelte";
   import { api } from "../convex/_generated/api";
@@ -22,12 +23,6 @@
   const inviteCodesQuery = useQuery(api.admin.listInviteCodes);
   const usersQuery = useQuery(api.auth.listUsers);
 
-  // Chat Query
-  const chatQuery = useQuery(api.chat.getMessages, () => ({
-    channel: activeChatChannel,
-    roomId: activeChatChannel === "room" ? (activeRoomId as any) : undefined,
-  }));
-
   // Reaktiv State med Svelte 5 Runes
   let activeView = $state("leaderboard"); // "leaderboard" | "wall_of_fame"
   let activeSort = $state("live");         // "live" | "month" | "season"
@@ -36,6 +31,7 @@
   let activeUserId = $state<string | null>(null);
   let isSyncing = $state(false);
   let isChatOpen = $state(false);
+  let showOnboarding = $state(false);
 
   // Modals state
   let isRoomModalOpen = $state(false);
@@ -51,6 +47,8 @@
   const seedDataMutation = useMutation(api.fpl.seedDefaultData);
   const registerMutation = useMutation(api.auth.registerWithInvite);
   const batchAssignMutation = useMutation(api.rooms.batchSaveRoomAssignments);
+  const updateRoomMutation = useMutation(api.rooms.updateRoom);
+  const startNewSeasonMutation = useMutation(api.admin.startNewSeason);
 
   // Utledet data med fallback
   let rooms = $derived(roomsQuery.data ?? []);
@@ -59,11 +57,6 @@
   let pinnedAnnouncement = $derived(pinnedAnnQuery.data ?? null);
   let inviteCodes = $derived(inviteCodesQuery.data ?? []);
   let users = $derived(usersQuery.data ?? []);
-  let messages = $derived(chatQuery.data ?? []);
-
-  let isConvexConnected = $derived(
-    !roomsQuery.error && roomsQuery.data !== undefined
-  );
 
   // Nåværende aktiv bruker
   let currentUser = $derived(
@@ -77,13 +70,35 @@
       }
   );
 
-  // Nåværende aktivt rom
+  // Chat Query reaktiv på aktivt rom
   let activeRoomId = $derived(
     selectedRoomId || (currentUser?.roomId ?? rooms[0]?._id)
   );
   let currentRoom = $derived(rooms.find((r) => r._id === activeRoomId) || rooms[0]);
 
+  const chatQuery = useQuery(api.chat.getMessages, () => ({
+    channel: activeChatChannel,
+    roomId: activeChatChannel === "room" ? (activeRoomId as any) : undefined,
+  }));
+  let messages = $derived(chatQuery.data ?? []);
+
+  let isConvexConnected = $derived(
+    !roomsQuery.error && roomsQuery.data !== undefined
+  );
+
   onMount(async () => {
+    // Sjekk om brukeren allerede har fullført onboarding / lagret profil
+    const savedUserId = localStorage.getItem("atlantasy_current_user_id");
+    const hasOnboarded = localStorage.getItem("atlantasy_has_onboarded");
+
+    if (savedUserId) {
+      activeUserId = savedUserId;
+      showOnboarding = false;
+    } else if (!hasOnboarded) {
+      // Førstegangsbruker: Vis velkomstside
+      showOnboarding = true;
+    }
+
     // Initialiser standarddata hvis databasen er tom
     setTimeout(async () => {
       if (roomsQuery.data && roomsQuery.data.length === 0) {
@@ -97,6 +112,19 @@
   });
 
   // Handlers
+  function handleOnboardingComplete(userId: string, _userData: any) {
+    activeUserId = userId;
+    localStorage.setItem("atlantasy_current_user_id", userId);
+    localStorage.setItem("atlantasy_has_onboarded", "true");
+    showOnboarding = false;
+  }
+
+  function handleAdminBypass() {
+    localStorage.setItem("atlantasy_has_onboarded", "true");
+    showOnboarding = false;
+    isAdminModalOpen = true;
+  }
+
   async function handleSendMessage(content: string, channel: string, roomId?: string) {
     if (!currentUser) return;
     try {
@@ -125,11 +153,32 @@
     modalRoom = room;
     isRoomModalOpen = true;
   }
+
+  async function handleUpdateRoomName(roomId: string, newName: string) {
+    try {
+      await updateRoomMutation.mutate({
+        roomId: roomId as any,
+        name: newName,
+      });
+    } catch (err) {
+      console.error("Kunne ikke oppdatere romnavn:", err);
+    }
+  }
 </script>
 
 <main
   class="flex flex-col h-screen w-screen bg-[#070a12] text-slate-100 overflow-hidden font-sans select-none"
 >
+  <!-- Velkomstside for førstegangsbrukere -->
+  {#if showOnboarding}
+    <WelcomeOnboarding
+      {rooms}
+      onComplete={handleOnboardingComplete}
+      onAdminBypass={handleAdminBypass}
+      onRegisterWithInvite={(data) => registerMutation.mutate(data)}
+    />
+  {/if}
+
   <!-- Frameless Custom Titlebar -->
   <TitleBar
     currentGw={settings?.currentGameweek ?? 26}
@@ -203,7 +252,7 @@
               </span>
               <span class="text-2xl">🏆</span>
             </div>
-            <h3 class="text-lg font-black text-white">Rom 1 - The Devs</h3>
+            <h3 class="text-lg font-black text-white">A1 - The Devs</h3>
             <p class="text-xs text-slate-300 leading-relaxed">
               Vant med et spektakulært snitt på <strong class="text-amber-300">76.0 poeng</strong>. Stian Taknes og Magnus Carlsen dro lasset!
             </p>
@@ -220,7 +269,7 @@
               </span>
               <span class="text-2xl">🥈</span>
             </div>
-            <h3 class="text-lg font-black text-white">Rom 6 - Data Wizards</h3>
+            <h3 class="text-lg font-black text-white">A6 - Data Wizards</h3>
             <p class="text-xs text-slate-300 leading-relaxed">
               Knuste motstanden i juleprogrammet med sitt dype prediksjonsoppsett.
             </p>
@@ -251,6 +300,7 @@
     isOpen={isRoomModalOpen}
     deductHits={settings?.deductTransferHits ?? true}
     onClose={() => (isRoomModalOpen = false)}
+    onUpdateRoomName={handleUpdateRoomName}
   />
 
   <AdminModal
@@ -264,6 +314,7 @@
     onDeclareWinner={(w) => declareWinnerMutation.mutate(w)}
     onSeedData={() => seedDataMutation.mutate({})}
     onBatchSaveAssignments={(assignments) => batchAssignMutation.mutate({ assignments })}
+    onStartNewSeason={(params) => startNewSeasonMutation.mutate(params)}
   />
 
   <RegisterModal
@@ -274,6 +325,8 @@
       try {
         const res = await registerMutation.mutate(data);
         activeUserId = res.userId;
+        localStorage.setItem("atlantasy_current_user_id", res.userId);
+        localStorage.setItem("atlantasy_has_onboarded", "true");
         isRegisterModalOpen = false;
         alert("Registrering fullført! Velkommen til ligaen.");
       } catch (err: any) {

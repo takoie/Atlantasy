@@ -238,3 +238,45 @@ export const declareMonthlyWinner = mutation({
     });
   },
 });
+
+/**
+ * Starter en ny sesong (resette poeng eller klargjøre for nytt år)
+ */
+export const startNewSeason = mutation({
+  args: {
+    seasonName: v.string(), // f.eks. "2025/2026"
+    resetPoints: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const settings = await ctx.db.query("league_settings").first();
+    if (settings) {
+      await ctx.db.patch(settings._id, {
+        currentGameweek: 1,
+        lastSyncedAt: Date.now(),
+      });
+    }
+
+    if (args.resetPoints) {
+      const allTeams = await ctx.db.query("fpl_teams").collect();
+      for (const t of allTeams) {
+        await ctx.db.patch(t._id, {
+          totalPoints: 0,
+          currentGwPoints: 0,
+          currentGwTransfersCost: 0,
+          lastUpdated: Date.now(),
+        });
+      }
+    }
+
+    // Publiser sesongstart-kunngjøring
+    await ctx.db.insert("announcements", {
+      title: `🏁 Ny Sesong Startet: ${args.seasonName}`,
+      content: `Velkommen til ny FPL-sesong (${args.seasonName})! Alle poengsummer er klargjort og kampen om pokalen starter nå i Gameweek 1. Lykke til til alle rom A1–A12!`,
+      type: "league_update",
+      authorName: "Admin",
+      isPinned: true,
+      createdAt: Date.now(),
+    });
+  },
+});
+

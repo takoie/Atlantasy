@@ -57,20 +57,20 @@ export const seedDefaultData = mutation({
       adminPin: "1234",
     });
 
-    // 2. Farger for Rom 1–12
+    // 2. Farger for Rom A1–A12
     const roomPalettes = [
-      { num: 1, name: "Rom 1 - The Devs", color: "#00ff87", desc: "Systemutvikling & Arkitektur" },
-      { num: 2, name: "Rom 2 - Wall Street", color: "#6366f1", desc: "Økonomi & Finans" },
-      { num: 3, name: "Rom 3 - The Closers", color: "#e90052", desc: "Salg & Nøkkelkunder" },
-      { num: 4, name: "Rom 4 - Creative Hub", color: "#a855f7", desc: "Design & Merkevare" },
-      { num: 5, name: "Rom 5 - Support Kings", color: "#06b6d4", desc: "Kundesenter & Drift" },
-      { num: 6, name: "Rom 6 - Data Wizards", color: "#3b82f6", desc: "BI, Analytics & AI" },
-      { num: 7, name: "Rom 7 - HR & Culture", color: "#ec4899", desc: "Folk & Trivsel" },
-      { num: 8, name: "Rom 8 - The Board", color: "#fbbf24", desc: "Ledelsen & Styret" },
-      { num: 9, name: "Rom 9 - Cloud Ops", color: "#10b981", desc: "DevOps & Infrastruktur" },
-      { num: 10, name: "Rom 10 - Product Pioneers", color: "#f97316", desc: "Produkt & UX" },
-      { num: 11, name: "Rom 11 - Legal Eagles", color: "#64748b", desc: "Jus & Samsvar" },
-      { num: 12, name: "Rom 12 - Growth Lab", color: "#14b8a6", desc: "Markedsføring & Vekst" },
+      { num: 1, name: "A1 - The Devs", color: "#00ff87", desc: "Systemutvikling & Arkitektur" },
+      { num: 2, name: "A2 - Wall Street", color: "#6366f1", desc: "Økonomi & Finans" },
+      { num: 3, name: "A3 - The Closers", color: "#e90052", desc: "Salg & Nøkkelkunder" },
+      { num: 4, name: "A4 - Creative Hub", color: "#a855f7", desc: "Design & Merkevare" },
+      { num: 5, name: "A5 - Support Kings", color: "#06b6d4", desc: "Kundesenter & Drift" },
+      { num: 6, name: "A6 - Data Wizards", color: "#3b82f6", desc: "BI, Analytics & AI" },
+      { num: 7, name: "A7 - HR & Culture", color: "#ec4899", desc: "Folk & Trivsel" },
+      { num: 8, name: "A8 - The Board", color: "#fbbf24", desc: "Ledelsen & Styret" },
+      { num: 9, name: "A9 - Cloud Ops", color: "#10b981", desc: "DevOps & Infrastruktur" },
+      { num: 10, name: "A10 - Product Pioneers", color: "#f97316", desc: "Produkt & UX" },
+      { num: 11, name: "A11 - Legal Eagles", color: "#64748b", desc: "Jus & Samsvar" },
+      { num: 12, name: "A12 - Growth Lab", color: "#14b8a6", desc: "Markedsføring & Vekst" },
     ];
 
     const createdRooms = [];
