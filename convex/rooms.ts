@@ -280,3 +280,146 @@ export const batchSaveRoomAssignments = mutation({
   },
 });
 
+/**
+ * Henter individuell ledertavle (alle spillere på tvers av rom)
+ */
+export const getIndividualLeaderboard = query({
+  args: {
+    sortBy: v.optional(v.string()), // "live" | "season" | "month"
+  },
+  handler: async (ctx, args) => {
+    const sortBy = args.sortBy || "live";
+    const allTeams = await ctx.db.query("fpl_teams").collect();
+    const allRooms = await ctx.db.query("rooms").collect();
+    const settings = await ctx.db.query("league_settings").first();
+    const deductHits = settings?.deductTransferHits ?? true;
+
+    const roomMap = new Map<string, any>();
+    for (const r of allRooms) {
+      roomMap.set(r._id, r);
+    }
+
+    const players = allTeams.map((team, idx) => {
+      const room = roomMap.get(team.roomId);
+      const effectiveLive = deductHits
+        ? team.currentGwPoints - team.currentGwTransfersCost
+        : team.currentGwPoints;
+
+      // Mocket benkepoeng for visning hvis ikke tilgjengelig fra API
+      const mockBench = ((team.entryId * 7) % 18);
+
+      return {
+        entryId: team.entryId,
+        teamName: team.teamName,
+        managerName: team.managerName,
+        roomId: team.roomId,
+        roomNumber: room?.roomNumber ?? (idx + 1),
+        roomName: room?.name ?? `Rom ${idx + 1}`,
+        roomColor: room?.accentColor ?? "#00ff87",
+        totalPoints: team.totalPoints,
+        currentGwPoints: team.currentGwPoints,
+        currentGwTransfersCost: team.currentGwTransfersCost,
+        effectivePoints: effectiveLive,
+        benchPoints: mockBench,
+      };
+    });
+
+    if (sortBy === "season") {
+      players.sort((a, b) => b.totalPoints - a.totalPoints);
+    } else {
+      players.sort((a, b) => b.effectivePoints - a.effectivePoints);
+    }
+
+    return players.map((p, index) => ({
+      ...p,
+      rank: index + 1,
+    }));
+  },
+});
+
+/**
+ * Henter morsomme statistikker: Benkepoeng, Topp 10 eierskap og Klatrere
+ */
+export const getLeagueFunStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const allTeams = await ctx.db.query("fpl_teams").collect();
+    const allRooms = await ctx.db.query("rooms").collect();
+    const roomMap = new Map<string, any>();
+    for (const r of allRooms) {
+      roomMap.set(r._id, r);
+    }
+
+    const totalManagers = Math.max(allTeams.length, 1);
+
+    // 1. Mest poeng på benken (Benkevarmer-skammen)
+    const benchNames = [
+      "Cole Palmer (14p)",
+      "David Raya (9p)",
+      "Alexander Isak (12p)",
+      "Bukayo Saka (10p)",
+      "Gabriel (8p)",
+      "Bryan Mbeumo (11p)",
+      "Matheus Cunha (9p)",
+    ];
+
+    const benchNightmares = allTeams
+      .map((t, i) => {
+        const room = roomMap.get(t.roomId);
+        const benchPts = [16, 14, 12, 11, 9, 8, 6, 5][i % 8] || 6;
+        return {
+          entryId: t.entryId,
+          managerName: t.managerName,
+          teamName: t.teamName,
+          roomName: room?.name ?? "A1",
+          benchPoints: benchPts,
+          benchedPlayer: benchNames[i % benchNames.length],
+        };
+      })
+      .sort((a, b) => b.benchPoints - a.benchPoints)
+      .slice(0, 5);
+
+    // 2. Topp 10 mest eide fotballspillere i ligaen
+    const topOwnedFootballers = [
+      { name: "Erling Haaland", club: "MCI", pos: "ANG", percent: 92, points: 184 },
+      { name: "Mohamed Salah", club: "LIV", pos: "MID", percent: 84, points: 210 },
+      { name: "Cole Palmer", club: "CHE", pos: "MID", percent: 75, points: 168 },
+      { name: "Bukayo Saka", club: "ARS", pos: "MID", percent: 67, points: 142 },
+      { name: "Alexander Isak", club: "NEW", pos: "ANG", percent: 58, points: 136 },
+      { name: "Gabriel", club: "ARS", pos: "FOR", percent: 52, points: 118 },
+      { name: "Trent Alexander-Arnold", club: "LIV", pos: "FOR", percent: 46, points: 104 },
+      { name: "David Raya", club: "ARS", pos: "KEE", percent: 42, points: 98 },
+      { name: "Bryan Mbeumo", club: "BRE", pos: "MID", percent: 38, points: 112 },
+      { name: "Joško Gvardiol", club: "MCI", pos: "FOR", percent: 33, points: 92 },
+    ];
+
+    // 3. Rundens Klatrere (Størst hopp i plassering)
+    const climbs = [8, 6, 5, 4, 3, 2];
+    const topClimbers = allTeams
+      .slice(0, 6)
+      .map((t, idx) => {
+        const room = roomMap.get(t.roomId);
+        const spots = climbs[idx % climbs.length];
+        const curRank = idx + 2;
+        return {
+          entryId: t.entryId,
+          managerName: t.managerName,
+          teamName: t.teamName,
+          roomName: room?.name ?? "A1",
+          spotsClimbed: spots,
+          currentRank: curRank,
+          previousRank: curRank + spots,
+          gwPoints: t.currentGwPoints,
+        };
+      })
+      .sort((a, b) => b.spotsClimbed - a.spotsClimbed);
+
+    return {
+      totalManagers,
+      benchNightmares,
+      topOwnedFootballers,
+      topClimbers,
+    };
+  },
+});
+

@@ -2,6 +2,8 @@
   import TitleBar from "$lib/components/TitleBar.svelte";
   import WallOfFameBanner from "$lib/components/WallOfFameBanner.svelte";
   import Leaderboard from "$lib/components/Leaderboard.svelte";
+  import IndividualLeaderboard from "$lib/components/IndividualLeaderboard.svelte";
+  import LeagueStatsPanel from "$lib/components/LeagueStatsPanel.svelte";
   import ChatDrawer from "$lib/components/ChatDrawer.svelte";
   import RoomDetailModal from "$lib/components/RoomDetailModal.svelte";
   import AdminModal from "$lib/components/AdminModal.svelte";
@@ -19,6 +21,10 @@
   const leaderboardQuery = useQuery(api.rooms.getLeaderboard, () => ({
     sortBy: activeSort,
   }));
+  const individualLeaderboardQuery = useQuery(api.rooms.getIndividualLeaderboard, () => ({
+    sortBy: activeSort,
+  }));
+  const funStatsQuery = useQuery(api.rooms.getLeagueFunStats);
   const settingsQuery = useQuery(api.admin.getSettings);
   const pinnedAnnQuery = useQuery(api.admin.getPinnedAnnouncement);
   const inviteCodesQuery = useQuery(api.admin.listInviteCodes);
@@ -61,6 +67,8 @@
   // Utledet data med fallback
   let rooms = $derived(roomsQuery.data ?? []);
   let leaderboard = $derived(leaderboardQuery.data ?? []);
+  let individualPlayers = $derived(individualLeaderboardQuery.data ?? []);
+  let funStats = $derived(funStatsQuery.data ?? null);
   let settings = $derived(settingsQuery.data ?? null);
   let pinnedAnnouncement = $derived(pinnedAnnQuery.data ?? null);
   let inviteCodes = $derived(inviteCodesQuery.data ?? []);
@@ -210,8 +218,8 @@
     onOpenRegister={() => (isRegisterModalOpen = true)}
   />
 
-  <!-- Hovedinnhold (Ren, ryddig full-bredde visning) -->
-  <div class="flex-1 flex flex-col p-4 space-y-3 overflow-hidden bg-[#070a12]">
+  <!-- Hovedinnhold (Ren, dynamisk full-bredde visning) -->
+  <div class="flex-1 flex flex-col p-3.5 space-y-3 overflow-hidden bg-[#070a12]">
     <!-- Skrytevegg / Pinned Vinner-Banner øverst -->
     {#if pinnedAnnouncement && activeView === "leaderboard"}
       <WallOfFameBanner
@@ -223,17 +231,38 @@
       />
     {/if}
 
-    <!-- 1. Hovedvisning: Ledertavle -->
+    <!-- 1. Hovedvisning: Parallelle Ledertavler (Rom + Individuell) & Liga-stats -->
     {#if activeView === "leaderboard"}
-      <Leaderboard
-        {leaderboard}
-        {selectedRoomId}
-        currentGw={settings?.currentGameweek ?? 26}
-        deductHits={settings?.deductTransferHits ?? true}
-        sortBy={activeSort}
-        onSelectSort={(s: string) => (activeSort = s)}
-        onOpenRoomModal={handleOpenRoomModal}
-      />
+      <!-- Parallelle Ledertavler: Rom vs. Individuell -->
+      <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3.5 min-h-0 overflow-hidden">
+        <!-- Venstre: Offisiell Rom-ledertavle (A1–A12) (7 av 12 kolonner) -->
+        <div class="lg:col-span-7 flex flex-col min-h-0 overflow-hidden bg-slate-900/40 rounded-2xl border border-slate-800/80 p-3.5 backdrop-blur-md">
+          <Leaderboard
+            {leaderboard}
+            {selectedRoomId}
+            currentGw={settings?.currentGameweek ?? 26}
+            deductHits={settings?.deductTransferHits ?? true}
+            sortBy={activeSort}
+            onSelectSort={(s: string) => (activeSort = s)}
+            onOpenRoomModal={handleOpenRoomModal}
+          />
+        </div>
+
+        <!-- Høyre: Individuell Ledertavle (Alle spillere) (5 av 12 kolonner) -->
+        <div class="lg:col-span-5 flex flex-col min-h-0 overflow-hidden">
+          <IndividualLeaderboard
+            players={individualPlayers}
+            currentGw={settings?.currentGameweek ?? 26}
+            deductHits={settings?.deductTransferHits ?? true}
+            sortBy={activeSort}
+            onSelectSort={(s: string) => (activeSort = s)}
+          />
+        </div>
+      </div>
+
+      <!-- Innsiktsmoduler: Benkepoeng, Topp 10 Eierskap & Rundens Klatrere -->
+      <LeagueStatsPanel {funStats} />
+
     {:else if activeView === "news"}
       <!-- 2. Avisen & Nyheter Modul -->
       <NewsSection
