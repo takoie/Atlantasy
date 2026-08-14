@@ -178,37 +178,42 @@ export const declareMonthlyWinner = mutation({
   args: {
     monthKey: v.string(),
     monthName: v.string(),
-    winningRoomId: v.id("rooms"),
+    winnerType: v.optional(v.string()), // "room" | "individual"
+    winningRoomId: v.optional(v.id("rooms")),
+    winnerManagerName: v.optional(v.string()),
+    winnerTeamName: v.optional(v.string()),
     winningScore: v.number(),
     customMessage: v.optional(v.string()),
     authorName: v.string(),
   },
   handler: async (ctx, args) => {
-    const room = await ctx.db.get(args.winningRoomId);
-    if (!room) throw new Error("Rommet finnes ikke.");
+    const isIndividual = args.winnerType === "individual";
+    const room = args.winningRoomId ? await ctx.db.get(args.winningRoomId) : null;
 
-    // Lagre i monthly_standings
-    const existing = await ctx.db
-      .query("monthly_standings")
-      .withIndex("by_monthKey", (q) => q.eq("monthKey", args.monthKey))
-      .first();
+    // Lagre i monthly_standings hvis rom
+    if (args.winningRoomId) {
+      const existing = await ctx.db
+        .query("monthly_standings")
+        .withIndex("by_monthKey", (q) => q.eq("monthKey", args.monthKey))
+        .first();
 
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        winningRoomId: args.winningRoomId,
-        winningScore: args.winningScore,
-        isCompleted: true,
-      });
-    } else {
-      await ctx.db.insert("monthly_standings", {
-        monthKey: args.monthKey,
-        monthName: args.monthName,
-        gameweekStart: 1,
-        gameweekEnd: 4,
-        winningRoomId: args.winningRoomId,
-        winningScore: args.winningScore,
-        isCompleted: true,
-      });
+      if (existing) {
+        await ctx.db.patch(existing._id, {
+          winningRoomId: args.winningRoomId,
+          winningScore: args.winningScore,
+          isCompleted: true,
+        });
+      } else {
+        await ctx.db.insert("monthly_standings", {
+          monthKey: args.monthKey,
+          monthName: args.monthName,
+          gameweekStart: 1,
+          gameweekEnd: 4,
+          winningRoomId: args.winningRoomId,
+          winningScore: args.winningScore,
+          isCompleted: true,
+        });
+      }
     }
 
     // Unpin eksisterende kunngjøringer
@@ -222,15 +227,30 @@ export const declareMonthlyWinner = mutation({
     }
 
     // Sett inn offisiell vinnerkunngjøring
-    const messageContent =
-      args.customMessage ||
-      `Gratulerer til ${room.name} som månedens ubestridte vinner for ${args.monthName} med et fantastisk snitt på ${args.winningScore} poeng! Pokalen heises til topps! 🏆✨`;
+    let title = "";
+    let defaultContent = "";
+
+    if (isIndividual) {
+      const manager = args.winnerManagerName || "Månedens Spiller";
+      title = `🏆 Månedens Individuelle Vinner: ${manager} (${args.monthName})`;
+      defaultContent = `Gratulerer til ${manager}${args.winnerTeamName ? ` (${args.winnerTeamName})` : ""} som månedens suverene individuelle poengkonge for ${args.monthName} med hele ${args.winningScore} poeng! Pokalen heises til topps! 👑✨`;
+    } else {
+      const rName = room?.name || "Vinnerrom";
+      title = `🏆 Månedens Vinnerrom: ${rName} (${args.monthName})`;
+      defaultContent = `Gratulerer til ${rName} som månedens ubestridte vinner for ${args.monthName} med et fantastisk snitt på ${args.winningScore} poeng! Pokalen heises til topps! 🏆✨`;
+    }
+
+    const messageContent = args.customMessage || defaultContent;
 
     await ctx.db.insert("announcements", {
-      title: `🏆 Månedens Vinner: ${room.name} (${args.monthName})`,
+      title,
       content: messageContent,
-      type: "winner_celebration",
+      type: isIndividual ? "individual_winner" : "winner_celebration",
+      winnerType: args.winnerType || "room",
+      winnerName: isIndividual ? args.winnerManagerName : room?.name,
+      winnerTeamName: args.winnerTeamName,
       winningRoomId: args.winningRoomId,
+      winningScore: args.winningScore,
       monthName: args.monthName,
       authorName: args.authorName,
       isPinned: true,

@@ -128,13 +128,17 @@ export default defineSchema({
     .index("by_channel_and_createdAt", ["channel", "createdAt"])
     .index("by_roomId_and_createdAt", ["roomId", "createdAt"]),
 
-  // Admin Announcements & Skrytevegg (Wall of Fame)
+  // Admin Announcements & Skrytevegg (Wall of Fame) - Støtter både rom- og individuelle vinnere
   announcements: defineTable({
     title: v.string(),
     content: v.string(),
-    type: v.string(),              // "winner_celebration" | "league_update" | "admin_alert"
+    type: v.string(),              // "winner_celebration" | "individual_winner" | "league_update" | "admin_alert"
+    winnerType: v.optional(v.string()), // "room" | "individual"
+    winnerName: v.optional(v.string()), // f.eks. "Magnus Carlsen" eller "A1 - The Devs"
+    winnerTeamName: v.optional(v.string()), // f.eks. "Checkmate FC"
     winningRoomId: v.optional(v.id("rooms")),
     monthName: v.optional(v.string()),
+    winningScore: v.optional(v.number()),
     authorName: v.string(),
     isPinned: v.boolean(),
     createdAt: v.number(),

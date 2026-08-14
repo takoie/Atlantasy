@@ -60,8 +60,11 @@
   let newSeasonName = $state("2025/2026");
   let resetPointsCheckbox = $state(true);
 
-  // Vinnerkåring state
+  // Vinnerkåring state (Rom eller Individuell)
+  let winnerCategory = $state<"room" | "individual">("room");
   let selectedWinnerRoomId = $state("");
+  let winnerManagerName = $state("");
+  let winnerTeamName = $state("");
   let winningMonthName = $state("Januar");
   let winningScore = $state(76.0);
   let customWinnerMessage = $state("");
@@ -240,19 +243,31 @@
   }
 
   function handleWinnerSubmit() {
-    if (!selectedWinnerRoomId) {
+    if (winnerCategory === "room" && !selectedWinnerRoomId) {
       alert("Vennligst velg et vinnerrom!");
       return;
     }
+    if (winnerCategory === "individual" && !winnerManagerName.trim()) {
+      alert("Vennligst oppgi managers navn for den individuelle vinneren!");
+      return;
+    }
+
     onDeclareWinner({
       monthKey: winningMonthName.toLowerCase(),
       monthName: winningMonthName,
-      winningRoomId: selectedWinnerRoomId,
+      winnerType: winnerCategory,
+      winningRoomId: winnerCategory === "room" ? selectedWinnerRoomId : undefined,
+      winnerManagerName: winnerCategory === "individual" ? winnerManagerName.trim() : undefined,
+      winnerTeamName: winnerCategory === "individual" ? winnerTeamName.trim() : undefined,
       winningScore: Number(winningScore),
       customMessage: customWinnerMessage || undefined,
       authorName: "Admin",
     });
-    showSuccess("Vinnerrom kåret og publisert til Skrytevegg!");
+    showSuccess(
+      winnerCategory === "individual"
+        ? `Kåret ${winnerManagerName} som månedens individuelle vinner!`
+        : "Vinnerrom kåret og publisert til Skrytevegg!"
+    );
   }
 
   function handleStartNewSeasonSubmit() {
@@ -728,22 +743,67 @@
         <!-- Tab 4: Kår Månedsvinner -->
         {#if activeTab === "winner"}
           <div class="p-5 space-y-4 overflow-y-auto flex-1">
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label for="admin-winner-room" class="block text-xs font-semibold text-slate-300 mb-1">
-                  Månedens Vinnerrom
-                </label>
-                <select
-                  id="admin-winner-room"
-                  bind:value={selectedWinnerRoomId}
-                  class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white focus:border-amber-400 focus:outline-none"
+            <!-- Vinner Kategori Toggle (Rom vs Individuell) -->
+            <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+              <span class="block text-xs font-bold text-slate-300">Velg Vinner-kategori:</span>
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onclick={() => (winnerCategory = "room")}
+                  class={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                    winnerCategory === "room"
+                      ? "bg-amber-500 text-slate-950 shadow-md"
+                      : "bg-slate-900 text-slate-400 hover:text-white"
+                  }`}
                 >
-                  <option value="">Velg rom...</option>
-                  {#each rooms as r}
-                    <option value={r._id}>{r.name}</option>
-                  {/each}
-                </select>
+                  🏆 Månedens Vinnerrom (A1–A12)
+                </button>
+
+                <button
+                  type="button"
+                  onclick={() => (winnerCategory = "individual")}
+                  class={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                    winnerCategory === "individual"
+                      ? "bg-amber-500 text-slate-950 shadow-md"
+                      : "bg-slate-900 text-slate-400 hover:text-white"
+                  }`}
+                >
+                  👑 Månedens Individuelle Spiller
+                </button>
               </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              {#if winnerCategory === "room"}
+                <div>
+                  <label for="admin-winner-room" class="block text-xs font-semibold text-slate-300 mb-1">
+                    Månedens Vinnerrom
+                  </label>
+                  <select
+                    id="admin-winner-room"
+                    bind:value={selectedWinnerRoomId}
+                    class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white focus:border-amber-400 focus:outline-none"
+                  >
+                    <option value="">Velg rom...</option>
+                    {#each rooms as r}
+                      <option value={r._id}>{r.name}</option>
+                    {/each}
+                  </select>
+                </div>
+              {:else}
+                <div>
+                  <label for="admin-winner-manager" class="block text-xs font-semibold text-slate-300 mb-1">
+                    Vinnende Manager / Spiller
+                  </label>
+                  <input
+                    id="admin-winner-manager"
+                    type="text"
+                    bind:value={winnerManagerName}
+                    placeholder="f.eks. Magnus Carlsen"
+                    class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white focus:border-amber-400 focus:outline-none"
+                  />
+                </div>
+              {/if}
 
               <div>
                 <label for="admin-winner-month" class="block text-xs font-semibold text-slate-300 mb-1">
@@ -759,17 +819,34 @@
               </div>
             </div>
 
-            <div>
-              <label for="admin-winner-score" class="block text-xs font-semibold text-slate-300 mb-1">
-                Vinnende Snittscore
-              </label>
-              <input
-                id="admin-winner-score"
-                type="number"
-                step="0.1"
-                bind:value={winningScore}
-                class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white focus:border-amber-400 focus:outline-none"
-              />
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="admin-winner-score" class="block text-xs font-semibold text-slate-300 mb-1">
+                  {winnerCategory === "individual" ? "Individuell Månedsscore" : "Vinnende Romsnitt"}
+                </label>
+                <input
+                  id="admin-winner-score"
+                  type="number"
+                  step="0.1"
+                  bind:value={winningScore}
+                  class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white focus:border-amber-400 focus:outline-none"
+                />
+              </div>
+
+              {#if winnerCategory === "individual"}
+                <div>
+                  <label for="admin-winner-team" class="block text-xs font-semibold text-slate-300 mb-1">
+                    FPL Lagnavn (Valgfritt)
+                  </label>
+                  <input
+                    id="admin-winner-team"
+                    type="text"
+                    bind:value={winnerTeamName}
+                    placeholder="f.eks. Checkmate FC"
+                    class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white focus:border-amber-400 focus:outline-none"
+                  />
+                </div>
+              {/if}
             </div>
 
             <div>
@@ -780,7 +857,7 @@
                 id="admin-winner-msg"
                 rows="3"
                 bind:value={customWinnerMessage}
-                placeholder="Skriv en hyllest til vinnerrommet som vises på Skryteveggen..."
+                placeholder={winnerCategory === "individual" ? "Skriv en hyllest til den individuelle vinneren..." : "Skriv en hyllest til vinnerrommet..."}
                 class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white focus:border-amber-400 focus:outline-none"
               ></textarea>
             </div>
@@ -790,7 +867,7 @@
               class="w-full py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg"
             >
               <Trophy class="w-4 h-4" />
-              <span>Publiser Månedens Vinner til Skrytevegg</span>
+              <span>Publiser til Skrytevegg</span>
             </button>
           </div>
         {/if}

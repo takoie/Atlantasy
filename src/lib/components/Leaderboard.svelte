@@ -150,17 +150,14 @@
               {/if}
             </div>
 
-            <!-- Rom Farge og Tittel: <Rom X> - <Kallenavn> -->
+            <!-- Rom Farge og Tittel: A1 - <Kallenavn> (Uten spillertall-boks) -->
             <div class="flex items-center gap-2 truncate">
               <span
                 class="w-2.5 h-2.5 rounded-full shrink-0"
                 style={`background-color: ${room.accentColor || "#00ff87"}`}
               ></span>
               <span class="font-bold text-sm text-white truncate hover:text-fpl-cyan transition-colors">
-                {room.name}
-              </span>
-              <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700 font-mono">
-                {room.teamCount} spillere
+                {room.name.startsWith("Rom ") ? room.name.replace(/^Rom\s*(\d+)/, "A$1") : room.name}
               </span>
             </div>
           </div>
