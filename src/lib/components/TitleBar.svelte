@@ -39,41 +39,66 @@
     onToggleNews?: () => void;
   } = $props();
 
+  import { getCurrentWindow } from "@tauri-apps/api/window";
+
   let isMaximized = $state(false);
-  let tauriWindow = $state<any>(null);
+  let appWindow: any = null;
 
   onMount(async () => {
     try {
-      // Sjekk om appen kjører i Tauri Desktop
-      const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      tauriWindow = getCurrentWindow();
-      isMaximized = await tauriWindow.isMaximized();
-
-      // Lytt på vindusendringer
-      await tauriWindow.onResized(async () => {
-        isMaximized = await tauriWindow.isMaximized();
-      });
-    } catch {
-      // Nettlesermodus
+      appWindow = getCurrentWindow();
+      if (appWindow) {
+        isMaximized = await appWindow.isMaximized();
+        await appWindow.onResized(async () => {
+          isMaximized = await appWindow.isMaximized();
+        });
+      }
+    } catch (err) {
+      console.warn("Tauri API ikke tilgjengelig (kjører i nettleser):", err);
     }
   });
 
+  async function getWin() {
+    if (appWindow) return appWindow;
+    try {
+      appWindow = getCurrentWindow();
+      return appWindow;
+    } catch {
+      return null;
+    }
+  }
+
   async function handleMinimize() {
-    if (tauriWindow) {
-      await tauriWindow.minimize();
+    try {
+      const win = await getWin();
+      if (win) {
+        await win.minimize();
+      }
+    } catch (err) {
+      console.error("Kunne ikke minimere vindu:", err);
     }
   }
 
   async function handleToggleMaximize() {
-    if (tauriWindow) {
-      await tauriWindow.toggleMaximize();
-      isMaximized = await tauriWindow.isMaximized();
+    try {
+      const win = await getWin();
+      if (win) {
+        await win.toggleMaximize();
+        isMaximized = await win.isMaximized();
+      }
+    } catch (err) {
+      console.error("Kunne ikke toggle maksimering:", err);
     }
   }
 
   async function handleClose() {
-    if (tauriWindow) {
-      await tauriWindow.close();
+    try {
+      const win = await getWin();
+      if (win) {
+        await win.close();
+      }
+    } catch (err) {
+      console.error("Kunne ikke lukke vindu:", err);
     }
   }
 </script>
