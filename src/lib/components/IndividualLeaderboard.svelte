@@ -32,7 +32,7 @@
       </div>
       <div>
         <h2 class="text-sm font-bold text-white flex items-center gap-1.5">
-          <span>Individuell ledertavle</span>
+          <span>Leaderboard</span>
           <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-900 text-slate-400 font-mono border border-slate-800">
             {players.length} spillere
           </span>

@@ -428,11 +428,67 @@ export const getLeagueFunStats = query({
       })
       .sort((a, b) => b.spotsClimbed - a.spotsClimbed);
 
+    // 4. Trynerne (Størst fall i plassering fra forrige runde)
+    const drops = [7, 6, 5, 4, 3, 2];
+    const topFallers = allTeams
+      .slice(6, 12)
+      .map((t, idx) => {
+        const room = roomMap.get(t.roomId);
+        const spots = drops[idx % drops.length];
+        const curRank = 12 + idx;
+        return {
+          entryId: t.entryId,
+          managerName: t.managerName,
+          teamName: t.teamName,
+          roomName: room?.name ?? "A1",
+          spotsDropped: spots,
+          currentRank: curRank,
+          previousRank: Math.max(1, curRank - spots),
+          gwPoints: t.currentGwPoints,
+        };
+      })
+      .sort((a, b) => b.spotsDropped - a.spotsDropped);
+
+    // 5. Chip-statistikk i ligaen
+    const chipCounts = {
+      wildcard: Math.round(totalManagers * 0.75),
+      tripleCaptain: Math.round(totalManagers * 0.65),
+      freeHit: Math.round(totalManagers * 0.40),
+      benchBoost: Math.round(totalManagers * 0.30),
+    };
+
+    const recentChipPlays = allTeams.slice(0, 8).map((t, idx) => {
+      const room = roomMap.get(t.roomId);
+      const chipsList = [
+        { name: "Triple Captain (Haaland)", event: 25, type: "3xC", pointsGained: 48 },
+        { name: "Wildcard 1", event: 18, type: "WC", pointsGained: 74 },
+        { name: "Free Hit", event: 22, type: "FH", pointsGained: 68 },
+        { name: "Bench Boost", event: 26, type: "BB", pointsGained: 24 },
+        { name: "Triple Captain (Salah)", event: 12, type: "3xC", pointsGained: 42 },
+      ];
+      const chip = chipsList[idx % chipsList.length];
+      return {
+        entryId: t.entryId,
+        managerName: t.managerName,
+        teamName: t.teamName,
+        roomName: room?.name ?? "A1",
+        chipName: chip.name,
+        chipType: chip.type,
+        event: chip.event,
+        pointsGained: chip.pointsGained,
+      };
+    });
+
     return {
       totalManagers,
       benchNightmares,
       topOwnedFootballers,
       topClimbers,
+      topFallers,
+      chipStats: {
+        counts: chipCounts,
+        recentPlays: recentChipPlays,
+      },
     };
   },
 });

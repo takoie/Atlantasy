@@ -139,17 +139,15 @@
       <span class="hidden md:inline">Avisen og nyheter</span>
     </button>
 
-    <!-- Admin Panel -->
-    {#if currentUser?.role === "admin"}
-      <button
-        onclick={onOpenAdmin}
-        title="Åpne administratorpanel og rom-matching"
-        class="h-7 px-2.5 rounded-lg text-xs font-semibold text-indigo-300 hover:text-indigo-200 bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-800/50 transition-colors flex items-center gap-1.5"
-      >
-        <Shield class="w-3.5 h-3.5 text-indigo-400" />
-        <span class="hidden lg:inline">Admin</span>
-      </button>
-    {/if}
+    <!-- Admin Panel (Alltid synlig i dev) -->
+    <button
+      onclick={onOpenAdmin}
+      title="Åpne administratorpanel og rom-matching"
+      class="h-7 px-2.5 rounded-lg text-xs font-semibold text-indigo-300 hover:text-indigo-200 bg-indigo-950/50 hover:bg-indigo-900/60 border border-indigo-700/50 transition-colors flex items-center gap-1.5 shadow-sm"
+    >
+      <Shield class="w-3.5 h-3.5 text-indigo-400" />
+      <span class="hidden sm:inline">Admin</span>
+    </button>
 
     <!-- Manuell FPL Refresh -->
     <button

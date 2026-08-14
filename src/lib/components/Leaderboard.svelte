@@ -50,7 +50,7 @@
       <div class="flex items-center gap-2">
         <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
           <Trophy class="w-4 h-4 text-emerald-400" />
-          <span>Rom-ledertavle</span>
+          <span>Leaderboard - Rom</span>
         </h1>
         <span class="text-xs px-2 py-0.5 rounded-full bg-slate-900 text-slate-300 border border-slate-800 font-mono">
           GW {currentGw}
@@ -135,39 +135,40 @@
             : "bg-slate-900/70 border-slate-800 hover:border-slate-700"
         }`}
       >
-        <!-- Hovedrad -->
-        <div class="px-4 py-3 flex items-center justify-between gap-4">
-          <!-- Venstre: Plassering + A1–A12 format -->
-          <div class="flex items-center gap-3 shrink-0 min-w-0">
-            <!-- Rank plakett -->
-            <div class="flex items-center justify-center w-7 h-7 rounded-lg font-black text-sm shrink-0">
+        <!-- Hovedrad: 3 distinkte, stabile kolonner -->
+        <div class="px-3.5 py-3 flex items-center justify-between gap-2 sm:gap-4">
+          
+          <!-- Kolonne 1 (Venstre): Fast bredde for Rank + Romnavn -->
+          <div class="w-[170px] sm:w-[210px] shrink-0 flex items-center gap-2.5 min-w-0">
+            <!-- Rank Plakett (fast bredde) -->
+            <div class="w-6 text-center shrink-0">
               {#if index === 0}
-                <span class="text-base" title="1. plass">🥇</span>
+                <span class="text-base">🥇</span>
               {:else if index === 1}
-                <span class="text-base" title="2. plass">🥈</span>
+                <span class="text-base">🥈</span>
               {:else if index === 2}
-                <span class="text-base" title="3. plass">🥉</span>
+                <span class="text-base">🥉</span>
               {:else}
                 <span class="text-slate-400 font-mono text-xs font-bold">#{index + 1}</span>
               {/if}
             </div>
 
-            <!-- Rom farge og tittel: A1 - Kallenavn (uten spillertall-boks) -->
-            <div class="flex items-center gap-2 truncate">
-              <span
-                class="w-2.5 h-2.5 rounded-full shrink-0"
-                style={`background-color: ${room.accentColor || "#10b981"}`}
-              ></span>
-              <span class="font-bold text-sm text-white truncate hover:text-emerald-400 transition-colors">
-                {room.name.startsWith("Rom ") ? room.name.replace(/^Rom\s*(\d+)/, "A$1") : room.name}
-              </span>
-            </div>
+            <!-- Fargeprikk -->
+            <span
+              class="w-2.5 h-2.5 rounded-full shrink-0"
+              style={`background-color: ${room.accentColor || "#10b981"}`}
+            ></span>
+
+            <!-- Rom tittel (truncate pent hvis langt) -->
+            <span class="font-bold text-xs sm:text-sm text-white truncate hover:text-emerald-400 transition-colors">
+              {room.name.startsWith("Rom ") ? room.name.replace(/^Rom\s*(\d+)/, "A$1") : room.name}
+            </span>
           </div>
 
-          <!-- Midten: Inline spillere og poeng -->
-          <div class="hidden md:flex items-center justify-center gap-3 flex-1 min-w-0 px-2">
+          <!-- Kolonne 2 (Midten): Sentrert, fast container for lederne -->
+          <div class="hidden md:flex flex-1 items-center justify-center min-w-0 px-1">
             {#if room.top1 || room.top2}
-              <div class="flex items-center gap-3 px-3 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs">
+              <div class="flex items-center gap-2.5 px-3 py-1 rounded-xl bg-slate-950/90 border border-slate-800 text-xs shadow-inner">
                 {#if room.top1}
                   <button
                     type="button"
@@ -179,20 +180,20 @@
                     title={`Se profilen til ${room.top1.managerName}`}
                   >
                     <span class="text-amber-400 font-bold text-[11px]">🥇</span>
-                    <span class="font-medium text-slate-200 hover:text-white underline decoration-dotted truncate">
+                    <span class="font-medium text-slate-200 hover:text-white underline decoration-dotted truncate max-w-[110px]">
                       {room.top1.managerName}:
                     </span>
-                    <span class="font-mono font-bold text-emerald-400">
+                    <span class="font-mono font-bold text-emerald-400 shrink-0">
                       {room.top1.effectivePoints}p
                     </span>
                     {#if room.top1.currentGwTransfersCost > 0 && deductHits}
-                      <span class="text-[10px] text-rose-400 font-mono">(-{room.top1.currentGwTransfersCost})</span>
+                      <span class="text-[10px] text-rose-400 font-mono shrink-0">(-{room.top1.currentGwTransfersCost})</span>
                     {/if}
                   </button>
                 {/if}
 
                 {#if room.top1 && room.top2}
-                  <span class="text-slate-600 font-bold">•</span>
+                  <span class="text-slate-600 font-bold shrink-0">•</span>
                 {/if}
 
                 {#if room.top2}
@@ -206,14 +207,14 @@
                     title={`Se profilen til ${room.top2.managerName}`}
                   >
                     <span class="text-slate-300 font-bold text-[11px]">🥈</span>
-                    <span class="font-medium text-slate-200 hover:text-white underline decoration-dotted truncate">
+                    <span class="font-medium text-slate-200 hover:text-white underline decoration-dotted truncate max-w-[110px]">
                       {room.top2.managerName}:
                     </span>
-                    <span class="font-mono font-bold text-emerald-400">
+                    <span class="font-mono font-bold text-emerald-400 shrink-0">
                       {room.top2.effectivePoints}p
                     </span>
                     {#if room.top2.currentGwTransfersCost > 0 && deductHits}
-                      <span class="text-[10px] text-rose-400 font-mono">(-{room.top2.currentGwTransfersCost})</span>
+                      <span class="text-[10px] text-rose-400 font-mono shrink-0">(-{room.top2.currentGwTransfersCost})</span>
                     {/if}
                   </button>
                 {/if}
@@ -221,16 +222,11 @@
             {/if}
           </div>
 
-          <!-- Høyre: Snitt og accordion toggle -->
-          <div class="flex items-center gap-3 shrink-0">
-            <div class="text-right">
-              <div class="text-[9px] uppercase tracking-wider text-slate-400 font-semibold">
-                {sortBy === "season" ? "Sesongsnitt" : sortBy === "month" ? "Månedssnitt" : "Rom-snitt"}
-              </div>
-              <div class="text-lg font-black text-emerald-400 font-mono leading-none">
-                {sortBy === "season" ? room.seasonTotal : room.liveAverage}
-                <span class="text-xs font-normal text-slate-400">pts</span>
-              </div>
+          <!-- Kolonne 3 (Høyre): Ren poengsum (uten ROM-SNITT tekst) + Utvid/Chevron -->
+          <div class="w-[85px] sm:w-[95px] shrink-0 flex items-center justify-end gap-2 text-right">
+            <div class="font-mono font-black text-base sm:text-lg text-emerald-400 leading-none">
+              {sortBy === "season" ? room.seasonTotal : room.liveAverage}
+              <span class="text-[10px] font-normal text-slate-400">pts</span>
             </div>
 
             <!-- Utvid-knapp -->
@@ -246,6 +242,7 @@
               {/if}
             </button>
           </div>
+
         </div>
 
         <!-- Utvidet visning: Alle spillere i rommet -->

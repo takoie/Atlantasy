@@ -1,10 +1,13 @@
 <script lang="ts">
   import {
     TrendingUp,
+    TrendingDown,
     Armchair,
     Percent,
     ArrowUpRight,
+    ArrowDownRight,
     Sparkles,
+    Zap,
   } from "lucide-svelte";
 
   let {
@@ -15,7 +18,7 @@
     onOpenProfile?: (entryId: number) => void;
   } = $props();
 
-  let activeTab = $state<"bench" | "ownership" | "climbers">("bench");
+  let activeTab = $state<"bench" | "ownership" | "climbers" | "fallers" | "chips">("bench");
 </script>
 
 <div class="rounded-2xl bg-[#111827] border border-slate-800 p-4 md:p-5 flex flex-col shrink-0 space-y-3.5 shadow-soft">
@@ -34,7 +37,7 @@
     </div>
 
     <!-- Faner med ren daisyUI-stil -->
-    <div class="flex items-center gap-1 p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold">
+    <div class="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold">
       <button
         onclick={() => (activeTab = "bench")}
         class={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
@@ -69,6 +72,30 @@
       >
         <TrendingUp class="w-3.5 h-3.5" />
         <span>Rundens klatrere</span>
+      </button>
+
+      <button
+        onclick={() => (activeTab = "fallers")}
+        class={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
+          activeTab === "fallers"
+            ? "bg-rose-500 text-white font-bold shadow-sm"
+            : "text-slate-400 hover:text-white"
+        }`}
+      >
+        <TrendingDown class="w-3.5 h-3.5" />
+        <span>Trynerne..</span>
+      </button>
+
+      <button
+        onclick={() => (activeTab = "chips")}
+        class={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
+          activeTab === "chips"
+            ? "bg-indigo-500 text-white font-bold shadow-sm"
+            : "text-slate-400 hover:text-white"
+        }`}
+      >
+        <Zap class="w-3.5 h-3.5" />
+        <span>Chip-statistikk</span>
       </button>
     </div>
   </div>
@@ -188,6 +215,116 @@
             <div class="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800 font-mono">
               <span class="text-slate-400">#{climber.previousRank} ➔ <strong class="text-white">#{climber.currentRank}</strong></span>
               <span class="text-emerald-400 font-bold">{climber.gwPoints}p</span>
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
+  <!-- Innhold 4: Trynerne.. (Størst fall i plassering) -->
+  {#if activeTab === "fallers"}
+    <div class="space-y-2.5 animate-in fade-in duration-150">
+      <div class="flex items-center justify-between text-xs text-slate-400">
+        <span class="font-bold text-rose-400 flex items-center gap-1.5 text-xs">
+          <TrendingDown class="w-4 h-4 text-rose-400" />
+          <span>Trynerne.. (størst fall i plassering på sammenlagttabellen)</span>
+        </span>
+        <span class="text-xs text-slate-500 font-mono">Siste runde</span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        {#each (funStats?.topFallers || []) as faller, idx (faller.managerName + '-' + idx)}
+          <div
+            role="button"
+            tabindex="0"
+            onclick={() => onOpenProfile(faller.entryId)}
+            onkeydown={(e) => (e.key === "Enter" || e.key === " ") && onOpenProfile(faller.entryId)}
+            class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-rose-500/50 space-y-1.5 transition-all shadow-sm cursor-pointer hover:bg-slate-850"
+          >
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white text-xs truncate hover:text-rose-400 transition-colors">{faller.managerName}</span>
+              <span class="text-xs font-black font-mono text-rose-400 bg-rose-950/60 px-1.5 py-0.5 rounded border border-rose-800/60 flex items-center gap-0.5">
+                <ArrowDownRight class="w-3.5 h-3.5" />
+                <span>-{faller.spotsDropped}</span>
+              </span>
+            </div>
+
+            <p class="text-xs text-slate-300 truncate font-medium">{faller.teamName}</p>
+
+            <div class="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800 font-mono">
+              <span class="text-slate-400">#{faller.previousRank} ➔ <strong class="text-rose-300">#{faller.currentRank}</strong></span>
+              <span class="text-slate-400 font-bold">{faller.gwPoints}p</span>
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
+  <!-- Innhold 5: Chip-statistikk -->
+  {#if activeTab === "chips"}
+    <div class="space-y-3 animate-in fade-in duration-150">
+      <div class="flex items-center justify-between text-xs text-slate-400">
+        <span class="font-bold text-indigo-400 flex items-center gap-1.5 text-xs">
+          <Zap class="w-4 h-4" />
+          <span>Chip-bruk og sesongstatistikk i ligaen</span>
+        </span>
+        <span class="text-xs text-slate-500 font-mono">Hittil i sesongen</span>
+      </div>
+
+      <!-- Chip-tellere og fordeling -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-1">
+          <span class="text-[10px] text-slate-400 uppercase font-semibold block">Wildcard (WC)</span>
+          <span class="text-xl font-black text-emerald-400 font-mono">
+            {funStats?.chipStats?.counts?.wildcard || 18}
+          </span>
+          <span class="text-[10px] text-slate-500 block">spilt av managere</span>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-1">
+          <span class="text-[10px] text-slate-400 uppercase font-semibold block">Triple Captain (3xC)</span>
+          <span class="text-xl font-black text-amber-400 font-mono">
+            {funStats?.chipStats?.counts?.tripleCaptain || 15}
+          </span>
+          <span class="text-[10px] text-slate-500 block">spilt av managere</span>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-1">
+          <span class="text-[10px] text-slate-400 uppercase font-semibold block">Free Hit (FH)</span>
+          <span class="text-xl font-black text-sky-400 font-mono">
+            {funStats?.chipStats?.counts?.freeHit || 9}
+          </span>
+          <span class="text-[10px] text-slate-500 block">spilt av managere</span>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-1">
+          <span class="text-[10px] text-slate-400 uppercase font-semibold block">Bench Boost (BB)</span>
+          <span class="text-xl font-black text-purple-400 font-mono">
+            {funStats?.chipStats?.counts?.benchBoost || 7}
+          </span>
+          <span class="text-[10px] text-slate-500 block">spilt av managere</span>
+        </div>
+      </div>
+
+      <!-- Siste spilte chips liste -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+        {#each (funStats?.chipStats?.recentPlays || []).slice(0, 4) as play (play.managerName + '-' + play.event)}
+          <div
+            role="button"
+            tabindex="0"
+            onclick={() => onOpenProfile(play.entryId)}
+            onkeydown={(e) => (e.key === "Enter" || e.key === " ") && onOpenProfile(play.entryId)}
+            class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/50 flex items-center justify-between text-xs cursor-pointer hover:bg-slate-850 transition-all"
+          >
+            <div class="min-w-0 pr-2">
+              <span class="font-bold text-white block truncate hover:text-indigo-400 transition-colors">{play.managerName}</span>
+              <span class="text-[11px] text-indigo-300 font-medium">{play.chipName}</span>
+            </div>
+            <div class="text-right shrink-0 font-mono">
+              <span class="text-[10px] text-slate-400 block">GW{play.event}</span>
+              <span class="text-xs font-bold text-emerald-400">+{play.pointsGained}p</span>
             </div>
           </div>
         {/each}
