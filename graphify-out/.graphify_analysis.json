@@ -1,0 +1,335 @@
+{
+  "communities": {
+    "0": [
+      "ref_dom",
+      "ref_dom_iterable",
+      "ref_es2022",
+      "ref_src_lib",
+      "tsconfig_compileroptions",
+      "tsconfig_compileroptions_allowimportingtsextensions",
+      "tsconfig_compileroptions_baseurl",
+      "tsconfig_compileroptions_isolatedmodules",
+      "tsconfig_compileroptions_lib",
+      "tsconfig_compileroptions_module",
+      "tsconfig_compileroptions_moduledetection",
+      "tsconfig_compileroptions_moduleresolution",
+      "tsconfig_compileroptions_noemit",
+      "tsconfig_compileroptions_nofallthroughcasesinswitch",
+      "tsconfig_compileroptions_nounusedlocals",
+      "tsconfig_compileroptions_nounusedparameters",
+      "tsconfig_compileroptions_paths",
+      "tsconfig_compileroptions_resolvejsonmodule",
+      "tsconfig_compileroptions_skiplibcheck",
+      "tsconfig_compileroptions_strict",
+      "tsconfig_compileroptions_target",
+      "tsconfig_compileroptions_usedefineforclassfields",
+      "tsconfig_paths_lib"
+    ],
+    "1": [
+      "autoprefixer",
+      "package_devdependencies",
+      "package_devdependencies_autoprefixer",
+      "package_devdependencies_postcss",
+      "package_devdependencies_svelte",
+      "package_devdependencies_svelte_check",
+      "package_devdependencies_sveltejs_vite_plugin_svelte",
+      "package_devdependencies_tailwindcss",
+      "package_devdependencies_tauri_apps_api",
+      "package_devdependencies_tauri_apps_cli",
+      "package_devdependencies_typescript",
+      "package_devdependencies_vite",
+      "postcss",
+      "svelte",
+      "svelte_check",
+      "sveltejs_vite_plugin_svelte",
+      "tailwindcss",
+      "tauri_apps_api",
+      "tauri_apps_cli",
+      "typescript",
+      "vite"
+    ],
+    "2": [
+      "clsx",
+      "convex",
+      "package",
+      "package_dependencies",
+      "package_dependencies_clsx",
+      "package_dependencies_convex",
+      "package_dependencies_lucide_svelte",
+      "package_dependencies_tailwind_merge",
+      "package_json_lucide_svelte",
+      "package_name",
+      "package_private",
+      "package_scripts",
+      "package_scripts_build",
+      "package_scripts_check",
+      "package_scripts_convex_dev",
+      "package_scripts_dev",
+      "package_scripts_preview",
+      "package_scripts_tauri",
+      "package_type",
+      "package_version",
+      "tailwind_merge"
+    ],
+    "3": [
+      "src_tauri_tauri_conf",
+      "src_tauri_tauri_conf_app",
+      "src_tauri_tauri_conf_app_security",
+      "src_tauri_tauri_conf_app_windows",
+      "src_tauri_tauri_conf_build",
+      "src_tauri_tauri_conf_build_beforebuildcommand",
+      "src_tauri_tauri_conf_build_beforedevcommand",
+      "src_tauri_tauri_conf_build_devurl",
+      "src_tauri_tauri_conf_build_frontenddist",
+      "src_tauri_tauri_conf_identifier",
+      "src_tauri_tauri_conf_productname",
+      "src_tauri_tauri_conf_schema",
+      "src_tauri_tauri_conf_security_csp",
+      "src_tauri_tauri_conf_version"
+    ],
+    "4": [
+      "convex_generated_api",
+      "convex_generated_datamodel",
+      "src_app",
+      "src_lib_components_header",
+      "src_lib_components_messageinput",
+      "src_lib_components_messagelist",
+      "src_lib_convex_svelte",
+      "src_lib_convex_svelte_convexclient",
+      "src_lib_convex_svelte_usemutation",
+      "src_lib_convex_svelte_usequery",
+      "src_main",
+      "src_main_app",
+      "src_main_target"
+    ],
+    "5": [
+      "convex_tsconfig",
+      "convex_tsconfig_compileroptions",
+      "convex_tsconfig_compileroptions_allowsyntheticdefaultimports",
+      "convex_tsconfig_compileroptions_module",
+      "convex_tsconfig_compileroptions_moduleresolution",
+      "convex_tsconfig_compileroptions_skiplibcheck",
+      "convex_tsconfig_compileroptions_strict",
+      "convex_tsconfig_compileroptions_target",
+      "convex_tsconfig_include",
+      "ref"
+    ],
+    "6": [
+      "ref_core_default",
+      "ref_main",
+      "ref_opener_default",
+      "src_tauri_capabilities_default",
+      "src_tauri_capabilities_default_description",
+      "src_tauri_capabilities_default_identifier",
+      "src_tauri_capabilities_default_permissions",
+      "src_tauri_capabilities_default_schema",
+      "src_tauri_capabilities_default_windows"
+    ],
+    "7": [
+      "ref_icons_128x128_2x_png",
+      "ref_icons_128x128_png",
+      "ref_icons_32x32_png",
+      "ref_icons_icon_ico",
+      "src_tauri_tauri_conf_bundle",
+      "src_tauri_tauri_conf_bundle_active",
+      "src_tauri_tauri_conf_bundle_icon",
+      "src_tauri_tauri_conf_bundle_targets"
+    ],
+    "8": [
+      "ref_src_d_ts",
+      "ref_src_js",
+      "ref_src_svelte",
+      "ref_src_ts",
+      "tsconfig",
+      "tsconfig_include"
+    ],
+    "9": [
+      "convex_generated_api_d",
+      "convex_meldinger",
+      "convex_meldinger_hentsistemeldinger",
+      "convex_meldinger_sendmelding",
+      "convex_meldinger_slettmelding"
+    ],
+    "10": [
+      "src_tauri_src_lib",
+      "src_tauri_src_lib_greet",
+      "src_tauri_src_lib_run",
+      "string"
+    ],
+    "11": [
+      "convex_generated_datamodel_d",
+      "convex_generated_datamodel_d_doc",
+      "convex_generated_datamodel_d_id"
+    ],
+    "12": [
+      "src_tauri_build",
+      "src_tauri_build_main"
+    ],
+    "13": [
+      "src_tauri_src_main",
+      "src_tauri_src_main_main"
+    ],
+    "14": [
+      "convex_generated_server_d"
+    ],
+    "15": [
+      "convex_generated_server_d_action"
+    ],
+    "16": [
+      "convex_generated_server_d_httpaction"
+    ],
+    "17": [
+      "convex_generated_server_d_internalaction"
+    ],
+    "18": [
+      "convex_generated_server_d_internalmutation"
+    ],
+    "19": [
+      "convex_generated_server_d_internalquery"
+    ],
+    "20": [
+      "convex_generated_server_d_mutation"
+    ],
+    "21": [
+      "convex_generated_server_d_query"
+    ],
+    "22": [
+      "convex_schema"
+    ],
+    "23": [
+      "lucide_svelte_lucide_svelte"
+    ],
+    "24": [
+      "postcss_config"
+    ],
+    "25": [
+      "svelte_config"
+    ],
+    "26": [
+      "tailwind_config"
+    ],
+    "27": [
+      "vite_config"
+    ]
+  },
+  "cohesion": {
+    "0": 0.08695652173913043,
+    "1": 0.09523809523809523,
+    "2": 0.09523809523809523,
+    "3": 0.14285714285714285,
+    "4": 0.21794871794871795,
+    "5": 0.2,
+    "6": 0.2222222222222222,
+    "7": 0.25,
+    "8": 0.3333333333333333,
+    "9": 0.4,
+    "10": 0.5,
+    "11": 0.6666666666666666,
+    "12": 1.0,
+    "13": 1.0,
+    "14": 1.0,
+    "15": 1.0,
+    "16": 1.0,
+    "17": 1.0,
+    "18": 1.0,
+    "19": 1.0,
+    "20": 1.0,
+    "21": 1.0,
+    "22": 1.0,
+    "23": 1.0,
+    "24": 1.0,
+    "25": 1.0,
+    "26": 1.0,
+    "27": 1.0
+  },
+  "gods": [
+    {
+      "id": "tsconfig_compileroptions",
+      "label": "compilerOptions",
+      "degree": 18
+    },
+    {
+      "id": "convex_tsconfig_compileroptions",
+      "label": "compilerOptions",
+      "degree": 7
+    },
+    {
+      "id": "package_scripts",
+      "label": "scripts",
+      "degree": 7
+    },
+    {
+      "id": "src_tauri_tauri_conf_build",
+      "label": "build",
+      "degree": 5
+    },
+    {
+      "id": "src_tauri_tauri_conf_bundle_icon",
+      "label": "icon",
+      "degree": 5
+    },
+    {
+      "id": "tsconfig_include",
+      "label": "include",
+      "degree": 5
+    },
+    {
+      "id": "src_tauri_tauri_conf_bundle",
+      "label": "bundle",
+      "degree": 4
+    },
+    {
+      "id": "tsconfig_compileroptions_lib",
+      "label": "lib",
+      "degree": 4
+    },
+    {
+      "id": "src_tauri_capabilities_default_permissions",
+      "label": "permissions",
+      "degree": 3
+    },
+    {
+      "id": "src_tauri_tauri_conf_app",
+      "label": "app",
+      "degree": 3
+    }
+  ],
+  "surprises": [],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `devDependencies` connect `devDependencies` to `package.json`?",
+      "why": "High betweenness centrality (0.051) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `compilerOptions` connect `compilerOptions` to `include`?",
+      "why": "High betweenness centrality (0.030) - this node is a cross-community bridge."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `Id`, `Doc`, `hentSisteMeldinger` to the rest of the system?",
+      "why": "90 weakly-connected nodes found - possible documentation gaps or missing edges."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `compilerOptions` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.08695652173913043 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `devDependencies` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.09523809523809523 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `package.json` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.09523809523809523 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `tauri.conf.json` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.14285714285714285 - nodes in this community are weakly interconnected."
+    }
+  ]
+}

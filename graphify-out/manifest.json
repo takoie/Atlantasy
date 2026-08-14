@@ -1,0 +1,122 @@
+{
+  ".codex/hooks.json": {
+    "mtime": 1786744273.0101721,
+    "ast_hash": "55edbd6b91f87fd6cc30fa6b4e339bb9",
+    "semantic_hash": "55edbd6b91f87fd6cc30fa6b4e339bb9"
+  },
+  "convex/_generated/api.d.ts": {
+    "mtime": 1786743824.7301297,
+    "ast_hash": "1ab235e585e4e386a4d013b6fcc36398",
+    "semantic_hash": "1ab235e585e4e386a4d013b6fcc36398"
+  },
+  "convex/_generated/dataModel.d.ts": {
+    "mtime": 1786743827.7424996,
+    "ast_hash": "3eb1cf153d11ce734eff7fa314f714b6",
+    "semantic_hash": "3eb1cf153d11ce734eff7fa314f714b6"
+  },
+  "convex/_generated/server.d.ts": {
+    "mtime": 1786743831.0181227,
+    "ast_hash": "7b407d8810015154b1feac22f6f6563a",
+    "semantic_hash": "7b407d8810015154b1feac22f6f6563a"
+  },
+  "convex/meldinger.ts": {
+    "mtime": 1786743755.5347764,
+    "ast_hash": "b6f0871128ed864ca8a940da12fbabd6",
+    "semantic_hash": "b6f0871128ed864ca8a940da12fbabd6"
+  },
+  "convex/schema.ts": {
+    "mtime": 1786743752.3187785,
+    "ast_hash": "1bd04256432168a0ea7126d9e22d34af",
+    "semantic_hash": "1bd04256432168a0ea7126d9e22d34af"
+  },
+  "convex/tsconfig.json": {
+    "mtime": 1786743757.9806523,
+    "ast_hash": "30279a1f9ff24b446043413269352dec",
+    "semantic_hash": "30279a1f9ff24b446043413269352dec"
+  },
+  "package.json": {
+    "mtime": 1786743724.0760736,
+    "ast_hash": "e444c76b3c9ea581b46df90769bec336",
+    "semantic_hash": "e444c76b3c9ea581b46df90769bec336"
+  },
+  "postcss.config.js": {
+    "mtime": 1786743740.1203485,
+    "ast_hash": "c735540bb63936a123bc867d950c9f69",
+    "semantic_hash": "c735540bb63936a123bc867d950c9f69"
+  },
+  "src-tauri/build.rs": {
+    "mtime": 1786743765.9027357,
+    "ast_hash": "1be34a5c61c2c35365de3dab14298f0b",
+    "semantic_hash": "1be34a5c61c2c35365de3dab14298f0b"
+  },
+  "src-tauri/capabilities/default.json": {
+    "mtime": 1786743778.264495,
+    "ast_hash": "fccb5564053e6006fd98b77c9777c519",
+    "semantic_hash": "fccb5564053e6006fd98b77c9777c519"
+  },
+  "src-tauri/src/lib.rs": {
+    "mtime": 1786743769.7717772,
+    "ast_hash": "8f5782f559eaca6e28130294dd3ac49c",
+    "semantic_hash": "8f5782f559eaca6e28130294dd3ac49c"
+  },
+  "src-tauri/src/main.rs": {
+    "mtime": 1786743773.344759,
+    "ast_hash": "eac59311a63d5e54e3f8104409b2e250",
+    "semantic_hash": "eac59311a63d5e54e3f8104409b2e250"
+  },
+  "src-tauri/tauri.conf.json": {
+    "mtime": 1786743780.9019668,
+    "ast_hash": "c519c047bdba0407e9a9a651c48bcdd9",
+    "semantic_hash": "c519c047bdba0407e9a9a651c48bcdd9"
+  },
+  "src/App.svelte": {
+    "mtime": 1786743821.575228,
+    "ast_hash": "4bd529b14246d70d723a93b25640fb6f",
+    "semantic_hash": "4bd529b14246d70d723a93b25640fb6f"
+  },
+  "src/lib/components/Header.svelte": {
+    "mtime": 1786743800.926802,
+    "ast_hash": "6656f970b8c0e9a5e7cbc8fcb1166a57",
+    "semantic_hash": "6656f970b8c0e9a5e7cbc8fcb1166a57"
+  },
+  "src/lib/components/MessageInput.svelte": {
+    "mtime": 1786743809.6250775,
+    "ast_hash": "b836ea36eb8088d47ddb6c333a35e4e6",
+    "semantic_hash": "b836ea36eb8088d47ddb6c333a35e4e6"
+  },
+  "src/lib/components/MessageList.svelte": {
+    "mtime": 1786743817.3388727,
+    "ast_hash": "d1d968206e653dac4a9c4119af266755",
+    "semantic_hash": "d1d968206e653dac4a9c4119af266755"
+  },
+  "src/lib/convex.svelte.ts": {
+    "mtime": 1786743786.962769,
+    "ast_hash": "343e0bc75761bf43b57d3723d08b4c8f",
+    "semantic_hash": "343e0bc75761bf43b57d3723d08b4c8f"
+  },
+  "src/main.ts": {
+    "mtime": 1786743796.4783385,
+    "ast_hash": "31996a7750268017478a50969b559164",
+    "semantic_hash": "31996a7750268017478a50969b559164"
+  },
+  "svelte.config.js": {
+    "mtime": 1786743730.8632746,
+    "ast_hash": "f5e926614dc5a538ac2984ba6a2be06e",
+    "semantic_hash": "f5e926614dc5a538ac2984ba6a2be06e"
+  },
+  "tailwind.config.js": {
+    "mtime": 1786743736.5978508,
+    "ast_hash": "5d058fc4a12a92c94bcb3dbafbe72510",
+    "semantic_hash": "5d058fc4a12a92c94bcb3dbafbe72510"
+  },
+  "tsconfig.json": {
+    "mtime": 1786743727.6381118,
+    "ast_hash": "04196aca1bece714f85d1fc99acb35a1",
+    "semantic_hash": "04196aca1bece714f85d1fc99acb35a1"
+  },
+  "vite.config.ts": {
+    "mtime": 1786743733.703722,
+    "ast_hash": "bc025cea36f6e09ba4637146f11b34d0",
+    "semantic_hash": "bc025cea36f6e09ba4637146f11b34d0"
+  }
+}
