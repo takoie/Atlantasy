@@ -14,6 +14,7 @@
   import CupView from "$lib/components/CupView.svelte";
   import Sidebar from "$lib/components/Sidebar.svelte";
   import UpdateModal from "$lib/components/UpdateModal.svelte";
+  import LicensesModal from "$lib/components/LicensesModal.svelte";
 
   import { useQuery, useMutation, useAction } from "$lib/convex.svelte";
   import { api } from "../convex/_generated/api";
@@ -57,6 +58,7 @@
   let selectedProfileEntryId = $state<number | null>(null);
   let isUpdateModalOpen = $state(false);
   let updateModalRef = $state<any>(null);
+  let isLicensesModalOpen = $state(false);
 
   // Convex Mutations
   const sendMessageMutation = useMutation(api.chat.sendMessage);
@@ -316,6 +318,7 @@
         }
       }}
       onCheckForUpdates={() => updateModalRef?.checkForUpdates(true)}
+      onOpenLicenses={() => (isLicensesModalOpen = true)}
     />
 
     <!-- Hovedinnholdsområde for valgt modul/side -->
@@ -651,5 +654,10 @@
     bind:this={updateModalRef}
     currentVersion="0.1.0"
     autoCheck={true}
+  />
+
+  <!-- Lisenser & Tredjeparts Open Source Kreditter -->
+  <LicensesModal
+    bind:isOpen={isLicensesModalOpen}
   />
 </main>

@@ -10,6 +10,7 @@
     Shield,
     RefreshCw,
     Timer,
+    Info,
   } from "lucide-svelte";
   import { onMount, onDestroy } from "svelte";
 
@@ -27,6 +28,7 @@
     onRefreshFpl = () => {},
     onOpenProfile = (_entryId?: number | null) => {},
     onCheckForUpdates = () => {},
+    onOpenLicenses = () => {},
   }: {
     activeView?: string;
     currentGw?: number;
@@ -41,6 +43,7 @@
     onRefreshFpl?: () => void;
     onOpenProfile?: (entryId?: number | null) => void;
     onCheckForUpdates?: () => void;
+    onOpenLicenses?: () => void;
   } = $props();
 
   // Norsk formatering av fristtidspunkt (f.eks. "Fredag 19:30")
@@ -330,9 +333,20 @@
       </div>
     </button>
 
-    <!-- Versjon & Oppdateringssjekk -->
+    <!-- Versjon, Lisenser & Oppdateringssjekk -->
     <div class="flex items-center justify-between px-1 text-[11px] text-[#94A3B8]">
-      <span class="font-mono">v0.1.0</span>
+      <div class="flex items-center gap-1.5">
+        <span class="font-mono text-white/80">v0.1.0</span>
+        <button
+          type="button"
+          onclick={onOpenLicenses}
+          class="text-[#94A3B8] hover:text-[#70E1F8] transition-colors p-0.5 rounded hover:bg-[#2A303C] flex items-center justify-center"
+          title="Vis åpne kildekodelisenser og rettigheter (Tauri, Svelte, Convex, m.m.)"
+        >
+          <Info class="w-3.5 h-3.5" />
+        </button>
+      </div>
+
       <button
         type="button"
         onclick={onCheckForUpdates}
