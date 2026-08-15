@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { X, Shirt, CheckCircle2, AlertTriangle, Search, Lock } from "lucide-svelte";
+  import { X, Shirt, CheckCircle2, AlertTriangle, Search, Lock, RefreshCw } from "lucide-svelte";
   import { formatConvexError } from "$lib/utils/formatError";
 
   let {
@@ -8,7 +8,8 @@
     fplTeams = [],
     users = [],
     onClose = () => {},
-    onClaim = async (_entryId: number) => {},
+    onClaim = async (_entryId?: any) => {},
+    onRefreshFpl = async () => {},
   }: {
     isOpen: boolean;
     currentUser?: any;
@@ -16,11 +17,13 @@
     users?: any[];
     onClose: () => void;
     onClaim: (entryId: number) => Promise<any>;
+    onRefreshFpl?: () => Promise<any>;
   } = $props();
 
   let selectedEntryId = $state<number | null>(null);
   let searchQuery = $state("");
   let isSubmitting = $state(false);
+  let isSyncing = $state(false);
   let errorMessage = $state("");
   let showConfirmPrompt = $state(false);
 
@@ -30,11 +33,11 @@
       .filter((t) => !users.some((u) => u.fplEntryId === t.entryId && u._id !== currentUser?._id))
       .filter((t) => {
         if (!searchQuery.trim()) return true;
-        const q = searchQuery.toLowerCase();
-        return (
-          t.teamName.toLowerCase().includes(q) ||
-          t.managerName.toLowerCase().includes(q)
-        );
+        const q = searchQuery.toLowerCase().trim();
+        const tName = (t.teamName || "").toLowerCase();
+        const mName = (t.managerName || "").toLowerCase();
+        const entryStr = String(t.entryId || "");
+        return tName.includes(q) || mName.includes(q) || entryStr.includes(q);
       })
   );
 
@@ -59,6 +62,18 @@
       errorMessage = formatConvexError(err, "Kunne ikke koble FPL-laget.");
     } finally {
       isSubmitting = false;
+    }
+  }
+
+  async function handleRefresh() {
+    isSyncing = true;
+    errorMessage = "";
+    try {
+      await onRefreshFpl();
+    } catch (err: any) {
+      errorMessage = formatConvexError(err, "Kunne ikke hente lag fra FPL.");
+    } finally {
+      isSyncing = false;
     }
   }
 </script>
@@ -102,22 +117,44 @@
           </div>
         {/if}
 
-        <!-- Søkefelt -->
-        <div class="relative">
-          <Search class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
-          <input
-            type="text"
-            bind:value={searchQuery}
-            placeholder="Søk etter lagnavn eller manager..."
-            class="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-xs text-white placeholder-[#94A3B8] focus:border-[#9FE88D] focus:outline-none"
-          />
+        <!-- Søkefelt og Oppdateringsknapp -->
+        <div class="flex items-center gap-2">
+          <div class="relative flex-1">
+            <Search class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
+            <input
+              type="text"
+              bind:value={searchQuery}
+              placeholder="Søk etter lagnavn, manager eller entry ID..."
+              class="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-xs text-white placeholder-[#94A3B8] focus:border-[#9FE88D] focus:outline-none"
+            />
+          </div>
+          <button
+            type="button"
+            disabled={isSyncing}
+            onclick={handleRefresh}
+            title="Synkroniser og oppdater laglisten direkte fra FPL"
+            class="p-2.5 rounded-xl bg-[#191E24] hover:bg-[#2A303C] border border-[#384252] hover:border-[#70E1F8]/50 text-[#70E1F8] transition-colors shrink-0"
+          >
+            <RefreshCw class={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
+          </button>
         </div>
 
         <!-- Lagliste -->
         <div class="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar pr-1">
           {#if availableTeams.length === 0}
-            <div class="p-4 rounded-xl bg-[#191E24] border border-[#384252] text-center text-xs text-[#94A3B8]">
-              {fplTeams.length === 0 ? "Ingen lag er synkronisert fra FPL ennå. Be administrator synke ligaen i adminpanelet." : "Ingen ledige lag funnet."}
+            <div class="p-4 rounded-xl bg-[#191E24] border border-[#384252] text-center space-y-3">
+              <p class="text-xs text-[#94A3B8]">
+                {fplTeams.length === 0 ? "Ingen lag er synkronisert fra FPL ennå." : "Ingen ledige lag matcher søket ditt."}
+              </p>
+              <button
+                type="button"
+                disabled={isSyncing}
+                onclick={handleRefresh}
+                class="px-3.5 py-2 rounded-xl bg-[#70E1F8]/15 hover:bg-[#70E1F8]/25 text-[#70E1F8] border border-[#70E1F8]/40 text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+              >
+                <RefreshCw class={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+                <span>{isSyncing ? "Synker fra FPL..." : "Synk lag fra FPL nå"}</span>
+              </button>
             </div>
           {:else}
             {#each availableTeams as team (team.entryId)}

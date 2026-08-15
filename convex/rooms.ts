@@ -463,7 +463,7 @@ export const getIndividualLeaderboard = query({
     }
 
     const players = allTeams.map((team, idx) => {
-      const room = roomMap.get(team.roomId);
+      const room = team.roomId ? roomMap.get(team.roomId) : undefined;
       const user = userMap.get(team.entryId);
       const effectiveLive = deductHits
         ? team.currentGwPoints - team.currentGwTransfersCost
@@ -533,7 +533,7 @@ export const getLeagueFunStats = query({
     const benchNightmares = allTeams
       .filter((t) => (t as any).benchPoints && (t as any).benchPoints > 0)
       .map((t) => {
-        const room = roomMap.get(t.roomId);
+        const room = t.roomId ? roomMap.get(t.roomId) : undefined;
         return {
           entryId: t.entryId,
           managerName: t.managerName,
@@ -550,7 +550,7 @@ export const getLeagueFunStats = query({
     const teamsWithCaptains = allTeams.filter((t) => (t as any).captainName);
     const captainSuccess = teamsWithCaptains
       .map((t) => {
-        const room = roomMap.get(t.roomId);
+        const room = t.roomId ? roomMap.get(t.roomId) : undefined;
         const captainName = (t as any).captainName;
         const pts = (t as any).captainPoints || 0;
         return {
@@ -587,7 +587,7 @@ export const getLeagueFunStats = query({
     const topHitTakers = allTeams
       .filter((t) => (t.currentGwTransfersCost && t.currentGwTransfersCost > 0) || ((t as any).totalHitsCost && (t as any).totalHitsCost > 0))
       .map((t) => {
-        const room = roomMap.get(t.roomId);
+        const room = t.roomId ? roomMap.get(t.roomId) : undefined;
         const gwHits = t.currentGwTransfersCost || 0;
         const totalHits = (t as any).totalHitsCost || gwHits;
         const hits = timeframe === "season" ? totalHits : gwHits;
@@ -614,7 +614,7 @@ export const getLeagueFunStats = query({
     const f1PointsScale = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
     const f1Standings = teamsWithPoints.map((team, idx) => {
       const f1Pts = idx < f1PointsScale.length ? f1PointsScale[idx] : 0;
-      const room = roomMap.get(team.roomId);
+      const room = team.roomId ? roomMap.get(team.roomId) : undefined;
       return {
         entryId: team.entryId,
         managerName: team.managerName,

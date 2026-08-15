@@ -39,7 +39,7 @@ export default defineSchema({
     entryId: v.number(),           // FPL Entry ID
     teamName: v.string(),          // FPL Lagnavn
     managerName: v.string(),       // Managers fulle navn
-    roomId: v.id("rooms"),         // Romtilhørighet
+    roomId: v.optional(v.id("rooms")), // Romtilhørighet (valgfritt før tildeling)
     userId: v.optional(v.id("users")),
     active: v.boolean(),
     totalPoints: v.number(),

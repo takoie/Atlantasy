@@ -16,7 +16,7 @@ export const fetchFplLeagueStandings = action({
     leagueId: v.number(),
     page: v.optional(v.number()),
   },
-  handler: async (_ctx, args) => {
+  handler: async (ctx, args) => {
     try {
       const pageNum = args.page || 1;
       const response = await fetch(
@@ -114,12 +114,30 @@ export const fetchFplLeagueStandings = action({
 
       const formattedStandings = Array.from(entryMap.values());
 
+      // 3. Lagre lagene automatisk i Convex fpl_teams databasen
+      if (formattedStandings.length > 0) {
+        const teamsData = formattedStandings.map((s) => ({
+          entryId: s.entryId,
+          teamName: s.teamName,
+          managerName: s.managerName,
+          totalPoints: s.total || 0,
+          currentGwPoints: s.pts || 0,
+          currentGwTransfersCost: s.hits || 0,
+        }));
+
+        await ctx.runMutation(api.fpl.saveLiveFplSyncResult, {
+          currentGameweek: 1,
+          teamsData,
+        });
+      }
+
       return {
         success: true,
         leagueName: data.league?.name || "FPL Classic League",
         standings: formattedStandings,
         hasNext: Boolean(data.standings?.has_next || data.new_entries?.has_next),
         totalResults: formattedStandings.length,
+        teamCount: formattedStandings.length,
       };
     } catch (err: any) {
       return {
@@ -183,11 +201,80 @@ export const syncLiveFplData = action({
       const standingsResults = standingsData.standings?.results || [];
       const newEntriesResults = standingsData.new_entries?.results || [];
 
-      const rawResults = standingsResults.length > 0 ? standingsResults : newEntriesResults;
+      // Kombiner både standings og new_entries
+      const entryMap = new Map<number, any>();
+      for (const item of standingsResults) {
+        if (!item.entry) continue;
+        const managerName =
+          item.player_name ||
+          `${item.player_first_name || ""} ${item.player_last_name || ""}`.trim() ||
+          "FPL Manager";
+        entryMap.set(item.entry, {
+          entry: item.entry,
+          entry_name: item.entry_name || "FPL Lag",
+          player_name: managerName,
+          total: item.total || 0,
+          event_total: item.event_total || 0,
+        });
+      }
+      for (const item of newEntriesResults) {
+        if (!item.entry || entryMap.has(item.entry)) continue;
+        const managerName =
+          item.player_name ||
+          `${item.player_first_name || ""} ${item.player_last_name || ""}`.trim() ||
+          "FPL Manager";
+        entryMap.set(item.entry, {
+          entry: item.entry,
+          entry_name: item.entry_name || "FPL Lag",
+          player_name: managerName,
+          total: item.total || 0,
+          event_total: item.event_total || 0,
+        });
+      }
+
+      // Hent ekstra sider med new_entries dersom det er flere enn 50 lag
+      if (standingsData.new_entries?.has_next) {
+        let nextPage = 2;
+        let hasMore = true;
+        while (hasMore && nextPage <= 10) {
+          try {
+            const nextRes = await fetch(
+              `https://fantasy.premierleague.com/api/leagues-classic/${targetLeagueId}/standings/?page_new_entries=${nextPage}`,
+              { headers: FPL_HEADERS }
+            );
+            if (nextRes.ok) {
+              const nextData = await nextRes.json();
+              const nextEntries = nextData.new_entries?.results || [];
+              for (const item of nextEntries) {
+                if (!item.entry || entryMap.has(item.entry)) continue;
+                const managerName =
+                  item.player_name ||
+                  `${item.player_first_name || ""} ${item.player_last_name || ""}`.trim() ||
+                  "FPL Manager";
+                entryMap.set(item.entry, {
+                  entry: item.entry,
+                  entry_name: item.entry_name || "FPL Lag",
+                  player_name: managerName,
+                  total: item.total || 0,
+                  event_total: item.event_total || 0,
+                });
+              }
+              hasMore = nextData.new_entries?.has_next || false;
+              nextPage++;
+            } else {
+              hasMore = false;
+            }
+          } catch {
+            hasMore = false;
+          }
+        }
+      }
+
+      const allCombinedResults = Array.from(entryMap.values());
 
       // 4. Hent transfer hits for hvert lag (picks endpoint)
       const enrichedTeams = await Promise.all(
-        rawResults.map(async (r: any) => {
+        allCombinedResults.map(async (r: any) => {
           let hits = 0;
           let captainName = undefined;
 
@@ -424,6 +511,17 @@ export const saveLiveFplSyncResult = mutation({
           totalPoints: item.totalPoints,
           currentGwPoints: item.currentGwPoints,
           currentGwTransfersCost: item.currentGwTransfersCost,
+          lastUpdated: Date.now(),
+        });
+      } else {
+        await ctx.db.insert("fpl_teams", {
+          entryId: item.entryId,
+          teamName: item.teamName,
+          managerName: item.managerName,
+          totalPoints: item.totalPoints,
+          currentGwPoints: item.currentGwPoints,
+          currentGwTransfersCost: item.currentGwTransfersCost,
+          active: true,
           lastUpdated: Date.now(),
         });
       }

@@ -245,6 +245,36 @@
     }
   }
 
+  // Automatisk periodisk FPL-synkronisering KUN når en bruker er aktiv i appen
+  $effect(() => {
+    if (!currentUser) return;
+
+    const syncIntervalMinutes = settings?.syncIntervalMinutes ?? 10;
+    const isAutoSyncEnabled = settings?.autoSyncEnabled ?? true;
+
+    if (!isAutoSyncEnabled) return;
+
+    const intervalMs = syncIntervalMinutes * 60 * 1000;
+    const lastSync = settings?.lastSyncedAt ?? 0;
+
+    // Sjekk ved oppstart dersom dataene er eldre enn intervallet
+    if (Date.now() - lastSync > intervalMs && !isSyncing) {
+      handleRefreshFpl();
+    }
+
+    // Sjekk hvert 60. sekund om det er på tide med en ny bakgrunnssynkronisering
+    const intervalId = setInterval(() => {
+      const currentLastSync = settings?.lastSyncedAt ?? 0;
+      if (Date.now() - currentLastSync >= intervalMs && !isSyncing) {
+        handleRefreshFpl();
+      }
+    }, 60 * 1000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  });
+
   function handleOpenRoomModal(room: any) {
     modalRoom = room;
     isRoomModalOpen = true;
@@ -678,6 +708,7 @@
     {fplTeams}
     {users}
     onClose={() => (isClaimTeamModalOpen = false)}
+    onRefreshFpl={handleRefreshFpl}
     onClaim={async (entryId) => {
       await claimMyFplTeamMutation.mutate({
         userId: currentUser?._id,
