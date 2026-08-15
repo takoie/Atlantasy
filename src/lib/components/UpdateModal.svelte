@@ -6,11 +6,11 @@
     CheckCircle2,
     AlertCircle,
     X,
-    ExternalLink,
     Clock,
     ArrowUpRight,
   } from "lucide-svelte";
   import { onMount } from "svelte";
+  import { invoke } from "@tauri-apps/api/core";
 
   let {
     isOpen = $bindable(false),
@@ -62,10 +62,10 @@
     }
 
     try {
-      const { check } = await import("@tauri-apps/plugin-updater");
-      const update = await check();
+      // Sjekk via Tauri v2 updater IPC
+      const update: any = await invoke("plugin:updater|check");
 
-      if (update && update.available) {
+      if (update && (update.available || update.version)) {
         updateObj = update;
         status = "available";
         isOpen = true;
@@ -81,7 +81,7 @@
       console.warn("Kunne ikke sjekke etter oppdateringer:", err);
       if (manual) {
         status = "error";
-        errorMessage = err?.message || "Kunne ikke kontakte GitHub for å hente oppdateringer.";
+        errorMessage = err?.message || String(err) || "Kunne ikke kontakte GitHub for å hente oppdateringer.";
         isOpen = true;
       }
     } finally {
@@ -90,43 +90,27 @@
   }
 
   async function startDownloadAndInstall() {
-    if (!updateObj) return;
-
     status = "downloading";
     downloadedBytes = 0;
     totalBytes = 0;
     errorMessage = "";
 
     try {
-      await updateObj.downloadAndInstall((event: any) => {
-        if (!event) return;
-        switch (event.event) {
-          case "Started":
-            totalBytes = event.data?.contentLength || 0;
-            break;
-          case "Progress":
-            downloadedBytes += event.data?.chunkLength || 0;
-            break;
-          case "Finished":
-            status = "installing";
-            break;
-        }
-      });
-
+      // Start nedlasting og installasjon via Tauri updater
+      await invoke("plugin:updater|download_and_install");
       status = "ready";
     } catch (err: any) {
       console.error("Feil ved nedlasting/installering:", err);
       status = "error";
-      errorMessage = err?.message || "Feil oppsto under nedlasting eller signaturverifisering.";
+      errorMessage = err?.message || String(err) || "Feil oppsto under nedlasting eller signaturverifisering.";
     }
   }
 
   async function triggerRelaunch() {
     try {
-      const { relaunch } = await import("@tauri-apps/plugin-process");
-      await relaunch();
+      await invoke("plugin:process|restart");
     } catch (err: any) {
-      console.error("Kunne ikke restarte app:", err);
+      console.error("Kunne ikke restarte app via process plugin:", err);
       window.location.reload();
     }
   }
@@ -141,10 +125,9 @@
   onMount(() => {
     isTauriEnv = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
     if (autoCheck && isTauriEnv) {
-      // Vent 3 sekunder etter oppstart før vi sjekker i bakgrunnen
       setTimeout(() => {
         checkForUpdates(false);
-      }, 3000);
+      }, 4000);
     }
   });
 </script>
@@ -189,7 +172,7 @@
             </h3>
             <p class="text-xs text-[#94A3B8] mt-0.5">
               {#if status === "available" && updateObj}
-                Versjon {updateObj.version} er nå publisert på GitHub
+                Versjon {updateObj.version} er nå tilgjengelig på GitHub
               {:else if status === "downloading" || status === "installing"}
                 Vennligst vent mens filene klargjøres
               {:else if status === "up_to_date"}
@@ -269,7 +252,7 @@
               <div class="w-full h-3.5 rounded-full bg-[#191E24] border border-[#384252] overflow-hidden p-0.5 shadow-inner">
                 <div
                   class="h-full rounded-full bg-gradient-to-r from-[#70E1F8] to-[#9FE88D] transition-all duration-200"
-                  style={`width: ${progressPercent}%;`}
+                  style={`width: ${progressPercent || 100}%;`}
                 ></div>
               </div>
             </div>
