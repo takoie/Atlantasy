@@ -12,7 +12,7 @@
   let {
     leaderboard = [],
     selectedRoomId = null,
-    currentGw = 26,
+    currentGw = 1,
     deductHits = true,
     sortBy = "live", // "live" | "month" | "season"
     onSelectSort = (_sort: string) => {},
@@ -43,62 +43,66 @@
   );
 </script>
 
-<div class="flex-1 flex flex-col h-full overflow-hidden">
+<div class="flex-1 flex flex-col h-full overflow-hidden text-[#E2E8F0] font-sans">
   <!-- Ledertavle topplinje: Header og 3-veis visningstoggle -->
-  <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800 shrink-0">
+  <div class="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-[#384252] shrink-0">
     <div class="flex items-center gap-3">
-      <div class="flex items-center gap-2">
-        <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
-          <Trophy class="w-4 h-4 text-emerald-400" />
-          <span>Leaderboard - Rom</span>
-        </h1>
-        <span class="text-xs px-2 py-0.5 rounded-full bg-slate-900 text-slate-300 border border-slate-800 font-mono">
-          GW {currentGw}
-        </span>
+      <div class="flex items-center gap-2.5">
+        <div class="p-2 rounded-xl bg-[#9FE88D]/15 text-[#9FE88D] border border-[#9FE88D]/30">
+          <Trophy class="w-5 h-5" />
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold text-white tracking-wide flex items-center gap-2">
+            <span>Rom-tabell</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-[#191E24] text-[#9FE88D] border border-[#384252] font-mono font-bold">
+              GW {currentGw}
+            </span>
+          </h1>
+          <p class="text-xs text-[#94A3B8]">
+            {sortBy === "season" ? "Rangert etter sesongtotal (Topp 2 snitt per runde)" : sortBy === "month" ? "Rangert etter månedssnitt" : "Rangert etter live runderesultat (Topp 2 snitt)"}
+          </p>
+        </div>
       </div>
 
       {#if deductHits}
-        <span class="hidden sm:inline-block text-[11px] text-amber-300/90 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800/40">
-          Hits fratrukket
+        <span class="hidden lg:inline-block text-xs text-[#F4C152] bg-[#F4C152]/10 px-2.5 py-1 rounded-lg border border-[#F4C152]/30 font-semibold">
+          Transfer hits fratrukket (-4p)
         </span>
       {/if}
     </div>
 
-    <!-- 3-veis toggle: Live runde | Måned | Sesong totalt -->
-    <div class="flex items-center gap-0.5 p-0.5 rounded-lg bg-slate-900 border border-slate-800 text-xs">
-      <!-- Live runde -->
+    <!-- 3-veis toggle: Live runde | Måned | Sesong totalt (DaisyUI Dim Style) -->
+    <div class="flex items-center gap-1 p-1 rounded-xl bg-[#191E24] border border-[#384252] text-xs font-bold">
       <button
         onclick={() => onSelectSort("live")}
-        class={`px-3 py-1 rounded-md font-semibold transition-colors flex items-center gap-1.5 ${
+        class={`px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
           sortBy === "live"
-            ? "bg-emerald-500 text-slate-950 font-bold shadow-sm"
-            : "text-slate-400 hover:text-slate-200"
+            ? "bg-[#9FE88D] text-[#16380c] font-bold shadow-sm"
+            : "text-[#94A3B8] hover:text-white"
         }`}
       >
         <Zap class="w-3.5 h-3.5" />
         <span>Live</span>
       </button>
 
-      <!-- Måned -->
       <button
         onclick={() => onSelectSort("month")}
-        class={`px-3 py-1 rounded-md font-semibold transition-colors flex items-center gap-1.5 ${
+        class={`px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
           sortBy === "month"
-            ? "bg-emerald-500 text-slate-950 font-bold shadow-sm"
-            : "text-slate-400 hover:text-slate-200"
+            ? "bg-[#F4C152] text-black font-bold shadow-sm"
+            : "text-[#94A3B8] hover:text-white"
         }`}
       >
         <Calendar class="w-3.5 h-3.5" />
         <span>Måned</span>
       </button>
 
-      <!-- Sesong totalt -->
       <button
         onclick={() => onSelectSort("season")}
-        class={`px-3 py-1 rounded-md font-semibold transition-colors flex items-center gap-1.5 ${
+        class={`px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
           sortBy === "season"
-            ? "bg-emerald-500 text-slate-950 font-bold shadow-sm"
-            : "text-slate-400 hover:text-slate-200"
+            ? "bg-[#70E1F8] text-black font-bold shadow-sm"
+            : "text-[#94A3B8] hover:text-white"
         }`}
       >
         <TrendingUp class="w-3.5 h-3.5" />
@@ -108,18 +112,29 @@
   </div>
 
   <!-- Rom-kortliste -->
-  <div class="flex-1 overflow-y-auto py-3 space-y-2 pr-1">
+  <div class="flex-1 overflow-y-auto py-3 space-y-2.5 pr-1 custom-scrollbar">
     {#if displayedRooms.length === 0}
-      <div class="p-8 text-center bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
-        <AlertCircle class="w-8 h-8 text-slate-500 mx-auto" />
-        <p class="text-sm font-semibold text-slate-300">Ingen rom funnet</p>
-        <p class="text-xs text-slate-500">
-          Trykk på "Admin" i toppen for å hente eller seede data.
+      <div class="p-8 text-center bg-[#2A303C] rounded-xl border border-[#384252] space-y-2">
+        <AlertCircle class="w-8 h-8 text-[#94A3B8] mx-auto" />
+        <p class="text-base font-bold text-white">Ingen rom funnet</p>
+        <p class="text-xs text-[#94A3B8]">
+          Gå til "Admin" i menyen til venstre for å hente eller fordele lag inn i rommene.
         </p>
       </div>
     {/if}
 
     {#each displayedRooms as room, index (room._id)}
+      <!-- Naturlig skillelinje etter Topp 3 -->
+      {#if index === 3 && displayedRooms.length > 3}
+        <div class="flex items-center gap-3 py-2 px-1 text-[#94A3B8] text-xs font-semibold select-none">
+          <div class="h-px bg-[#384252] flex-1"></div>
+          <span class="text-[11px] uppercase tracking-wider text-[#94A3B8]/90 font-mono font-bold flex items-center gap-1.5 bg-[#191E24] px-3 py-0.5 rounded-full border border-[#384252]">
+            <span>Øvrige rom (4–{displayedRooms.length})</span>
+          </span>
+          <div class="h-px bg-[#384252] flex-1"></div>
+        </div>
+      {/if}
+
       <div
         role="button"
         tabindex="0"
@@ -127,48 +142,45 @@
         onkeydown={(e) => (e.key === "Enter" || e.key === " ") && onOpenRoomModal(room)}
         class={`relative rounded-xl border transition-all duration-150 cursor-pointer overflow-hidden ${
           index === 0
-            ? "bg-gradient-to-r from-amber-950/20 via-slate-900 to-slate-900 border-amber-500/40 shadow-sm hover:border-amber-400"
+            ? "bg-[#2A303C] border-[#F4C152]/60 shadow-sm hover:border-[#F4C152] ring-1 ring-[#F4C152]/20"
             : index === 1
-            ? "bg-slate-900/90 border-slate-750 hover:border-slate-600"
+            ? "bg-[#2A303C] border-[#CBD5E1]/40 shadow-sm hover:border-[#CBD5E1] ring-1 ring-[#CBD5E1]/10"
             : index === 2
-            ? "bg-slate-900/90 border-amber-800/30 hover:border-amber-700/60"
-            : "bg-slate-900/70 border-slate-800 hover:border-slate-700"
+            ? "bg-[#2A303C] border-[#D97706]/40 shadow-sm hover:border-[#D97706] ring-1 ring-[#D97706]/10"
+            : "bg-[#2A303C] border-[#384252] hover:border-[#4B5563]"
         }`}
       >
         <!-- Hovedrad: 3 distinkte, stabile kolonner -->
-        <div class="px-3.5 py-3 flex items-center justify-between gap-2 sm:gap-4">
-          
+        <div class="px-4 py-3.5 flex items-center justify-between gap-3 sm:gap-4">
           <!-- Kolonne 1 (Venstre): Fast bredde for Rank + Romnavn -->
-          <div class="w-[170px] sm:w-[210px] shrink-0 flex items-center gap-2.5 min-w-0">
-            <!-- Rank Plakett (fast bredde) -->
-            <div class="w-6 text-center shrink-0">
+          <div class="w-[200px] sm:w-[240px] shrink-0 flex items-center gap-3 min-w-0">
+            <div class="w-7 text-center shrink-0">
               {#if index === 0}
-                <span class="text-base">🥇</span>
+                <span class="text-xl inline-block drop-shadow-sm">🥇</span>
               {:else if index === 1}
-                <span class="text-base">🥈</span>
+                <span class="text-xl inline-block drop-shadow-sm">🥈</span>
               {:else if index === 2}
-                <span class="text-base">🥉</span>
+                <span class="text-xl inline-block drop-shadow-sm">🥉</span>
               {:else}
-                <span class="text-slate-400 font-mono text-xs font-bold">#{index + 1}</span>
+                <span class="text-[#94A3B8] font-mono text-sm font-bold">#{index + 1}</span>
               {/if}
             </div>
 
             <!-- Fargeprikk -->
             <span
-              class="w-2.5 h-2.5 rounded-full shrink-0"
-              style={`background-color: ${room.accentColor || "#10b981"}`}
+              class="w-3 h-3 rounded-full shrink-0"
+              style={`background-color: ${room.accentColor || "#9FE88D"}`}
             ></span>
 
-            <!-- Rom tittel (truncate pent hvis langt) -->
-            <span class="font-bold text-xs sm:text-sm text-white truncate hover:text-emerald-400 transition-colors">
-              {room.name.startsWith("Rom ") ? room.name.replace(/^Rom\s*(\d+)/, "A$1") : room.name}
+            <span class="font-bold text-sm sm:text-base text-white truncate hover:text-[#9FE88D] transition-colors">
+              {room.name.replace(/^Rom\s*/i, "")}
             </span>
           </div>
 
           <!-- Kolonne 2 (Midten): Sentrert, fast container for lederne -->
-          <div class="hidden md:flex flex-1 items-center justify-center min-w-0 px-1">
+          <div class="hidden md:flex flex-1 items-center justify-center min-w-0 px-2">
             {#if room.top1 || room.top2}
-              <div class="flex items-center gap-2.5 px-3 py-1 rounded-xl bg-slate-950/90 border border-slate-800 text-xs shadow-inner">
+              <div class="flex items-center gap-3 px-3.5 py-1.5 rounded-xl bg-[#191E24] border border-[#384252] text-xs">
                 {#if room.top1}
                   <button
                     type="button"
@@ -176,24 +188,24 @@
                       e.stopPropagation();
                       onOpenProfile(room.top1.entryId);
                     }}
-                    class="flex items-center gap-1.5 truncate hover:text-emerald-400 transition-colors text-left"
+                    class="flex items-center gap-1.5 truncate hover:text-[#9FE88D] transition-colors text-left"
                     title={`Se profilen til ${room.top1.managerName}`}
                   >
-                    <span class="text-amber-400 font-bold text-[11px]">🥇</span>
-                    <span class="font-medium text-slate-200 hover:text-white underline decoration-dotted truncate max-w-[110px]">
+                    <span class="text-[#F4C152] font-bold text-xs">🥇</span>
+                    <span class="font-medium text-[#E2E8F0] hover:text-white truncate max-w-[120px]">
                       {room.top1.managerName}:
                     </span>
-                    <span class="font-mono font-bold text-emerald-400 shrink-0">
+                    <span class="font-mono font-bold text-[#9FE88D] shrink-0 text-sm">
                       {room.top1.effectivePoints}p
                     </span>
                     {#if room.top1.currentGwTransfersCost > 0 && deductHits}
-                      <span class="text-[10px] text-rose-400 font-mono shrink-0">(-{room.top1.currentGwTransfersCost})</span>
+                      <span class="text-xs text-[#FB6F84] font-mono shrink-0">(-{room.top1.currentGwTransfersCost})</span>
                     {/if}
                   </button>
                 {/if}
 
                 {#if room.top1 && room.top2}
-                  <span class="text-slate-600 font-bold shrink-0">•</span>
+                  <span class="text-[#384252] font-bold">|</span>
                 {/if}
 
                 {#if room.top2}
@@ -203,37 +215,45 @@
                       e.stopPropagation();
                       onOpenProfile(room.top2.entryId);
                     }}
-                    class="flex items-center gap-1.5 truncate hover:text-emerald-400 transition-colors text-left"
+                    class="flex items-center gap-1.5 truncate hover:text-[#9FE88D] transition-colors text-left"
                     title={`Se profilen til ${room.top2.managerName}`}
                   >
-                    <span class="text-slate-300 font-bold text-[11px]">🥈</span>
-                    <span class="font-medium text-slate-200 hover:text-white underline decoration-dotted truncate max-w-[110px]">
+                    <span class="text-[#94A3B8] font-bold text-xs">🥈</span>
+                    <span class="font-medium text-[#E2E8F0] hover:text-white truncate max-w-[120px]">
                       {room.top2.managerName}:
                     </span>
-                    <span class="font-mono font-bold text-emerald-400 shrink-0">
+                    <span class="font-mono font-bold text-[#9FE88D] shrink-0 text-sm">
                       {room.top2.effectivePoints}p
                     </span>
                     {#if room.top2.currentGwTransfersCost > 0 && deductHits}
-                      <span class="text-[10px] text-rose-400 font-mono shrink-0">(-{room.top2.currentGwTransfersCost})</span>
+                      <span class="text-xs text-[#FB6F84] font-mono shrink-0">(-{room.top2.currentGwTransfersCost})</span>
                     {/if}
                   </button>
                 {/if}
               </div>
+            {:else}
+              <span class="text-xs text-[#94A3B8] italic">Ingen spillere tildelt rommet</span>
             {/if}
           </div>
 
-          <!-- Kolonne 3 (Høyre): Ren poengsum (uten ROM-SNITT tekst) + Utvid/Chevron -->
-          <div class="w-[85px] sm:w-[95px] shrink-0 flex items-center justify-end gap-2 text-right">
-            <div class="font-mono font-black text-base sm:text-lg text-emerald-400 leading-none">
-              {sortBy === "season" ? room.seasonTotal : room.liveAverage}
-              <span class="text-[10px] font-normal text-slate-400">pts</span>
+          <!-- Kolonne 3 (Høyre): Fast bredde for Score og Snitt -->
+          <div class="w-[140px] sm:w-[170px] shrink-0 flex items-center justify-end gap-3 text-right">
+            <div>
+              <div class="font-mono font-black text-base sm:text-lg text-[#9FE88D] leading-tight">
+                {sortBy === "season" ? room.seasonTotal : room.liveAverage}
+                <span class="text-xs font-normal text-[#94A3B8]">snitt</span>
+              </div>
+              <div class="text-xs font-mono text-[#94A3B8] leading-tight">
+                {room.teamCount} {room.teamCount === 1 ? "spiller" : "spillere"}
+              </div>
             </div>
 
-            <!-- Utvid-knapp -->
+            <!-- Ekspander-knapp for lagliste -->
             <button
+              type="button"
               onclick={(e) => toggleExpand(room._id, e)}
-              class="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-              title={expandedRooms[room._id] ? "Skjul detaljer" : "Vis alle spillere"}
+              class="p-1.5 rounded-lg text-[#94A3B8] hover:text-white hover:bg-[#242B35] transition-colors"
+              title={expandedRooms[room._id] ? "Skjul spillere" : "Vis alle spillere"}
             >
               {#if expandedRooms[room._id]}
                 <ChevronUp class="w-4 h-4" />
@@ -242,43 +262,59 @@
               {/if}
             </button>
           </div>
-
         </div>
 
-        <!-- Utvidet visning: Alle spillere i rommet -->
+        <!-- Ekspandert visning for alle spillere i dette rommet -->
         {#if expandedRooms[room._id]}
-          <div class="px-4 pb-3 pt-1 border-t border-slate-800/80 bg-slate-950/60">
-            <div class="space-y-1.5 pt-2">
-              {#if !room.teams || room.teams.length === 0}
-                <div class="text-xs text-slate-500 py-1">Ingen spillere tildelt dette rommet enda.</div>
-              {:else}
-                {#each room.teams as team, tIdx}
-                  <div
-                    role="button"
-                    tabindex="0"
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      onOpenProfile(team.entryId);
-                    }}
-                    onkeydown={(e) => (e.key === "Enter" || e.key === " ") && onOpenProfile(team.entryId)}
-                    class="flex items-center justify-between text-xs py-1 px-2 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-slate-700 cursor-pointer"
-                  >
-                    <div class="flex items-center gap-2">
-                      <span class="font-mono text-[10px] text-slate-500 w-4">#{tIdx + 1}</span>
-                      <span class="font-semibold text-slate-200">{team.managerName}</span>
-                      <span class="text-[10px] text-slate-400 font-normal">({team.teamName})</span>
-                    </div>
-
-                    <div class="flex items-center gap-2 font-mono">
-                      {#if team.transfersCost > 0 && deductHits}
-                        <span class="text-[10px] text-rose-400">-{team.transfersCost}</span>
-                      {/if}
-                      <span class="font-bold text-white">{team.effectivePoints} pts</span>
-                    </div>
-                  </div>
-                {/each}
-              {/if}
+          <div class="px-4 pb-3.5 pt-2 border-t border-[#384252] bg-[#191E24] space-y-1.5 animate-in fade-in duration-150">
+            <div class="flex items-center justify-between text-xs text-[#94A3B8] font-semibold px-2 pb-1">
+              <span>Manager & Lag</span>
+              <span>Poeng (Hits)</span>
             </div>
+
+            {#if !room.teams || room.teams.length === 0}
+              <div class="p-3 text-center text-xs text-[#94A3B8]">
+                Ingen spillere registrert i dette rommet enda.
+              </div>
+            {/if}
+
+            {#each room.teams || [] as team, tIdx}
+              <div
+                role="button"
+                tabindex="0"
+                onclick={(e) => {
+                  e.stopPropagation();
+                  onOpenProfile(team.entryId);
+                }}
+                onkeydown={(e) => (e.key === "Enter" || e.key === " ") && onOpenProfile(team.entryId)}
+                class="flex items-center justify-between px-3 py-2 rounded-lg bg-[#242B35] hover:bg-[#2A303C] border border-[#384252] transition-colors text-xs cursor-pointer group"
+              >
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <span class="font-mono text-xs font-bold text-[#94A3B8] w-4">
+                    #{tIdx + 1}
+                  </span>
+                  <div class="min-w-0">
+                    <span class="font-bold text-white group-hover:text-[#9FE88D] transition-colors truncate block">
+                      {team.managerName}
+                    </span>
+                    <span class="text-xs text-[#94A3B8] truncate block">
+                      {team.teamName}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="text-right shrink-0">
+                  <span class="font-mono font-bold text-sm text-[#9FE88D]">
+                    {team.effectivePoints}p
+                  </span>
+                  {#if team.transfersCost > 0 && deductHits}
+                    <span class="text-xs text-[#FB6F84] font-mono block">
+                      (-{team.transfersCost})
+                    </span>
+                  {/if}
+                </div>
+              </div>
+            {/each}
           </div>
         {/if}
       </div>

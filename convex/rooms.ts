@@ -211,6 +211,94 @@ export const updateRoom = mutation({
 });
 
 /**
+ * Oppretter et nytt rom
+ */
+export const createRoom = mutation({
+  args: {
+    name: v.string(),
+    description: v.optional(v.string()),
+    accentColor: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const existingRooms = await ctx.db.query("rooms").collect();
+    const maxNumber = existingRooms.reduce(
+      (max, r) => Math.max(max, r.roomNumber || 0),
+      0
+    );
+
+    const colors = [
+      "#1eb854", "#1fd65f", "#d99330", "#38bdf8",
+      "#a855f7", "#ec4899", "#f59e0b", "#10b981",
+      "#6366f1", "#14b8a6", "#84cc16", "#e11d48"
+    ];
+    const defaultColor = colors[maxNumber % colors.length] || "#1eb854";
+
+    const roomId = await ctx.db.insert("rooms", {
+      roomNumber: maxNumber + 1,
+      name: args.name.trim() || `A${maxNumber + 1}`,
+      description: args.description?.trim(),
+      accentColor: args.accentColor || defaultColor,
+      createdAt: Date.now(),
+    });
+
+    return roomId;
+  },
+});
+
+/**
+ * Sletter et rom og frigjør/sletter tilhørende lag og historikk
+ */
+export const deleteRoom = mutation({
+  args: {
+    roomId: v.id("rooms"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.roomId);
+
+    const teamsInRoom = await ctx.db
+      .query("fpl_teams")
+      .withIndex("by_roomId", (q) => q.eq("roomId", args.roomId))
+      .collect();
+
+    for (const t of teamsInRoom) {
+      await ctx.db.delete(t._id);
+    }
+
+    const roomScores = await ctx.db
+      .query("room_gameweek_scores")
+      .withIndex("by_roomId_and_gw", (q) => q.eq("roomId", args.roomId))
+      .collect();
+
+    for (const rs of roomScores) {
+      await ctx.db.delete(rs._id);
+    }
+  },
+});
+
+/**
+ * Endrer lagnavn for et FPL-lag i databasen
+ */
+export const updateTeamName = mutation({
+  args: {
+    entryId: v.number(),
+    newTeamName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const team = await ctx.db
+      .query("fpl_teams")
+      .withIndex("by_entryId", (q) => q.eq("entryId", args.entryId))
+      .first();
+
+    if (team) {
+      await ctx.db.patch(team._id, {
+        teamName: args.newTeamName.trim(),
+        lastUpdated: Date.now(),
+      });
+    }
+  },
+});
+
+/**
  * Tildeler et FPL-lag til et bestemt rom
  */
 export const assignTeamToRoom = mutation({
@@ -237,6 +325,27 @@ export const getAllFplTeams = query({
 });
 
 /**
+ * Tømmer alle lag fra rommene og sletter mock/lag-data slik at rommene er helt rene for ekte data
+ */
+export const clearAllRoomAssignments = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const allTeams = await ctx.db.query("fpl_teams").collect();
+    for (const t of allTeams) {
+      await ctx.db.delete(t._id);
+    }
+    const allScores = await ctx.db.query("gameweek_scores").collect();
+    for (const s of allScores) {
+      await ctx.db.delete(s._id);
+    }
+    const allRoomScores = await ctx.db.query("room_gameweek_scores").collect();
+    for (const rs of allRoomScores) {
+      await ctx.db.delete(rs._id);
+    }
+  },
+});
+
+/**
  * Batch-lagrer romtilhørighet for FPL-lag (brukes fra Admin drag & drop)
  */
 export const batchSaveRoomAssignments = mutation({
@@ -252,8 +361,20 @@ export const batchSaveRoomAssignments = mutation({
         currentGwTransfersCost: v.optional(v.number()),
       })
     ),
+    clearUnassigned: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    const assignedEntryIds = new Set(args.assignments.map((a) => a.entryId));
+
+    if (args.clearUnassigned) {
+      const allExisting = await ctx.db.query("fpl_teams").collect();
+      for (const t of allExisting) {
+        if (!assignedEntryIds.has(t.entryId)) {
+          await ctx.db.delete(t._id);
+        }
+      }
+    }
+
     for (const item of args.assignments) {
       const existing = await ctx.db
         .query("fpl_teams")
@@ -313,12 +434,6 @@ export const getIndividualLeaderboard = query({
         ? team.currentGwPoints - team.currentGwTransfersCost
         : team.currentGwPoints;
 
-      // Beregn månedspoeng (f.eks. live poeng * 3.8 som representativ månedsscore)
-      const monthPoints = Math.round(effectiveLive * 3.6 + ((team.entryId % 15)));
-
-      // Mocket benkepoeng for visning hvis ikke tilgjengelig fra API
-      const mockBench = ((team.entryId * 7) % 18);
-
       return {
         entryId: team.entryId,
         teamName: team.teamName,
@@ -326,13 +441,13 @@ export const getIndividualLeaderboard = query({
         roomId: team.roomId,
         roomNumber: room?.roomNumber ?? (idx + 1),
         roomName: room?.name ?? `Rom ${idx + 1}`,
-        roomColor: room?.accentColor ?? "#00ff87",
-        totalPoints: team.totalPoints,
-        monthPoints,
-        currentGwPoints: team.currentGwPoints,
-        currentGwTransfersCost: team.currentGwTransfersCost,
+        roomColor: room?.accentColor ?? "#1eb854",
+        totalPoints: team.totalPoints ?? 0,
+        monthPoints: team.totalPoints ?? 0,
+        currentGwPoints: team.currentGwPoints ?? 0,
+        currentGwTransfersCost: team.currentGwTransfersCost ?? 0,
         effectivePoints: effectiveLive,
-        benchPoints: mockBench,
+        benchPoints: 0,
       };
     });
 
@@ -352,136 +467,175 @@ export const getIndividualLeaderboard = query({
 });
 
 /**
- * Henter morsomme statistikker: Benkepoeng, Topp 10 eierskap og Klatrere
+ * Henter reelle og underholdende statistikker for ligaen med støtte for tidsrom (runde, måned, sesong)
  */
 export const getLeagueFunStats = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    timeframe: v.optional(v.string()), // "round" | "month" | "season"
+  },
+  handler: async (ctx, args) => {
+    const timeframe = args.timeframe || "round";
     const allTeams = await ctx.db.query("fpl_teams").collect();
     const allRooms = await ctx.db.query("rooms").collect();
+    const settings = await ctx.db.query("league_settings").first();
+    const currentGw = settings?.currentGameweek ?? 1;
+
     const roomMap = new Map<string, any>();
     for (const r of allRooms) {
       roomMap.set(r._id, r);
     }
 
-    const totalManagers = Math.max(allTeams.length, 1);
+    const totalManagers = allTeams.length;
 
-    // 1. Mest poeng på benken (Benkevarmer-skammen)
-    const benchNames = [
-      "Cole Palmer (14p)",
-      "David Raya (9p)",
-      "Alexander Isak (12p)",
-      "Bukayo Saka (10p)",
-      "Gabriel (8p)",
-      "Bryan Mbeumo (11p)",
-      "Matheus Cunha (9p)",
-    ];
+    // Sortert etter live GW-poeng eller sesongpoeng
+    const sortedByScore = [...allTeams].sort((a, b) => {
+      if (timeframe === "season") return b.totalPoints - a.totalPoints;
+      return b.currentGwPoints - a.currentGwPoints;
+    });
 
+    // 1. Benkevarmer-skammen (kun reelle benkepoeng fra databasen)
     const benchNightmares = allTeams
-      .map((t, i) => {
+      .filter((t) => (t as any).benchPoints && (t as any).benchPoints > 0)
+      .map((t) => {
         const room = roomMap.get(t.roomId);
-        const benchPts = [16, 14, 12, 11, 9, 8, 6, 5][i % 8] || 6;
         return {
           entryId: t.entryId,
           managerName: t.managerName,
           teamName: t.teamName,
-          roomName: room?.name ?? "A1",
-          benchPoints: benchPts,
-          benchedPlayer: benchNames[i % benchNames.length],
+          roomName: room?.name ?? "Rom",
+          benchPoints: (t as any).benchPoints || 0,
+          benchedPlayer: (t as any).benchedPlayer || "Benk",
         };
       })
       .sort((a, b) => b.benchPoints - a.benchPoints)
+      .slice(0, 8);
+
+    // 2. Kapteinslotteriet & Kapteinsblemmen (kun dersom kaptein er registrert på lag)
+    const teamsWithCaptains = allTeams.filter((t) => (t as any).captainName);
+    const captainSuccess = teamsWithCaptains
+      .map((t) => {
+        const room = roomMap.get(t.roomId);
+        const captainName = (t as any).captainName;
+        const pts = (t as any).captainPoints || 0;
+        return {
+          entryId: t.entryId,
+          managerName: t.managerName,
+          teamName: t.teamName,
+          roomName: room?.name ?? "Rom",
+          captainName,
+          points: pts * 2,
+          rawPoints: pts,
+        };
+      })
+      .sort((a, b) => b.points - a.points);
+
+    const topCaptains = captainSuccess.slice(0, 5);
+    const captainFails = [...captainSuccess].reverse().slice(0, 5);
+
+    // Kapteinsfordeling i prosent
+    const captainCounts = new Map<string, number>();
+    captainSuccess.forEach((c) => {
+      captainCounts.set(c.captainName, (captainCounts.get(c.captainName) || 0) + 1);
+    });
+
+    const captainDistribution = Array.from(captainCounts.entries())
+      .map(([name, count]) => ({
+        name,
+        count,
+        percent: teamsWithCaptains.length > 0 ? Math.round((count / teamsWithCaptains.length) * 100) : 0,
+      }))
+      .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    // 2. Topp 10 mest eide fotballspillere i ligaen
-    const topOwnedFootballers = [
-      { name: "Erling Haaland", club: "MCI", pos: "ANG", percent: 92, points: 184 },
-      { name: "Mohamed Salah", club: "LIV", pos: "MID", percent: 84, points: 210 },
-      { name: "Cole Palmer", club: "CHE", pos: "MID", percent: 75, points: 168 },
-      { name: "Bukayo Saka", club: "ARS", pos: "MID", percent: 67, points: 142 },
-      { name: "Alexander Isak", club: "NEW", pos: "ANG", percent: 58, points: 136 },
-      { name: "Gabriel", club: "ARS", pos: "FOR", percent: 52, points: 118 },
-      { name: "Trent Alexander-Arnold", club: "LIV", pos: "FOR", percent: 46, points: 104 },
-      { name: "David Raya", club: "ARS", pos: "KEE", percent: 42, points: 98 },
-      { name: "Bryan Mbeumo", club: "BRE", pos: "MID", percent: 38, points: 112 },
-      { name: "Joško Gvardiol", club: "MCI", pos: "FOR", percent: 33, points: 92 },
-    ];
-
-    // 3. Rundens Klatrere (Størst hopp i plassering)
-    const climbs = [8, 6, 5, 4, 3, 2];
-    const topClimbers = allTeams
-      .slice(0, 6)
-      .map((t, idx) => {
+    // 3. Hit-jegeren & Overgangskaos (kun reelle transfer hits)
+    const topHitTakers = allTeams
+      .filter((t) => (t.currentGwTransfersCost && t.currentGwTransfersCost > 0) || ((t as any).totalHitsCost && (t as any).totalHitsCost > 0))
+      .map((t) => {
         const room = roomMap.get(t.roomId);
-        const spots = climbs[idx % climbs.length];
-        const curRank = idx + 2;
+        const gwHits = t.currentGwTransfersCost || 0;
+        const totalHits = (t as any).totalHitsCost || gwHits;
+        const hits = timeframe === "season" ? totalHits : gwHits;
+
         return {
           entryId: t.entryId,
           managerName: t.managerName,
           teamName: t.teamName,
-          roomName: room?.name ?? "A1",
-          spotsClimbed: spots,
-          currentRank: curRank,
-          previousRank: curRank + spots,
-          gwPoints: t.currentGwPoints,
+          roomName: room?.name ?? "Rom",
+          gwHits: hits,
+          totalHits,
+          hitsCount: Math.round(hits / 4),
         };
       })
-      .sort((a, b) => b.spotsClimbed - a.spotsClimbed);
+      .sort((a, b) => b.gwHits - a.gwHits);
 
-    // 4. Trynerne (Størst fall i plassering fra forrige runde)
-    const drops = [7, 6, 5, 4, 3, 2];
-    const topFallers = allTeams
-      .slice(6, 12)
-      .map((t, idx) => {
-        const room = roomMap.get(t.roomId);
-        const spots = drops[idx % drops.length];
-        const curRank = 12 + idx;
-        return {
-          entryId: t.entryId,
-          managerName: t.managerName,
-          teamName: t.teamName,
-          roomName: room?.name ?? "A1",
-          spotsDropped: spots,
-          currentRank: curRank,
-          previousRank: Math.max(1, curRank - spots),
-          gwPoints: t.currentGwPoints,
-        };
-      })
-      .sort((a, b) => b.spotsDropped - a.spotsDropped);
+    const totalLeagueHits = topHitTakers.reduce((sum, t) => sum + t.gwHits, 0);
 
-    // 5. Chip-statistikk i ligaen
-    const chipCounts = {
-      wildcard: Math.round(totalManagers * 0.75),
-      tripleCaptain: Math.round(totalManagers * 0.65),
-      freeHit: Math.round(totalManagers * 0.40),
-      benchBoost: Math.round(totalManagers * 0.30),
-    };
+    // 4. Differensialer (populeres når runder starter og picks synkroniseres)
+    const differentials: any[] = [];
 
-    const recentChipPlays = allTeams.slice(0, 8).map((t, idx) => {
-      const room = roomMap.get(t.roomId);
-      const chipsList = [
-        { name: "Triple Captain (Haaland)", event: 25, type: "3xC", pointsGained: 48 },
-        { name: "Wildcard 1", event: 18, type: "WC", pointsGained: 74 },
-        { name: "Free Hit", event: 22, type: "FH", pointsGained: 68 },
-        { name: "Bench Boost", event: 26, type: "BB", pointsGained: 24 },
-        { name: "Triple Captain (Salah)", event: 12, type: "3xC", pointsGained: 42 },
-      ];
-      const chip = chipsList[idx % chipsList.length];
+    // 5. Formel 1-Poengtabell (beregnes kun hvis lag har spilt og fått poeng)
+    const teamsWithPoints = sortedByScore.filter((t) => (timeframe === "season" ? t.totalPoints > 0 : t.currentGwPoints > 0));
+    const f1PointsScale = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
+    const f1Standings = teamsWithPoints.map((team, idx) => {
+      const f1Pts = idx < f1PointsScale.length ? f1PointsScale[idx] : 0;
+      const room = roomMap.get(team.roomId);
       return {
-        entryId: t.entryId,
-        managerName: t.managerName,
-        teamName: t.teamName,
-        roomName: room?.name ?? "A1",
-        chipName: chip.name,
-        chipType: chip.type,
-        event: chip.event,
-        pointsGained: chip.pointsGained,
+        entryId: team.entryId,
+        managerName: team.managerName,
+        teamName: team.teamName,
+        roomName: room?.name ?? "Rom",
+        f1Rank: idx + 1,
+        f1Points: f1Pts,
+        fplGwPoints: timeframe === "season" ? team.totalPoints : team.currentGwPoints,
+        fplSeasonPoints: team.totalPoints,
+        podiums: idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "",
       };
     });
 
+    // 6. Auto-Sub Mirakler (kun reelle auto subs)
+    const autoSubs: any[] = [];
+
+    // 7. Drømmeellever & Skrekkellever i ligaen (populeres fra live fpl-synk)
+    const dreamXI: any[] = [];
+    const nightmareXI: any[] = [];
+
+    // 8. Topp mest eide fotballspillere i ligaen (populeres ved synk)
+    const topOwnedFootballers: any[] = [];
+
+    // 9. Rundens Klatrere & Trynerne (populeres etter at runder spilles)
+    const topClimbers: any[] = [];
+    const topFallers: any[] = [];
+
+    // 10. Chip-statistikk i ligaen (kun reelle spilte chips)
+    const chipCounts = {
+      wildcard: 0,
+      tripleCaptain: 0,
+      freeHit: 0,
+      benchBoost: 0,
+    };
+
+    const recentChipPlays: any[] = [];
+
     return {
+      timeframe,
       totalManagers,
       benchNightmares,
+      captainStats: {
+        topCaptains,
+        captainFails,
+        distribution: captainDistribution,
+      },
+      transferHitStats: {
+        topHitTakers,
+        totalLeagueHits,
+      },
+      differentialStats: differentials,
+      f1Standings,
+      autoSubStats: autoSubs,
+      dreamAndNightmareXI: {
+        dreamTeam: dreamXI,
+        nightmareTeam: nightmareXI,
+      },
       topOwnedFootballers,
       topClimbers,
       topFallers,
@@ -494,7 +648,7 @@ export const getLeagueFunStats = query({
 });
 
 /**
- * Henter full FPL-profil for et lag / manager med lagoppstilling, grafdata og chipbruk
+ * Henter FPL-profil for et lag / manager med reelle lag- og lagoppstillingsdata
  */
 export const getTeamProfile = query({
   args: {
@@ -515,52 +669,15 @@ export const getTeamProfile = query({
       room = await ctx.db.get(team.roomId);
     }
 
-    const currentGw = 26;
+    const settings = await ctx.db.query("league_settings").first();
+    const currentGw = settings?.currentGameweek ?? 1;
     const managerName = team?.managerName || "Ukjent Manager";
     const teamName = team?.teamName || "FPL Lag";
 
-    // Lagoppstilling (11 på banen + 4 på benken)
-    const pitch = [
-      // Keeper
-      { id: 1, name: "David Raya", club: "ARS", pos: "GKP", points: 6, isCaptain: false, isVice: false, fixture: "LEI (B)" },
-      // Forsvar
-      { id: 2, name: "Gabriel", club: "ARS", pos: "DEF", points: 8, isCaptain: false, isVice: false, fixture: "LEI (B)" },
-      { id: 3, name: "Joško Gvardiol", club: "MCI", pos: "DEF", points: 6, isCaptain: false, isVice: false, fixture: "NEW (H)" },
-      { id: 4, name: "Trent Alex.-Arnold", club: "LIV", pos: "DEF", points: 9, isCaptain: false, isVice: false, fixture: "AVL (H)" },
-      { id: 5, name: "Antonee Robinson", club: "FUL", pos: "DEF", points: 5, isCaptain: false, isVice: false, fixture: "CRY (H)" },
-      // Midtbane
-      { id: 6, name: "Mohamed Salah", club: "LIV", pos: "MID", points: 15, isCaptain: false, isVice: true, fixture: "AVL (H)" },
-      { id: 7, name: "Cole Palmer", club: "CHE", pos: "MID", points: 12, isCaptain: false, isVice: false, fixture: "BOU (A)" },
-      { id: 8, name: "Bukayo Saka", club: "ARS", pos: "MID", points: 10, isCaptain: false, isVice: false, fixture: "LEI (B)" },
-      { id: 9, name: "Bryan Mbeumo", club: "BRE", pos: "MID", points: 8, isCaptain: false, isVice: false, fixture: "WHU (H)" },
-      // Angrep
-      { id: 10, name: "Erling Haaland", club: "MCI", pos: "FWD", points: 26, isCaptain: true, isVice: false, fixture: "NEW (H)" }, // 13 * 2
-      { id: 11, name: "Alexander Isak", club: "NEW", pos: "FWD", points: 9, isCaptain: false, isVice: false, fixture: "MCI (A)" },
-    ];
-
-    const bench = [
-      { id: 12, name: "Mark Flekken", club: "BRE", pos: "GKP", points: 3, isSub: true, subOrder: 1 },
-      { id: 13, name: "Morgan Rogers", club: "AVL", pos: "MID", points: 6, isSub: true, subOrder: 2 },
-      { id: 14, name: "Leif Davis", club: "IPS", pos: "DEF", points: 2, isSub: true, subOrder: 3 },
-      { id: 15, name: "João Pedro", club: "BHA", pos: "FWD", points: 1, isSub: true, subOrder: 4 },
-    ];
-
-    // Historikk over siste runder for graf (Rank og poeng)
-    const history = [
-      { gw: 19, points: 68, rank: 14, average: 58 },
-      { gw: 20, points: 74, rank: 10, average: 61 },
-      { gw: 21, points: 82, rank: 7, average: 64 },
-      { gw: 22, points: 59, rank: 9, average: 62 },
-      { gw: 23, points: 91, rank: 4, average: 65 },
-      { gw: 24, points: 77, rank: 3, average: 60 },
-      { gw: 25, points: 84, rank: 2, average: 63 },
-      { gw: 26, points: team?.currentGwPoints || 88, rank: leagueRank, average: 67 },
-    ];
-
-    // Chip-oversikt
+    // Standard tilgjengelige chips for enhver FPL manager
     const chips = [
-      { name: "Wildcard 1", status: "Brukt", gw: "GW 8" },
-      { name: "Triple Captain", status: "Brukt", gw: "GW 14 (Haaland 39p)" },
+      { name: "Wildcard 1", status: "Tilgjengelig", gw: null },
+      { name: "Triple Captain", status: "Tilgjengelig", gw: null },
       { name: "Wildcard 2", status: "Tilgjengelig", gw: null },
       { name: "Free Hit", status: "Tilgjengelig", gw: null },
       { name: "Bench Boost", status: "Tilgjengelig", gw: null },
@@ -572,19 +689,19 @@ export const getTeamProfile = query({
       teamName,
       leagueRank,
       totalManagers: allTeams.length,
-      totalPoints: team?.totalPoints || 1640,
-      currentGwPoints: team?.currentGwPoints || 88,
-      currentGwTransfersCost: team?.currentGwTransfersCost || 0,
-      roomName: room?.name || "A1 - The Devs",
-      roomColor: room?.accentColor || "#00ff87",
-      roomNumber: room?.roomNumber || 1,
-      overallFplRank: 42350,
-      teamValue: "£104.8m",
-      bank: "£1.2m",
-      totalTransfers: 24,
-      pitch,
-      bench,
-      history,
+      totalPoints: team?.totalPoints ?? 0,
+      currentGwPoints: team?.currentGwPoints ?? 0,
+      currentGwTransfersCost: team?.currentGwTransfersCost ?? 0,
+      roomName: room?.name ?? "Ikke tildelt rom",
+      roomColor: room?.accentColor ?? "#1eb854",
+      roomNumber: room?.roomNumber ?? 1,
+      overallFplRank: null,
+      teamValue: "£100.0m",
+      bank: "£0.0m",
+      totalTransfers: 0,
+      pitch: [],
+      bench: [],
+      history: [],
       chips,
       fplUrl: `https://fantasy.premierleague.com/entry/${args.entryId}/event/${currentGw}`,
     };

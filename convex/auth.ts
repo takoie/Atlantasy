@@ -46,7 +46,41 @@ export const loginOrRegister = mutation({
       throw new Error("Vennligst oppgi både brukernavn og passord.");
     }
 
-    // 1. Sjekk om bruker allerede eksisterer (Innlogging)
+    // 1. Sjekk om admin logger inn med standard PIN/passord (1234)
+    if (cleanUsername.toLowerCase() === "admin" && (cleanPassword === "1234" || cleanPassword === "admin")) {
+      const existingAdmin = await ctx.db
+        .query("users")
+        .withIndex("by_username", (q) => q.eq("username", "Admin"))
+        .first();
+
+      if (existingAdmin) {
+        if (existingAdmin.role !== "admin") {
+          await ctx.db.patch(existingAdmin._id, { role: "admin", password: cleanPassword });
+        }
+        return {
+          userId: existingAdmin._id,
+          role: "admin",
+          isNew: false,
+        };
+      }
+
+      const newAdminId = await ctx.db.insert("users", {
+        username: "Admin",
+        password: cleanPassword,
+        role: "admin",
+        avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Admin",
+        createdAt: Date.now(),
+        lastActiveAt: Date.now(),
+      });
+
+      return {
+        userId: newAdminId,
+        role: "admin",
+        isNew: true,
+      };
+    }
+
+    // 2. Sjekk om bruker allerede eksisterer (Innlogging)
     const existingUser = await ctx.db
       .query("users")
       .withIndex("by_username", (q) => q.eq("username", cleanUsername))

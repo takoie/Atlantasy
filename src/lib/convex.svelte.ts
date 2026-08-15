@@ -97,3 +97,39 @@ export function useMutation<Mutation extends FunctionReference<"mutation">>(
     },
   };
 }
+
+/**
+ * Svelte 5 Runes-basert helper for Convex actions
+ */
+export function useAction<Action extends FunctionReference<"action">>(
+  action: Action
+) {
+  let isPending = $state<boolean>(false);
+  let error = $state<Error | null>(null);
+
+  async function execute(
+    args: FunctionArgs<Action>
+  ): Promise<FunctionReturnType<Action>> {
+    isPending = true;
+    error = null;
+    try {
+      const res = await convexClient.action(action, args);
+      return res;
+    } catch (e: any) {
+      error = e instanceof Error ? e : new Error(String(e));
+      throw error;
+    } finally {
+      isPending = false;
+    }
+  }
+
+  return {
+    execute,
+    get isPending() {
+      return isPending;
+    },
+    get error() {
+      return error;
+    },
+  };
+}

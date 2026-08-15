@@ -1,34 +1,525 @@
 import { action, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
+
+const FPL_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Atlantasy Desktop FPL Client",
+  Accept: "application/json",
+};
 
 /**
- * Action for å hente live data direkte fra FPLs offisielle API
+ * Action for å hente ligatabell og managere direkte fra FPLs offisielle API
+ * Støtter både aktive sesongtabeller (standings) og før-sesong påmeldte lag (new_entries)
  */
 export const fetchFplLeagueStandings = action({
   args: {
     leagueId: v.number(),
+    page: v.optional(v.number()),
   },
   handler: async (_ctx, args) => {
     try {
+      const pageNum = args.page || 1;
       const response = await fetch(
-        `https://fantasy.premierleague.com/api/leagues-classic/${args.leagueId}/standings/`
+        `https://fantasy.premierleague.com/api/leagues-classic/${args.leagueId}/standings/?page_standings=${pageNum}&page_new_entries=${pageNum}`,
+        { headers: FPL_HEADERS }
       );
 
       if (!response.ok) {
-        throw new Error(`FPL API feilet med status ${response.status}`);
+        throw new Error(`FPL API feilet med HTTP status ${response.status}`);
       }
 
       const data = await response.json();
+      const standingsResults = data.standings?.results || [];
+      const newEntriesResults = data.new_entries?.results || [];
+
+      // Kombiner standings og new_entries (uten duplikater på entryId)
+      const entryMap = new Map<number, any>();
+
+      for (const item of standingsResults) {
+        if (!item.entry) continue;
+        const managerName =
+          item.player_name ||
+          `${item.player_first_name || ""} ${item.player_last_name || ""}`.trim() ||
+          "FPL Manager";
+        entryMap.set(item.entry, {
+          entryId: item.entry,
+          teamName: item.entry_name || "FPL Lag",
+          managerName,
+          total: item.total || 0,
+          pts: item.event_total || 0,
+          hits: 0,
+          rank: item.rank || 1,
+          lastRank: item.last_rank || item.rank || 1,
+        });
+      }
+
+      for (const item of newEntriesResults) {
+        if (!item.entry || entryMap.has(item.entry)) continue;
+        const managerName =
+          item.player_name ||
+          `${item.player_first_name || ""} ${item.player_last_name || ""}`.trim() ||
+          "FPL Manager";
+        entryMap.set(item.entry, {
+          entryId: item.entry,
+          teamName: item.entry_name || "FPL Lag",
+          managerName,
+          total: item.total || 0,
+          pts: item.event_total || 0,
+          hits: 0,
+          rank: item.rank || entryMap.size + 1,
+          lastRank: item.last_rank || entryMap.size + 1,
+        });
+      }
+
+      // Hent eventuelle ekstra sider med new_entries dersom det er flere enn 50 påmeldte lag
+      if (data.new_entries?.has_next && pageNum === 1) {
+        let nextPage = 2;
+        let hasMore = true;
+        while (hasMore && nextPage <= 10) {
+          try {
+            const nextRes = await fetch(
+              `https://fantasy.premierleague.com/api/leagues-classic/${args.leagueId}/standings/?page_new_entries=${nextPage}`,
+              { headers: FPL_HEADERS }
+            );
+            if (nextRes.ok) {
+              const nextData = await nextRes.json();
+              const nextEntries = nextData.new_entries?.results || [];
+              for (const item of nextEntries) {
+                if (!item.entry || entryMap.has(item.entry)) continue;
+                const managerName =
+                  item.player_name ||
+                  `${item.player_first_name || ""} ${item.player_last_name || ""}`.trim() ||
+                  "FPL Manager";
+                entryMap.set(item.entry, {
+                  entryId: item.entry,
+                  teamName: item.entry_name || "FPL Lag",
+                  managerName,
+                  total: item.total || 0,
+                  pts: item.event_total || 0,
+                  hits: 0,
+                  rank: item.rank || entryMap.size + 1,
+                  lastRank: item.last_rank || entryMap.size + 1,
+                });
+              }
+              hasMore = nextData.new_entries?.has_next || false;
+              nextPage++;
+            } else {
+              hasMore = false;
+            }
+          } catch {
+            hasMore = false;
+          }
+        }
+      }
+
+      const formattedStandings = Array.from(entryMap.values());
+
       return {
         success: true,
-        leagueName: data.league?.name,
-        standings: data.standings?.results || [],
+        leagueName: data.league?.name || "FPL Classic League",
+        standings: formattedStandings,
+        hasNext: Boolean(data.standings?.has_next || data.new_entries?.has_next),
+        totalResults: formattedStandings.length,
       };
     } catch (err: any) {
       return {
         success: false,
         error: err.message || "Kunne ikke hente data fra FPL API",
+        standings: [],
       };
+    }
+  },
+});
+
+/**
+ * Action for å synkronisere all live data fra FPL API:
+ * 1. Finner gjeldende Gameweek fra bootstrap-static
+ * 2. Henter stillingen i den konfigurerte FPL-ligaen (både standings og new_entries)
+ * 3. Henter transfer hits (-4p per ekstra bytte) per lag
+ * 4. Oppdaterer databasen og beregner romsnitt
+ */
+export const syncLiveFplData = action({
+  args: {
+    customLeagueId: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    try {
+      // 1. Hent bootstrap-static for å finne aktiv gameweek
+      let activeGw = 1;
+      try {
+        const bootRes = await fetch(
+          "https://fantasy.premierleague.com/api/bootstrap-static/",
+          { headers: FPL_HEADERS }
+        );
+        if (bootRes.ok) {
+          const bootData = await bootRes.json();
+          const currentEvent =
+            bootData.events?.find((e: any) => e.is_current) ||
+            bootData.events?.find((e: any) => e.is_next) ||
+            bootData.events?.[0];
+          if (currentEvent?.id) {
+            activeGw = currentEvent.id;
+          }
+        }
+      } catch (e) {
+        console.warn("Kunne ikke hente bootstrap-static, bruker fallback GW:", e);
+      }
+
+      // 2. Hent ligainnstillinger fra Convex for å finne liga-ID
+      const settings = await ctx.runQuery(api.admin.getSettings);
+      const targetLeagueId = args.customLeagueId || settings?.leagueId || 464734;
+
+      // 3. Hent ligastilling og påmeldte fra FPL
+      const standingsRes = await fetch(
+        `https://fantasy.premierleague.com/api/leagues-classic/${targetLeagueId}/standings/`,
+        { headers: FPL_HEADERS }
+      );
+
+      if (!standingsRes.ok) {
+        throw new Error(`FPL League API returnerte status ${standingsRes.status}`);
+      }
+
+      const standingsData = await standingsRes.json();
+      const standingsResults = standingsData.standings?.results || [];
+      const newEntriesResults = standingsData.new_entries?.results || [];
+
+      const rawResults = standingsResults.length > 0 ? standingsResults : newEntriesResults;
+
+      // 4. Hent transfer hits for hvert lag (picks endpoint)
+      const enrichedTeams = await Promise.all(
+        rawResults.map(async (r: any) => {
+          let hits = 0;
+          let captainName = undefined;
+
+          try {
+            const picksRes = await fetch(
+              `https://fantasy.premierleague.com/api/entry/${r.entry}/event/${activeGw}/picks/`,
+              { headers: FPL_HEADERS }
+            );
+            if (picksRes.ok) {
+              const picksData = await picksRes.json();
+              hits = picksData.entry_history?.event_transfers_cost || 0;
+            }
+          } catch {
+            // Ignorer enkelte picks-feil og fortsett med 0 hits
+          }
+
+          const managerName =
+            r.player_name ||
+            `${r.player_first_name || ""} ${r.player_last_name || ""}`.trim() ||
+            "FPL Manager";
+
+          return {
+            entryId: r.entry,
+            teamName: r.entry_name || "FPL Lag",
+            managerName,
+            totalPoints: r.total || 0,
+            currentGwPoints: r.event_total || 0,
+            currentGwTransfersCost: hits,
+            captainName,
+          };
+        })
+      );
+
+      // 5. Lagre synkroniserte data i Convex databasen
+      await ctx.runMutation(api.fpl.saveLiveFplSyncResult, {
+        currentGameweek: activeGw,
+        teamsData: enrichedTeams,
+      });
+
+      return {
+        success: true,
+        gameweek: activeGw,
+        syncedCount: enrichedTeams.length,
+        leagueName: standingsData.league?.name,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message || "Feil under synkronisering mot FPL API",
+      };
+    }
+  },
+});
+
+/**
+ * Action for å hente live lagoppstilling (pitch & bench), picks og chips direkte fra FPL API for en manager
+ */
+export const fetchLiveTeamSquad = action({
+  args: {
+    entryId: v.number(),
+    gameweek: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    try {
+      // 1. Hent bootstrap-static for fotballspillere og klubber
+      const bootRes = await fetch(
+        "https://fantasy.premierleague.com/api/bootstrap-static/",
+        { headers: FPL_HEADERS }
+      );
+
+      if (!bootRes.ok) {
+        throw new Error(`Bootstrap static feilet med status ${bootRes.status}`);
+      }
+
+      const bootData = await bootRes.json();
+      const elementsMap = new Map<number, any>();
+      for (const el of bootData.elements || []) {
+        elementsMap.set(el.id, el);
+      }
+
+      const teamsMap = new Map<number, any>();
+      for (const t of bootData.teams || []) {
+        teamsMap.set(t.id, t);
+      }
+
+      // Finn aktiv GW
+      let gw = args.gameweek;
+      if (!gw) {
+        const currentEvent =
+          bootData.events?.find((e: any) => e.is_current) ||
+          bootData.events?.find((e: any) => e.is_next) ||
+          bootData.events?.[0];
+        gw = currentEvent?.id || 1;
+      }
+
+      // 2. Hent managerens picks for gameweek
+      const picksRes = await fetch(
+        `https://fantasy.premierleague.com/api/entry/${args.entryId}/event/${gw}/picks/`,
+        { headers: FPL_HEADERS }
+      );
+
+      if (!picksRes.ok) {
+        throw new Error(`Picks feilet med status ${picksRes.status}`);
+      }
+
+      const picksData = await picksRes.json();
+      const rawPicks = picksData.picks || [];
+
+      const posLabels: Record<number, string> = {
+        1: "GKP",
+        2: "DEF",
+        3: "MID",
+        4: "FWD",
+      };
+
+      const pitch: any[] = [];
+      const bench: any[] = [];
+
+      rawPicks.forEach((p: any, idx: number) => {
+        const el = elementsMap.get(p.element) || {};
+        const teamObj = teamsMap.get(el.team) || {};
+        const posType = posLabels[el.element_type] || "MID";
+
+        const playerCard = {
+          id: p.element,
+          name: el.web_name || "Spiller",
+          club: teamObj.short_name || "PL",
+          pos: posType,
+          points: el.event_points || 0,
+          isCaptain: p.is_captain,
+          isVice: p.is_vice_captain,
+          multiplier: p.multiplier,
+          fixture: teamObj.name || "",
+        };
+
+        if (idx < 11) {
+          pitch.push(playerCard);
+        } else {
+          bench.push({
+            ...playerCard,
+            isSub: true,
+            subOrder: idx - 10,
+          });
+        }
+      });
+
+      // 3. Hent entry history
+      let historyList: any[] = [];
+      let chipsList: any[] = [];
+      try {
+        const histRes = await fetch(
+          `https://fantasy.premierleague.com/api/entry/${args.entryId}/history/`,
+          { headers: FPL_HEADERS }
+        );
+        if (histRes.ok) {
+          const histData = await histRes.json();
+          historyList = (histData.current || []).map((h: any) => ({
+            gw: h.event,
+            points: h.points,
+            rank: h.overall_rank,
+            average: 60,
+          }));
+
+          chipsList = (histData.chips || []).map((c: any) => ({
+            name: c.name,
+            status: "Brukt",
+            gw: `GW ${c.event}`,
+          }));
+        }
+      } catch {
+        // Ignorer history-feil
+      }
+
+      return {
+        success: true,
+        pitch,
+        bench,
+        history: historyList,
+        chips: chipsList,
+        activeChip: picksData.active_chip,
+        eventTransfersCost: picksData.entry_history?.event_transfers_cost || 0,
+        pointsOnBench: picksData.entry_history?.points_on_bench || 0,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message || "Kunne ikke hente live lagoppstilling fra FPL",
+      };
+    }
+  },
+});
+
+/**
+ * Mutation for å lagre live FPL-synkroniseringsresultater i Convex databasen
+ */
+export const saveLiveFplSyncResult = mutation({
+  args: {
+    currentGameweek: v.number(),
+    teamsData: v.array(
+      v.object({
+        entryId: v.number(),
+        teamName: v.string(),
+        managerName: v.string(),
+        totalPoints: v.number(),
+        currentGwPoints: v.number(),
+        currentGwTransfersCost: v.number(),
+        captainName: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    // 1. Oppdater league_settings
+    const settings = await ctx.db.query("league_settings").first();
+    if (settings) {
+      await ctx.db.patch(settings._id, {
+        currentGameweek: args.currentGameweek,
+        lastSyncedAt: Date.now(),
+      });
+    }
+
+    const deductHits = settings?.deductTransferHits ?? true;
+
+    // 2. Oppdater / opprett fpl_teams
+    for (const item of args.teamsData) {
+      const existing = await ctx.db
+        .query("fpl_teams")
+        .withIndex("by_entryId", (q) => q.eq("entryId", item.entryId))
+        .first();
+
+      if (existing) {
+        await ctx.db.patch(existing._id, {
+          teamName: item.teamName,
+          managerName: item.managerName,
+          totalPoints: item.totalPoints,
+          currentGwPoints: item.currentGwPoints,
+          currentGwTransfersCost: item.currentGwTransfersCost,
+          lastUpdated: Date.now(),
+        });
+      }
+
+      // Lagre gameweek_scores historikk
+      const existingGw = await ctx.db
+        .query("gameweek_scores")
+        .withIndex("by_entryId_and_gw", (q) =>
+          q.eq("entryId", item.entryId).eq("gameweek", args.currentGameweek)
+        )
+        .first();
+
+      const netPts = deductHits
+        ? item.currentGwPoints - item.currentGwTransfersCost
+        : item.currentGwPoints;
+
+      if (existingGw) {
+        await ctx.db.patch(existingGw._id, {
+          points: item.currentGwPoints,
+          transfersCost: item.currentGwTransfersCost,
+          netPoints: netPts,
+          captainName: item.captainName,
+          lastCalculated: Date.now(),
+        });
+      } else {
+        await ctx.db.insert("gameweek_scores", {
+          entryId: item.entryId,
+          gameweek: args.currentGameweek,
+          points: item.currentGwPoints,
+          transfersCost: item.currentGwTransfersCost,
+          netPoints: netPts,
+          captainName: item.captainName,
+          lastCalculated: Date.now(),
+        });
+      }
+    }
+
+    // 3. Beregn og oppdater romsnitt per gameweek (Top 2 spillere per rom)
+    const allRooms = await ctx.db.query("rooms").collect();
+    const allTeams = await ctx.db.query("fpl_teams").collect();
+
+    for (const room of allRooms) {
+      const roomTeams = allTeams.filter((t) => t.roomId === room._id);
+      if (roomTeams.length === 0) continue;
+
+      const scored = roomTeams.map((t) => {
+        const net = deductHits
+          ? t.currentGwPoints - t.currentGwTransfersCost
+          : t.currentGwPoints;
+        return {
+          entryId: t.entryId,
+          net,
+        };
+      });
+
+      scored.sort((a, b) => b.net - a.net);
+      const top1 = scored[0];
+      const top2 = scored[1];
+
+      let avg = 0;
+      if (top1 && top2) {
+        avg = (top1.net + top2.net) / 2;
+      } else if (top1) {
+        avg = top1.net;
+      }
+
+      const existingRoomScore = await ctx.db
+        .query("room_gameweek_scores")
+        .withIndex("by_roomId_and_gw", (q) =>
+          q.eq("roomId", room._id).eq("gameweek", args.currentGameweek)
+        )
+        .first();
+
+      if (existingRoomScore) {
+        await ctx.db.patch(existingRoomScore._id, {
+          averageTop2: Math.round(avg * 10) / 10,
+          top1EntryId: top1?.entryId || 0,
+          top1Points: top1?.net || 0,
+          top2EntryId: top2?.entryId || 0,
+          top2Points: top2?.net || 0,
+          deductedHits: deductHits,
+          lastCalculated: Date.now(),
+        });
+      } else {
+        await ctx.db.insert("room_gameweek_scores", {
+          roomId: room._id,
+          gameweek: args.currentGameweek,
+          averageTop2: Math.round(avg * 10) / 10,
+          top1EntryId: top1?.entryId || 0,
+          top1Points: top1?.net || 0,
+          top2EntryId: top2?.entryId || 0,
+          top2Points: top2?.net || 0,
+          deductedHits: deductHits,
+          lastCalculated: Date.now(),
+        });
+      }
     }
   },
 });
@@ -49,224 +540,88 @@ export const seedDefaultData = mutation({
     await ctx.db.insert("league_settings", {
       leagueId: 464734,
       leagueName: "Atlantasy FPL Bedriftsliga",
-      currentGameweek: 26,
-      deductTransferHits: true, // Standard: trekk fra transfer hits
+      currentGameweek: 1,
+      deductTransferHits: true,
       autoSyncEnabled: true,
       syncIntervalMinutes: 10,
       lastSyncedAt: Date.now(),
       adminPin: "1234",
     });
 
-    // 2. Farger for Rom A1–A12
-    const roomPalettes = [
-      { num: 1, name: "A1 - The Devs", color: "#00ff87", desc: "Systemutvikling & Arkitektur" },
-      { num: 2, name: "A2 - Wall Street", color: "#6366f1", desc: "Økonomi & Finans" },
-      { num: 3, name: "A3 - The Closers", color: "#e90052", desc: "Salg & Nøkkelkunder" },
-      { num: 4, name: "A4 - Creative Hub", color: "#a855f7", desc: "Design & Merkevare" },
-      { num: 5, name: "A5 - Support Kings", color: "#06b6d4", desc: "Kundesenter & Drift" },
-      { num: 6, name: "A6 - Data Wizards", color: "#3b82f6", desc: "BI, Analytics & AI" },
-      { num: 7, name: "A7 - HR & Culture", color: "#ec4899", desc: "Folk & Trivsel" },
-      { num: 8, name: "A8 - The Board", color: "#fbbf24", desc: "Ledelsen & Styret" },
-      { num: 9, name: "A9 - Cloud Ops", color: "#10b981", desc: "DevOps & Infrastruktur" },
-      { num: 10, name: "A10 - Product Pioneers", color: "#f97316", desc: "Produkt & UX" },
-      { num: 11, name: "A11 - Legal Eagles", color: "#64748b", desc: "Jus & Samsvar" },
-      { num: 12, name: "A12 - Growth Lab", color: "#14b8a6", desc: "Markedsføring & Vekst" },
+    // 2. Rene standardrom A1–A12
+    const roomColors = [
+      "#1eb854", "#38bdf8", "#d99330", "#a855f7",
+      "#ec4899", "#f59e0b", "#10b981", "#6366f1",
+      "#14b8a6", "#84cc16", "#e11d48", "#06b6d4"
     ];
 
-    const createdRooms = [];
-    for (const r of roomPalettes) {
-      const id = await ctx.db.insert("rooms", {
-        roomNumber: r.num,
-        name: r.name,
-        description: r.desc,
-        accentColor: r.color,
+    for (let i = 1; i <= 12; i++) {
+      await ctx.db.insert("rooms", {
+        roomNumber: i,
+        name: `A${i}`,
+        description: `Rom A${i}`,
+        accentColor: roomColors[(i - 1) % roomColors.length],
         createdAt: Date.now(),
       });
-      createdRooms.push({ id, ...r });
     }
 
-    // 3. Opprett Admin-bruker og vanlige testbrukere
-    const adminUserId = await ctx.db.insert("users", {
-      username: "Stian (Admin)",
-      email: "stian@atlantis.no",
-      role: "admin",
-      fplEntryId: 98124,
-      fplTeamName: "Tactical Masterclass",
-      fplManagerName: "Stian Taknes",
-      roomId: createdRooms[0].id,
-      avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=StianAdmin",
-      createdAt: Date.now(),
-    });
-
-    const user2Id = await ctx.db.insert("users", {
-      username: "MagnusC",
-      email: "magnus@atlantis.no",
-      role: "user",
-      fplEntryId: 10234,
-      fplTeamName: "Checkmate FC",
-      fplManagerName: "Magnus Carlsen",
-      roomId: createdRooms[0].id,
-      avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=MagnusC",
-      createdAt: Date.now(),
-    });
-
-    const user3Id = await ctx.db.insert("users", {
-      username: "ErlingH",
-      email: "erling@atlantis.no",
-      role: "user",
-      fplEntryId: 44102,
-      fplTeamName: "Braut Machine",
-      fplManagerName: "Erling Haaland",
-      roomId: createdRooms[1].id,
-      avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=ErlingH",
-      createdAt: Date.now(),
-    });
-
-    // 4. Opprett FPL-lag for rommene (4–5 spillere per rom med realistiske runderesultater)
-    const sampleTeams = [
-      // Rom 1
-      { entryId: 98124, teamName: "Tactical Masterclass", managerName: "Stian Taknes", roomIdx: 0, pts: 78, hits: 0, total: 1540, userId: adminUserId },
-      { entryId: 10234, teamName: "Checkmate FC", managerName: "Magnus Carlsen", roomIdx: 0, pts: 74, hits: 4, total: 1520, userId: user2Id },
-      { entryId: 55410, teamName: "Klopps Heavy Metal", managerName: "Henrik Lie", roomIdx: 0, pts: 62, hits: 0, total: 1410 },
-      { entryId: 77123, teamName: "Null Pointer XI", managerName: "Sander Berg", roomIdx: 0, pts: 58, hits: 8, total: 1380 },
-      
-      // Rom 2
-      { entryId: 44102, teamName: "Braut Machine", managerName: "Erling Haaland", roomIdx: 1, pts: 84, hits: 0, total: 1590, userId: user3Id },
-      { entryId: 66103, teamName: "Compound Interest FC", managerName: "Kari Nordmann", roomIdx: 1, pts: 68, hits: 0, total: 1460 },
-      { entryId: 88192, teamName: "Bull Market Boys", managerName: "Jonas Gahr", roomIdx: 1, pts: 60, hits: 4, total: 1390 },
-      { entryId: 99120, teamName: "Excel Wizards", managerName: "Line Pettersen", roomIdx: 1, pts: 55, hits: 0, total: 1340 },
-
-      // Rom 3
-      { entryId: 31021, teamName: "Cold Call Kings", managerName: "Andreas Vik", roomIdx: 2, pts: 71, hits: 0, total: 1475 },
-      { entryId: 31022, teamName: "Quota Crushers", managerName: "Julie Moe", roomIdx: 2, pts: 67, hits: 0, total: 1440 },
-      { entryId: 31023, teamName: "Pipeline Dream", managerName: "Torstein Dale", roomIdx: 2, pts: 59, hits: 4, total: 1370 },
-      { entryId: 31024, teamName: "Always Be Closing", managerName: "Mari Hansen", roomIdx: 2, pts: 52, hits: 0, total: 1310 },
-
-      // Rom 4
-      { entryId: 41001, teamName: "Figma United", managerName: "Oda Sørli", roomIdx: 3, pts: 76, hits: 0, total: 1490 },
-      { entryId: 41002, teamName: "Pixel Perfect", managerName: "Fredrik Bø", roomIdx: 3, pts: 65, hits: 4, total: 1415 },
-      { entryId: 41003, teamName: "Kerning Chaos", managerName: "Emilie Strand", roomIdx: 3, pts: 54, hits: 0, total: 1350 },
-      { entryId: 41004, teamName: "Dark Mode Only", managerName: "Mikkel Foss", roomIdx: 3, pts: 49, hits: 0, total: 1290 },
-
-      // Rom 5
-      { entryId: 51001, teamName: "Ticket Solvers", managerName: "Håkon Vang", roomIdx: 4, pts: 66, hits: 0, total: 1420 },
-      { entryId: 51002, teamName: "SLA Guaranteed", managerName: "Nora Kristiansen", roomIdx: 4, pts: 63, hits: 0, total: 1395 },
-      { entryId: 51003, teamName: "Escalation Matrix", managerName: "Lars Erik", roomIdx: 4, pts: 58, hits: 4, total: 1340 },
-
-      // Rom 6
-      { entryId: 61001, teamName: "Deep Learning XI", managerName: "Dr. Thomas Holm", roomIdx: 5, pts: 81, hits: 0, total: 1535 },
-      { entryId: 61002, teamName: "Big Query Ballers", managerName: "Kjetil Røed", roomIdx: 5, pts: 70, hits: 0, total: 1480 },
-      { entryId: 61003, teamName: "Overfitted FC", managerName: "Silje Aas", roomIdx: 5, pts: 61, hits: 4, total: 1385 },
-
-      // Rom 7
-      { entryId: 71001, teamName: "Waffle Friday FC", managerName: "Camilla Lind", roomIdx: 6, pts: 64, hits: 0, total: 1380 },
-      { entryId: 71002, teamName: "Teambuilding United", managerName: "Eivind Dahl", roomIdx: 6, pts: 60, hits: 0, total: 1350 },
-
-      // Rom 8
-      { entryId: 81001, teamName: "Golden Parachute", managerName: "Bjarne Betjent", roomIdx: 7, pts: 79, hits: 4, total: 1510 },
-      { entryId: 81002, teamName: "Q4 Deliverables", managerName: "Cecilie Grønn", roomIdx: 7, pts: 72, hits: 0, total: 1470 },
-
-      // Rom 9
-      { entryId: 91001, teamName: "Kubernetes Kickerz", managerName: "Robin Løke", roomIdx: 8, pts: 75, hits: 0, total: 1465 },
-      { entryId: 91002, teamName: "Zero Downtime", managerName: "Petter North", roomIdx: 8, pts: 68, hits: 0, total: 1425 },
-
-      // Rom 10
-      { entryId: 10101, teamName: "Roadmap Rovers", managerName: "Synne Bakke", roomIdx: 9, pts: 69, hits: 0, total: 1410 },
-      { entryId: 10102, teamName: "Sprint Backlog", managerName: "Tobias Moe", roomIdx: 9, pts: 61, hits: 0, total: 1360 },
-
-      // Rom 11
-      { entryId: 11101, teamName: "GDPR Compliance", managerName: "Adv. Kristin Dale", roomIdx: 10, pts: 65, hits: 0, total: 1390 },
-      { entryId: 11102, teamName: "Terms of Service", managerName: "Hans Christian", roomIdx: 10, pts: 58, hits: 0, total: 1330 },
-
-      // Rom 12
-      { entryId: 12101, teamName: "Funnel Hackers", managerName: "Mathias Ruud", roomIdx: 11, pts: 73, hits: 0, total: 1445 },
-      { entryId: 12102, teamName: "CTR Optimizers", managerName: "Ida Johnsen", roomIdx: 11, pts: 67, hits: 0, total: 1400 },
-    ];
-
-    for (const t of sampleTeams) {
-      const room = createdRooms[t.roomIdx];
-      await ctx.db.insert("fpl_teams", {
-        entryId: t.entryId,
-        teamName: t.teamName,
-        managerName: t.managerName,
-        roomId: room.id,
-        userId: t.userId,
-        active: true,
-        totalPoints: t.total,
-        currentGwPoints: t.pts,
-        currentGwTransfersCost: t.hits,
-        lastUpdated: Date.now(),
-      });
-    }
-
-    // 5. Opprett standard invitasjonskoder
+    // 3. Opprett standard invitasjonskoder
     await ctx.db.insert("invite_codes", {
       code: "ATLANTIS-2025",
       role: "user",
-      expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+      expiresAt: Date.now() + 90 * 24 * 60 * 60 * 1000,
       maxUses: 100,
-      usedCount: 3,
+      usedCount: 0,
       createdAt: Date.now(),
     });
 
     await ctx.db.insert("invite_codes", {
       code: "ADMIN-ATL-99",
       role: "admin",
-      expiresAt: Date.now() + 60 * 24 * 60 * 60 * 1000,
-      maxUses: 5,
-      usedCount: 1,
+      expiresAt: Date.now() + 180 * 24 * 60 * 60 * 1000,
+      maxUses: 10,
+      usedCount: 0,
       createdAt: Date.now(),
-    });
-
-    // 6. Opprett vinnerhyllest og kunngjøringer ("Skrytevegg")
-    await ctx.db.insert("announcements", {
-      title: "🏆 Månedens Vinner: Rom 1 - The Devs (Januar)",
-      content: "Gratulerer til Rom 1 (The Devs) som stakk av med månedens heder og ære for januar med et spektakulært snitt på 76.0 poeng! Stian Taknes og Magnus Carlsen dro lasset. Pokalen er overlevert! 🥇🎉",
-      type: "winner_celebration",
-      winningRoomId: createdRooms[0].id,
-      monthName: "Januar",
-      authorName: "Stian (Admin)",
-      isPinned: true,
-      createdAt: Date.now() - 2 * 24 * 60 * 60 * 1000,
-    });
-
-    // 7. Legg inn noen chat-meldinger i Banter for god stemning
-    await ctx.db.insert("messages", {
-      senderId: adminUserId,
-      senderName: "Stian (Admin)",
-      senderRole: "admin",
-      senderAvatar: "https://api.dicebear.com/7.x/bottts/svg?seed=StianAdmin",
-      channel: "banter",
-      content: "Velkommen til Atlantasy Desktop! Husk at runden låses fredag kl 19:30. Rom 1 har allerede planlagt trippelkaptein på Haaland 🚀",
-      type: "announcement",
-      createdAt: Date.now() - 3600 * 1000,
-    });
-
-    await ctx.db.insert("messages", {
-      senderId: user3Id,
-      senderName: "Erling Haaland",
-      senderRole: "user",
-      senderAvatar: "https://api.dicebear.com/7.x/bottts/svg?seed=ErlingH",
-      channel: "banter",
-      content: "Rom 2 (Wall Street) tar ledelsen denne runden! Snittet vårt er skyhøyt 💪",
-      type: "chat",
-      createdAt: Date.now() - 1800 * 1000,
-    });
-
-    await ctx.db.insert("messages", {
-      senderId: user2Id,
-      senderName: "Magnus Carlsen",
-      senderRole: "user",
-      senderAvatar: "https://api.dicebear.com/7.x/bottts/svg?seed=MagnusC",
-      channel: "banter",
-      content: "Posisjonelt mesterverk fra Rom 1 som vanlig. Bare vent til søndagskampene 😉",
-      type: "chat",
-      createdAt: Date.now() - 600 * 1000,
     });
 
     return {
       success: true,
-      message: "Databasen er initialisert med 12 rom, spillere, innstillinger og vinnerhyllest!",
+      message: "Opprettet 12 rene standardrom (Rom A1-A12) og standardinnstillinger.",
     };
+  },
+});
+
+/**
+ * Action for å hente offisiell neste FPL-frist fra Premier League API
+ */
+export const fetchNextDeadline = action({
+  args: {},
+  handler: async () => {
+    try {
+      const res = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/", { headers: FPL_HEADERS });
+      if (!res.ok) throw new Error("Kunne ikke hente bootstrap-static");
+      const data = await res.json();
+      const nextEvent =
+        data.events?.find((e: any) => e.is_next) ||
+        data.events?.find((e: any) => !e.finished && new Date(e.deadline_time).getTime() > Date.now()) ||
+        data.events?.[0];
+
+      if (!nextEvent) return null;
+
+      return {
+        gameweek: nextEvent.id,
+        name: `GW ${nextEvent.id}`,
+        deadlineTime: nextEvent.deadline_time,
+        deadlineEpoch: new Date(nextEvent.deadline_time).getTime(),
+      };
+    } catch {
+      // Fallback
+      return {
+        gameweek: 1,
+        name: "GW 1",
+        deadlineTime: new Date(Date.now() + 6 * 24 * 3600 * 1000).toISOString(),
+        deadlineEpoch: Date.now() + 6 * 24 * 3600 * 1000,
+      };
+    }
   },
 });

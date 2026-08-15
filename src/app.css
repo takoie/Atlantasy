@@ -12,7 +12,7 @@
   }
 
   body {
-    @apply bg-[#070a12] text-slate-100 antialiased select-none font-sans overflow-hidden;
+    @apply bg-[#1c2128] text-[#E2E8F0] antialiased select-none font-sans overflow-hidden;
     margin: 0;
     padding: 0;
     height: 100vh;
@@ -33,36 +33,33 @@
   app-region: no-drag;
 }
 
-/* Custom modern desktop scrollbar */
+/* Custom DaisyUI Dim scrollbar */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(10, 15, 26, 0.4);
+  background: #191E24;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.3);
+  background: #384252;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 255, 135, 0.4);
+  background: #9FE88D;
 }
 
-/* Glassmorphism utility */
-.glass-panel {
-  background: rgba(15, 22, 36, 0.65);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+/* DaisyUI Dim themed panels */
+.dim-panel {
+  background: #2A303C;
+  border: 1px solid #384252;
 }
 
-.glass-panel-subtle {
-  background: rgba(15, 22, 36, 0.45);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+.dim-card {
+  background: #242B35;
+  border: 1px solid #384252;
 }
+

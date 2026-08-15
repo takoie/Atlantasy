@@ -11,10 +11,11 @@
   import WelcomeOnboarding from "$lib/components/WelcomeOnboarding.svelte";
   import NewsSection from "$lib/components/NewsSection.svelte";
   import TeamProfileModal from "$lib/components/TeamProfileModal.svelte";
+  import Sidebar from "$lib/components/Sidebar.svelte";
 
-  import { useQuery, useMutation } from "$lib/convex.svelte";
+  import { useQuery, useMutation, useAction } from "$lib/convex.svelte";
   import { api } from "../convex/_generated/api";
-  import { Trophy, ArrowLeft } from "lucide-svelte";
+  import { Trophy, ArrowLeft, Crown, Sparkles, Flame, Award } from "lucide-svelte";
   import { onMount } from "svelte";
 
   // Reaktiv Convex Queries
@@ -25,9 +26,12 @@
   const individualLeaderboardQuery = useQuery(api.rooms.getIndividualLeaderboard, () => ({
     sortBy: activeSort,
   }));
-  const funStatsQuery = useQuery(api.rooms.getLeagueFunStats);
+  let insightsTimeframe = $state<"round" | "month" | "season">("round");
+  const funStatsQuery = useQuery(api.rooms.getLeagueFunStats, () => ({
+    timeframe: insightsTimeframe,
+  }));
   const settingsQuery = useQuery(api.admin.getSettings);
-  const pinnedAnnQuery = useQuery(api.admin.getPinnedAnnouncement);
+  const monthWinnersQuery = useQuery(api.admin.getMonthWinners);
   const inviteCodesQuery = useQuery(api.admin.listInviteCodes);
   const usersQuery = useQuery(api.auth.listUsers);
   const articlesQuery = useQuery(api.articles.listArticles);
@@ -55,16 +59,40 @@
   const updateSettingsMutation = useMutation(api.admin.updateSettings);
   const createInviteMutation = useMutation(api.admin.createInviteCode);
   const declareWinnerMutation = useMutation(api.admin.declareMonthlyWinner);
+  const unpinAnnouncementMutation = useMutation(api.admin.unpinAnnouncement);
   const seedDataMutation = useMutation(api.fpl.seedDefaultData);
   const registerMutation = useMutation(api.auth.registerWithInvite);
   const loginOrRegisterMutation = useMutation(api.auth.loginOrRegister);
   const setUserRoleMutation = useMutation(api.auth.setUserRole);
   const batchAssignMutation = useMutation(api.rooms.batchSaveRoomAssignments);
+  const clearAllAssignmentsMutation = useMutation(api.rooms.clearAllRoomAssignments);
   const updateRoomMutation = useMutation(api.rooms.updateRoom);
+  const createRoomMutation = useMutation(api.rooms.createRoom);
+  const deleteRoomMutation = useMutation(api.rooms.deleteRoom);
+  const updateTeamNameMutation = useMutation(api.rooms.updateTeamName);
   const startNewSeasonMutation = useMutation(api.admin.startNewSeason);
   const createArticleMutation = useMutation(api.articles.createArticle);
+  const updateArticleMutation = useMutation(api.articles.updateArticle);
+  const toggleArchiveArticleMutation = useMutation(api.articles.toggleArchiveArticle);
+  const togglePinArticleMutation = useMutation(api.articles.togglePinArticle);
   const likeArticleMutation = useMutation(api.articles.likeArticle);
   const deleteArticleMutation = useMutation(api.articles.deleteArticle);
+  const wipePreseededMutation = useMutation(api.admin.wipeAllPreseededData);
+  const deleteAllUsersMutation = useMutation(api.admin.deleteAllUsers);
+  const deleteUserMutation = useMutation(api.admin.deleteUser);
+  const deleteInviteMutation = useMutation(api.admin.deleteInviteCode);
+
+  // Convex Actions for Live FPL API Integration
+  const syncLiveFplAction = useAction(api.fpl.syncLiveFplData);
+  const fetchFplLeagueAction = useAction(api.fpl.fetchFplLeagueStandings);
+  const fetchDeadlineAction = useAction(api.fpl.fetchNextDeadline);
+
+  let nextDeadlineInfo = $state<{
+    gameweek: number;
+    name: string;
+    deadlineTime: string;
+    deadlineEpoch: number;
+  } | null>(null);
 
   // Utledet data med fallback
   let rooms = $derived(roomsQuery.data ?? []);
@@ -72,22 +100,18 @@
   let individualPlayers = $derived(individualLeaderboardQuery.data ?? []);
   let funStats = $derived(funStatsQuery.data ?? null);
   let settings = $derived(settingsQuery.data ?? null);
-  let pinnedAnnouncement = $derived(pinnedAnnQuery.data ?? null);
+  let monthWinners = $derived(monthWinnersQuery.data ?? null);
+  let roomWinner = $derived(monthWinners?.roomWinner ?? null);
+  let soloWinner = $derived(monthWinners?.soloWinner ?? null);
+  let winnerHistory = $derived(monthWinners?.history ?? []);
   let inviteCodes = $derived(inviteCodesQuery.data ?? []);
   let users = $derived(usersQuery.data ?? []);
   let articles = $derived(articlesQuery.data ?? []);
   let fplTeams = $derived(allTeamsQuery.data ?? []);
 
-  // Nåværende aktiv bruker
+  // Nåværende aktiv bruker (eller null hvis utlogget)
   let currentUser = $derived(
-    users.find((u) => u._id === activeUserId) ||
-      users[0] || {
-        _id: "guest",
-        username: "Stian (Admin)",
-        role: "admin",
-        avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=StianAdmin",
-        fplTeamName: "Tactical Masterclass",
-      }
+    activeUserId ? (users.find((u) => u._id === activeUserId) || null) : null
   );
 
   // Chat Query reaktiv på aktivt rom
@@ -109,25 +133,22 @@
   onMount(async () => {
     // Sjekk om brukeren allerede har fullført onboarding / lagret profil
     const savedUserId = localStorage.getItem("atlantasy_current_user_id");
-    const hasOnboarded = localStorage.getItem("atlantasy_has_onboarded");
-
     if (savedUserId) {
       activeUserId = savedUserId;
       showOnboarding = false;
-    } else if (!hasOnboarded) {
+    } else {
       showOnboarding = true;
     }
 
-    // Initialiser standarddata hvis databasen er tom
-    setTimeout(async () => {
-      if (roomsQuery.data && roomsQuery.data.length === 0) {
-        try {
-          await seedDataMutation.mutate({});
-        } catch {
-          // Ignorer hvis allerede seeder
-        }
+    // Hent offisiell neste FPL-frist
+    try {
+      const dl = await fetchDeadlineAction.execute({});
+      if (dl) {
+        nextDeadlineInfo = dl;
       }
-    }, 1500);
+    } catch (err) {
+      console.warn("Kunne ikke hente deadline fra FPL API:", err);
+    }
   });
 
   // Handlers
@@ -144,8 +165,15 @@
     isAdminModalOpen = true;
   }
 
+  function handleLogout() {
+    activeUserId = null;
+    localStorage.removeItem("atlantasy_current_user_id");
+    localStorage.removeItem("atlantasy_has_onboarded");
+    showOnboarding = true;
+  }
+
   async function handleSendMessage(content: string, channel: string, roomId?: string) {
-    if (!currentUser) return;
+    if (!content.trim() || !currentUser) return;
     try {
       await sendMessageMutation.mutate({
         senderId: currentUser._id,
@@ -163,9 +191,16 @@
 
   async function handleRefreshFpl() {
     isSyncing = true;
-    setTimeout(() => {
+    try {
+      const res = await syncLiveFplAction.execute({});
+      if (res && res.success) {
+        console.log(`FPL synkronisert for GW ${res.gameweek}: ${res.syncedCount} lag.`);
+      }
+    } catch (err) {
+      console.warn("FPL Live Sync feilet (bruker eksisterende data):", err);
+    } finally {
       isSyncing = false;
-    }, 1200);
+    }
   }
 
   function handleOpenRoomModal(room: any) {
@@ -191,62 +226,73 @@
 </script>
 
 <main
-  class="flex flex-col h-screen w-screen bg-[#0f172a] text-slate-100 overflow-hidden font-sans select-none"
+  class="flex flex-col h-screen w-screen bg-[#1c2128] text-[#E2E8F0] overflow-hidden font-sans select-none"
 >
-  <!-- Velkomstside for førstegangsbrukere -->
-  {#if showOnboarding}
+  <!-- Velkomstside for registrering & Innlogging (Låst uten gjestemodus) -->
+  {#if showOnboarding || !activeUserId || !currentUser}
     <WelcomeOnboarding
       {rooms}
       {fplTeams}
+      {users}
       onComplete={handleOnboardingComplete}
-      onAdminBypass={handleAdminBypass}
       onLoginOrRegister={(data) => loginOrRegisterMutation.mutate(data)}
     />
   {/if}
 
   <!-- Frameless Custom Titlebar -->
   <TitleBar
-    currentGw={settings?.currentGameweek ?? 26}
+    currentGw={settings?.currentGameweek ?? 1}
     {isConvexConnected}
-    {isSyncing}
-    {activeView}
+    deadlineEpoch={nextDeadlineInfo?.deadlineEpoch}
+    deadlineLabel={nextDeadlineInfo?.name || `GW ${settings?.currentGameweek ?? 1}`}
     {currentUser}
-    onOpenAdmin={() => (isAdminModalOpen = true)}
-    onRefreshFpl={handleRefreshFpl}
-    onToggleChat={() => (isChatOpen = !isChatOpen)}
-    onToggleWallOfFame={() => {
-      activeView = activeView === "wall_of_fame" ? "leaderboard" : "wall_of_fame";
-      selectedRoomId = null;
-    }}
-    onToggleNews={() => {
-      activeView = activeView === "news" ? "leaderboard" : "news";
-      selectedRoomId = null;
-    }}
+    onLogin={() => (showOnboarding = true)}
+    onLogout={handleLogout}
   />
 
-  <!-- Hovedinnhold (Ren, dynamisk full-bredde visning) -->
-  <div class="flex-1 flex flex-col p-3.5 space-y-3 overflow-hidden bg-[#0f172a]">
-    <!-- Skrytevegg / Pinned Vinner-Banner øverst -->
-    {#if pinnedAnnouncement && activeView === "leaderboard"}
-      <WallOfFameBanner
-        announcement={pinnedAnnouncement}
-        onSelectRoom={(rId) => {
-          selectedRoomId = rId;
-          activeView = "leaderboard";
-        }}
-      />
-    {/if}
+  <!-- Hovedlayout med Venstremeny (Sidebar) og Dedikerte Sider -->
+  <div class="flex-1 flex flex-row min-h-0 overflow-hidden">
+    <!-- Venstremeny (Sidebar) -->
+    <Sidebar
+      {activeView}
+      currentGw={settings?.currentGameweek ?? 1}
+      {isConvexConnected}
+      {isSyncing}
+      {currentUser}
+      deadlineEpoch={nextDeadlineInfo?.deadlineEpoch}
+      deadlineLabel={nextDeadlineInfo?.name ? (nextDeadlineInfo.name.match(/GW\s*\d+/i)?.[0] || `GW ${settings?.currentGameweek ?? 1}`) : `GW ${settings?.currentGameweek ?? 1}`}
+      onSelectView={(view) => {
+        activeView = view;
+        selectedRoomId = null;
+      }}
+      onOpenAdmin={() => (isAdminModalOpen = true)}
+      onRefreshFpl={handleRefreshFpl}
+    />
 
-    <!-- 1. Hovedvisning: Parallelle ledertavler (Rom + Individuell) & Liga-stats -->
-    {#if activeView === "leaderboard"}
-      <!-- Parallelle ledertavler: Rom vs. Individuell -->
-      <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3.5 min-h-0 overflow-hidden">
-        <!-- Venstre: Offisiell rom-ledertavle (A1–A12) (7 av 12 kolonner) -->
-        <div class="lg:col-span-7 flex flex-col min-h-0 overflow-hidden bg-[#111827] rounded-2xl border border-slate-800 p-3.5 shadow-soft">
+    <!-- Hovedinnholdsområde for valgt modul/side -->
+    <div class="flex-1 flex flex-col p-3.5 sm:p-4 space-y-3 overflow-hidden bg-[#1c2128] min-w-0">
+      <!-- 1. Rom-tabell (Leaderboard) -->
+      {#if activeView === "leaderboard"}
+        {#if roomWinner || soloWinner}
+          <WallOfFameBanner
+            {roomWinner}
+            {soloWinner}
+            onSelectRoom={(rId) => {
+              selectedRoomId = rId;
+              activeView = "leaderboard";
+            }}
+            onOpenWallOfFame={() => {
+              activeView = "wall_of_fame";
+              selectedRoomId = null;
+            }}
+          />
+        {/if}
+
+        <div class="flex-1 flex flex-col min-h-0 bg-[#2A303C] rounded-2xl border border-[#384252] p-3.5 sm:p-4 shadow-sm overflow-hidden">
           <Leaderboard
             {leaderboard}
             {selectedRoomId}
-            currentGw={settings?.currentGameweek ?? 26}
+            currentGw={settings?.currentGameweek ?? 1}
             deductHits={settings?.deductTransferHits ?? true}
             sortBy={activeSort}
             onSelectSort={(s: string) => (activeSort = s)}
@@ -255,94 +301,210 @@
           />
         </div>
 
-        <!-- Høyre: Individuell ledertavle (Alle spillere) (5 av 12 kolonner) -->
-        <div class="lg:col-span-5 flex flex-col min-h-0 overflow-hidden">
-          <IndividualLeaderboard
-            players={individualPlayers}
-            currentGw={settings?.currentGameweek ?? 26}
-            deductHits={settings?.deductTransferHits ?? true}
-            sortBy={activeSort}
-            onSelectSort={(s: string) => (activeSort = s)}
-            onOpenProfile={handleOpenProfile}
-          />
-        </div>
-      </div>
+      <!-- 2. Individuell Tabell (Alle FPL-spillere) -->
+      {:else if activeView === "individual"}
+        <IndividualLeaderboard
+          players={individualPlayers}
+          currentGw={settings?.currentGameweek ?? 1}
+          deductHits={settings?.deductTransferHits ?? true}
+          sortBy={activeSort}
+          onSelectSort={(s: string) => (activeSort = s)}
+          onOpenProfile={handleOpenProfile}
+        />
 
-      <!-- Innsiktsmoduler: Benkepoeng, Topp 10 Eierskap & Rundens Klatrere -->
-      <LeagueStatsPanel {funStats} onOpenProfile={handleOpenProfile} />
+      <!-- 3. Ligainnsikt & Høydepunkter (Fullskjerm / Dedikert Side) -->
+      {:else if activeView === "insights"}
+        <LeagueStatsPanel
+          isFullPage={true}
+          {funStats}
+          timeframe={insightsTimeframe}
+          onChangeTimeframe={(t) => (insightsTimeframe = t)}
+          onOpenProfile={handleOpenProfile}
+        />
 
-    {:else if activeView === "news"}
-      <!-- 2. Avisen og nyheter modul -->
-      <NewsSection
-        {articles}
-        {currentUser}
-        onBack={() => (activeView = "leaderboard")}
-        onCreateArticle={(data) => {
-          createArticleMutation.mutate(data);
-        }}
-        onLikeArticle={(id) => likeArticleMutation.mutate({ articleId: id as any })}
-        onDeleteArticle={(id) => deleteArticleMutation.mutate({ articleId: id as any })}
-      />
-    {:else}
-      <!-- 3. Dedikert hedersvegg og månedens vinnere side -->
-      <div class="flex-1 overflow-y-auto space-y-4 pr-1">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-          <div class="flex items-center gap-2.5">
-            <div class="p-2 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/20">
-              <Trophy class="w-5 h-5" />
+      <!-- 4. Sanntids Liga-Chat & Banter (Fullskjerm / Dedikert Side) -->
+      {:else if activeView === "chat"}
+        <ChatDrawer
+          isFullPage={true}
+          isOpen={true}
+          {messages}
+          {currentUser}
+          {currentRoom}
+          activeChannel={activeChatChannel}
+          onSelectChannel={(c) => (activeChatChannel = c)}
+          onSendMessage={handleSendMessage}
+        />
+
+      <!-- 5. Nyheter & Runderapporter -->
+      {:else if activeView === "news"}
+        <NewsSection
+          {articles}
+          {currentUser}
+          onBack={() => (activeView = "leaderboard")}
+          onCreateArticle={(data) => {
+            createArticleMutation.mutate(data);
+          }}
+          onUpdateArticle={(data) => {
+            updateArticleMutation.mutate(data);
+          }}
+          onLikeArticle={(id) => likeArticleMutation.mutate({ articleId: id as any })}
+          onDeleteArticle={(id) => deleteArticleMutation.mutate({ articleId: id as any })}
+          onToggleArchive={(id) => toggleArchiveArticleMutation.mutate({ articleId: id as any })}
+          onTogglePin={(id) => togglePinArticleMutation.mutate({ articleId: id as any })}
+        />
+
+      <!-- 6. Skrytevegg & Hedersvegg (Full Side) -->
+      {:else if activeView === "wall_of_fame"}
+        <div class="flex-1 overflow-y-auto space-y-5 pr-1 pb-4 custom-scrollbar text-[#E2E8F0]">
+          <div class="flex items-center justify-between pb-3 border-b border-[#384252]">
+            <div class="flex items-center gap-2.5">
+              <div class="p-2 rounded-xl bg-[#F4C152]/15 text-[#F4C152] border border-[#F4C152]/30">
+                <Trophy class="w-5 h-5" />
+              </div>
+              <div>
+                <h2 class="text-base font-bold text-white">Månedens Vinnere & Hedersvegg</h2>
+                <p class="text-xs text-[#94A3B8]">Offisiell hedersplass for de skarpeste FPL-rommene og solovinnerne</p>
+              </div>
             </div>
-            <div>
-              <h2 class="text-base font-bold text-white">Månedens vinnere og hedersvegg</h2>
-              <p class="text-xs text-slate-400">Hedersplass for de skarpeste FPL-rommene gjennom sesongen</p>
+
+            <button
+              onclick={() => (activeView = "leaderboard")}
+              class="px-3.5 py-1.5 rounded-xl bg-[#242B35] hover:bg-[#2A303C] text-xs font-semibold text-[#E2E8F0] border border-[#384252] transition-colors flex items-center gap-1.5"
+            >
+              <ArrowLeft class="w-3.5 h-3.5" />
+              <span>Tilbake til rom-tabell</span>
+            </button>
+          </div>
+
+          <!-- Aktive Månedsvinnere i Rampelyset -->
+          <div class="space-y-2.5">
+            <div class="flex items-center gap-2">
+              <Sparkles class="w-4 h-4 text-[#F4C152]" />
+              <h3 class="text-xs font-bold uppercase tracking-wider text-[#F4C152]">
+                Nåværende kårede månedsvinnere
+              </h3>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- 🏆 Aktivt Vinnerrom -->
+              {#if roomWinner}
+                <div class="p-4 rounded-2xl bg-[#2A303C] border border-[#F4C152]/40 space-y-3 shadow-sm relative overflow-hidden">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-[#F4C152] bg-[#F4C152]/15 px-2.5 py-0.5 rounded-md border border-[#F4C152]/30 flex items-center gap-1">
+                      <Trophy class="w-3 h-3" />
+                      <span>Månedens Vinnerrom • {roomWinner.monthName || "Denne måneden"}</span>
+                    </span>
+                    <span class="text-2xl">🏆</span>
+                  </div>
+                  <div>
+                    <h4 class="text-lg font-bold text-white">{roomWinner.winningRoom?.name || roomWinner.winnerName || "Vinnerrom"}</h4>
+                    <p class="text-xs text-[#E2E8F0] leading-relaxed mt-1">
+                      {roomWinner.content}
+                    </p>
+                  </div>
+                  <div class="flex items-center justify-between pt-2 border-t border-[#384252]">
+                    <div class="text-xs text-[#F4C152] font-mono font-bold">
+                      Vinnende romsnitt: <strong class="text-white">{roomWinner.winningScore} pts</strong>
+                    </div>
+                    {#if roomWinner.winningRoomId}
+                      <button
+                        onclick={() => {
+                          selectedRoomId = roomWinner.winningRoomId;
+                          activeView = "leaderboard";
+                        }}
+                        class="px-2.5 py-1 rounded-lg bg-[#242B35] text-[#F4C152] hover:bg-[#384252] text-xs font-bold transition-colors border border-[#384252] flex items-center gap-1"
+                      >
+                        <span>Se rom</span>
+                        <Flame class="w-3.5 h-3.5" />
+                      </button>
+                    {/if}
+                  </div>
+                </div>
+              {:else}
+                <div class="p-5 rounded-2xl bg-[#242B35] border border-[#384252] text-center flex flex-col items-center justify-center space-y-1">
+                  <Trophy class="w-8 h-8 text-[#94A3B8] mb-1" />
+                  <span class="text-xs font-bold text-white">Ingen aktiv romvinner kåret</span>
+                  <span class="text-[11px] text-[#94A3B8]">Kår vinnerrom i adminpanelet</span>
+                </div>
+              {/if}
+
+              <!-- 👑 Aktiv Solovinner -->
+              {#if soloWinner}
+                <div class="p-4 rounded-2xl bg-[#2A303C] border border-[#9FE88D]/40 space-y-3 shadow-sm relative overflow-hidden">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-[#9FE88D] bg-[#9FE88D]/15 px-2.5 py-0.5 rounded-md border border-[#9FE88D]/30 flex items-center gap-1">
+                      <Crown class="w-3 h-3" />
+                      <span>Månedens Solovinner • {soloWinner.monthName || "Denne måneden"}</span>
+                    </span>
+                    <span class="text-2xl">👑</span>
+                  </div>
+                  <div>
+                    <h4 class="text-lg font-bold text-white flex items-center gap-2">
+                      <span>{soloWinner.winnerName || "Solovinner"}</span>
+                      {#if soloWinner.winnerTeamName}
+                        <span class="text-xs text-[#94A3B8] font-normal">({soloWinner.winnerTeamName})</span>
+                      {/if}
+                    </h4>
+                    <p class="text-xs text-[#E2E8F0] leading-relaxed mt-1">
+                      {soloWinner.content}
+                    </p>
+                  </div>
+                  <div class="flex items-center justify-between pt-2 border-t border-[#384252]">
+                    <div class="text-xs text-[#9FE88D] font-mono font-bold">
+                      Månedsscore: <strong class="text-white">{soloWinner.winningScore} pts</strong>
+                    </div>
+                    {#if soloWinner.winningRoomId}
+                      <button
+                        onclick={() => {
+                          selectedRoomId = soloWinner.winningRoomId;
+                          activeView = "leaderboard";
+                        }}
+                        class="px-2.5 py-1 rounded-lg bg-[#242B35] text-[#9FE88D] hover:bg-[#384252] text-xs font-bold transition-colors border border-[#384252] flex items-center gap-1"
+                      >
+                        <span>Se rom</span>
+                        <Crown class="w-3.5 h-3.5" />
+                      </button>
+                    {/if}
+                  </div>
+                </div>
+              {:else}
+                <div class="p-5 rounded-2xl bg-[#242B35] border border-[#384252] text-center flex flex-col items-center justify-center space-y-1">
+                  <Crown class="w-8 h-8 text-[#94A3B8] mb-1" />
+                  <span class="text-xs font-bold text-white">Ingen aktiv solovinner kåret</span>
+                  <span class="text-[11px] text-[#94A3B8]">Kår solovinner i adminpanelet</span>
+                </div>
+              {/if}
             </div>
           </div>
 
-          <button
-            onclick={() => (activeView = "leaderboard")}
-            class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition-colors flex items-center gap-1.5"
-          >
-            <ArrowLeft class="w-3.5 h-3.5" />
-            <span>Tilbake til ledertavle</span>
-          </button>
-        </div>
+          <!-- Månedshistorikk -->
+          {#if winnerHistory && winnerHistory.length > 0}
+            <div class="space-y-2.5 pt-2">
+              <div class="flex items-center gap-2">
+                <Award class="w-4 h-4 text-[#F4C152]" />
+                <h3 class="text-xs font-bold uppercase tracking-wider text-white">
+                  Tidligere måneders vinnere
+                </h3>
+              </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <!-- Januar Vinner -->
-          <div class="p-4 rounded-xl bg-gradient-to-br from-amber-950/20 to-slate-900 border border-amber-500/40 space-y-3 shadow-md">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-amber-300">
-                Januar 2025
-              </span>
-              <span class="text-2xl">🏆</span>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {#each winnerHistory as h}
+                  <div class="p-3.5 rounded-xl bg-[#242B35] border border-[#384252] flex items-center justify-between">
+                    <div>
+                      <span class="text-[11px] font-bold text-[#F4C152]">{h.monthName}</span>
+                      <p class="text-xs font-bold text-white mt-0.5">{h.winningRoomName || "Rom"}</p>
+                    </div>
+                    <span class="text-xs font-mono font-bold text-[#9FE88D] bg-[#191E24] px-2 py-0.5 rounded border border-[#384252]">
+                      {h.winningScore} pts
+                    </span>
+                  </div>
+                {/each}
+              </div>
             </div>
-            <h3 class="text-lg font-black text-white">A1 - The Devs</h3>
-            <p class="text-xs text-slate-300 leading-relaxed">
-              Vant med et spektakulært snitt på <strong class="text-amber-300">76.0 poeng</strong>. Stian Taknes og Magnus Carlsen dro lasset!
-            </p>
-            <div class="text-[11px] text-amber-400 font-mono font-bold">
-              Vinnende romsnitt: 76.0 pts
-            </div>
-          </div>
-
-          <!-- Desember Vinner -->
-          <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3 shadow-md">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Desember 2024
-              </span>
-              <span class="text-2xl">🥈</span>
-            </div>
-            <h3 class="text-lg font-black text-white">A6 - Data Wizards</h3>
-            <p class="text-xs text-slate-300 leading-relaxed">
-              Knuste motstanden i juleprogrammet med sitt dype prediksjonsoppsett.
-            </p>
-            <div class="text-[11px] text-emerald-400 font-mono font-bold">
-              Vinnende romsnitt: 72.5 pts
-            </div>
-          </div>
+          {/if}
         </div>
-      </div>
-    {/if}
+      {/if}
+    </div>
   </div>
 
   <!-- Chat Drawer (Slide-over fra høyre) -->
@@ -381,14 +543,25 @@
     {rooms}
     {inviteCodes}
     {users}
+    monthWinnersData={monthWinners}
     onClose={() => (isAdminModalOpen = false)}
     onUpdateSettings={(s) => updateSettingsMutation.mutate(s)}
     onCreateInviteCode={(c) => createInviteMutation.mutate(c)}
     onDeclareWinner={(w) => declareWinnerMutation.mutate(w)}
-    onSeedData={() => seedDataMutation.mutate({})}
-    onBatchSaveAssignments={(assignments) => batchAssignMutation.mutate({ assignments })}
+    onUnpinWinner={(id) => unpinAnnouncementMutation.mutate({ announcementId: id as any })}
+    onBatchSaveAssignments={(assignments, clearUnassigned) => batchAssignMutation.mutate({ assignments, clearUnassigned })}
+    onClearAllAssignments={() => clearAllAssignmentsMutation.mutate({})}
+    onCreateRoom={(params) => createRoomMutation.mutate(params)}
+    onDeleteRoom={(roomId) => deleteRoomMutation.mutate({ roomId: roomId as any })}
+    onUpdateRoomName={(roomId, newName) => updateRoomMutation.mutate({ roomId: roomId as any, name: newName })}
+    onUpdateTeamName={(entryId, newTeamName) => updateTeamNameMutation.mutate({ entryId, newTeamName })}
     onStartNewSeason={(params) => startNewSeasonMutation.mutate(params)}
     onSetUserRole={(uId, role) => setUserRoleMutation.mutate({ userId: uId as any, role })}
+    onFetchFplLeague={(lId) => fetchFplLeagueAction.execute({ leagueId: lId })}
+    onWipeAllPreseededData={() => wipePreseededMutation.mutate({})}
+    onDeleteAllUsers={() => deleteAllUsersMutation.mutate({})}
+    onDeleteUser={(uId) => deleteUserMutation.mutate({ userId: uId as any })}
+    onDeleteInviteCode={(cId) => deleteInviteMutation.mutate({ codeId: cId as any })}
   />
 
   <RegisterModal

@@ -4,39 +4,30 @@
     Square,
     X,
     Trophy,
-    RefreshCw,
-    Shield,
-    MessageSquare,
     Wifi,
-    Crown,
-    Newspaper,
+    Radio,
+    LogOut,
+    LogIn,
+    User,
   } from "lucide-svelte";
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
 
   let {
-    currentGw = 26,
+    currentGw = 1,
     isConvexConnected = true,
-    isSyncing = false,
-    unreadCount = 0,
-    activeView = "leaderboard",
+    deadlineEpoch = null,
+    deadlineLabel = "GW 1",
     currentUser = null,
-    onOpenAdmin = () => {},
-    onRefreshFpl = () => {},
-    onToggleChat = () => {},
-    onToggleWallOfFame = () => {},
-    onToggleNews = () => {},
+    onLogin = () => {},
+    onLogout = () => {},
   }: {
     currentGw?: number;
     isConvexConnected?: boolean;
-    isSyncing?: boolean;
-    unreadCount?: number;
-    activeView?: string;
+    deadlineEpoch?: number | null;
+    deadlineLabel?: string;
     currentUser?: any;
-    onOpenAdmin?: () => void;
-    onRefreshFpl?: () => void;
-    onToggleChat?: () => void;
-    onToggleWallOfFame?: () => void;
-    onToggleNews?: () => void;
+    onLogin?: () => void;
+    onLogout?: () => void;
   } = $props();
 
   import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -44,7 +35,40 @@
   let isMaximized = $state(false);
   let appWindow: any = null;
 
+  // Countdown state
+  let targetDeadline = $derived(
+    deadlineEpoch || (Date.now() + (6 * 24 + 18) * 3600 * 1000) // Standard neste fredag frist
+  );
+
+  let timeLeft = $state({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+    isExpired: false,
+  });
+
+  let timerInterval: any = null;
+
+  function updateCountdown() {
+    const diff = targetDeadline - Date.now();
+    if (diff <= 0) {
+      timeLeft = { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true };
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    timeLeft = { days, hours, minutes, seconds, isExpired: false };
+  }
+
   onMount(async () => {
+    updateCountdown();
+    timerInterval = setInterval(updateCountdown, 1000);
+
     try {
       appWindow = getCurrentWindow();
       if (appWindow) {
@@ -56,6 +80,10 @@
     } catch (err) {
       console.warn("Tauri API ikke tilgjengelig (kjører i nettleser):", err);
     }
+  });
+
+  onDestroy(() => {
+    if (timerInterval) clearInterval(timerInterval);
   });
 
   async function getWin() {
@@ -104,154 +132,140 @@
 </script>
 
 <header
-  class="h-11 w-full bg-[#111827] border-b border-slate-800 flex items-center justify-between select-none shrink-0 z-40 titlebar-drag-region"
+  class="relative h-11 w-full bg-[#191E24] border-b border-[#384252] flex items-center justify-between select-none shrink-0 z-40 titlebar-drag-region text-[#E2E8F0] font-sans px-3"
   data-tauri-drag-region
 >
-  <!-- Venstre: App Branding & Status -->
-  <div class="flex items-center gap-3 px-3.5">
-    <div class="flex items-center gap-2">
-      <div
-        class="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-slate-950 font-black shadow-sm"
-      >
-        <Trophy class="w-3.5 h-3.5 text-slate-950" />
-      </div>
-      <span class="font-bold text-xs tracking-wide text-white flex items-center gap-1.5">
-        Atlantasy
-        <span class="text-[9px] font-mono text-emerald-400 bg-emerald-950/40 px-1.5 py-0.2 rounded border border-emerald-800/40">
-          Desktop
-        </span>
-      </span>
-    </div>
+  <!-- Venstre: Usynlig avstandsholder -->
+  <div class="w-8 shrink-0"></div>
 
-    <!-- Gameweek Live Badge -->
-    <div
-      class="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900 border border-slate-700/60 text-[11px]"
-    >
-      <span class="relative flex h-2 w-2">
-        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+  <!-- Midten: Nøyaktig sentrert "Atlantasy FPL" tittel med rullende fotball animasjon -->
+  <div class="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center">
+    <div class="relative flex items-center justify-center px-6 py-1">
+      <!-- Rullende fotball som fader inn, ruller forbi og fader ut -->
+      <span class="absolute text-sm rolling-football pointer-events-none select-none">
+        ⚽
       </span>
-      <span class="text-slate-300 font-medium">Gameweek {currentGw}</span>
-      <span class="text-[10px] text-emerald-400 font-semibold lowercase">live</span>
+
+      <span class="font-extrabold text-sm tracking-wider text-white flex items-center gap-1.5 drop-shadow-sm">
+        <span>Atlantasy</span>
+        <span class="text-[#9FE88D]">FPL</span>
+      </span>
     </div>
   </div>
 
-  <!-- Midten: Navigasjon & Raske Handlinger -->
-  <div class="flex items-center gap-1.5 titlebar-no-drag">
-    <!-- Skrytevegg / Månedsvinnere knapp -->
-    <button
-      onclick={onToggleWallOfFame}
-      class={`h-7 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-        activeView === "wall_of_fame"
-          ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm"
-          : "text-slate-300 hover:text-white hover:bg-slate-800/60"
-      }`}
-    >
-      <Crown class="w-3.5 h-3.5 text-amber-400" />
-      <span class="hidden md:inline">Månedens vinnere</span>
-    </button>
-
-    <!-- Avisen og nyheter -->
-    <button
-      onclick={onToggleNews}
-      class={`h-7 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-        activeView === "news"
-          ? "bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm"
-          : "text-slate-300 hover:text-white hover:bg-slate-800/60"
-      }`}
-    >
-      <Newspaper class="w-3.5 h-3.5 text-purple-400" />
-      <span class="hidden md:inline">Avisen og nyheter</span>
-    </button>
-
-    <!-- Admin Panel (Alltid synlig i dev) -->
-    <button
-      onclick={onOpenAdmin}
-      title="Åpne administratorpanel og rom-matching"
-      class="h-7 px-2.5 rounded-lg text-xs font-semibold text-indigo-300 hover:text-indigo-200 bg-indigo-950/50 hover:bg-indigo-900/60 border border-indigo-700/50 transition-colors flex items-center gap-1.5 shadow-sm"
-    >
-      <Shield class="w-3.5 h-3.5 text-indigo-400" />
-      <span class="hidden sm:inline">Admin</span>
-    </button>
-
-    <!-- Manuell FPL Refresh -->
-    <button
-      onclick={onRefreshFpl}
-      disabled={isSyncing}
-      title="Synkroniser FPL-poeng"
-      class="h-7 px-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors flex items-center gap-1 text-xs"
-    >
-      <RefreshCw class={`w-3.5 h-3.5 ${isSyncing ? "animate-spin text-emerald-400" : ""}`} />
-      {#if isSyncing}
-        <span class="hidden sm:inline text-[11px] text-emerald-400">Synkroniserer...</span>
-      {/if}
-    </button>
-
-    <!-- Chat Drawer Toggle -->
-    <button
-      onclick={onToggleChat}
-      title="Åpne banter og rom-chat"
-      class="h-7 px-2.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors flex items-center gap-1.5 relative"
-    >
-      <MessageSquare class="w-3.5 h-3.5 text-slate-300" />
-      <span class="hidden md:inline">Chat</span>
-      {#if unreadCount > 0}
-        <span
-          class="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center -ml-0.5"
-        >
-          {unreadCount}
-        </span>
-      {/if}
-    </button>
-  </div>
-
-  <!-- Høyre: Brukerinfo, Forbindelse & Windows Vinduskontroller -->
-  <div class="flex items-center gap-2 titlebar-no-drag">
-    <!-- Brukerinfo -->
+  <!-- Høyre: Brukerstatus, Convex Tilkobling & Windows Vinduskontroller -->
+  <div class="flex items-center gap-2 titlebar-no-drag ml-auto">
+    <!-- Brukerstatus & Logg inn / ut -->
     {#if currentUser}
-      <div class="hidden sm:flex items-center gap-2 px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-xs">
+      <div class="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[#242B35] border border-[#384252] shadow-sm">
         <img
           src={currentUser.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${currentUser.username}`}
-          alt="Avatar"
-          class="w-4 h-4 rounded-full bg-slate-800"
+          alt=""
+          class="w-5 h-5 rounded-full bg-[#191E24] border border-[#384252]"
         />
-        <span class="font-semibold text-white truncate max-w-[100px]">{currentUser.username}</span>
+        <div class="hidden sm:flex flex-col text-left">
+          <span class="text-xs font-bold text-white leading-tight truncate max-w-[110px]">
+            {currentUser.username}
+          </span>
+          <span class="text-[9px] font-mono text-[#94A3B8] uppercase leading-tight">
+            {currentUser.role === "admin" ? "Admin" : (currentUser.fplTeamName || "Spiller")}
+          </span>
+        </div>
+        <button
+          type="button"
+          onclick={onLogout}
+          title="Logg ut av bruker"
+          class="p-1 rounded-lg text-[#94A3B8] hover:text-[#FB6F84] hover:bg-[#384252] transition-colors ml-0.5"
+        >
+          <LogOut class="w-3.5 h-3.5" />
+        </button>
       </div>
+    {:else}
+      <button
+        type="button"
+        onclick={onLogin}
+        class="px-3 py-1 rounded-xl bg-[#9FE88D] hover:bg-[#8ce078] text-[#16380c] font-bold text-xs transition-all shadow-sm flex items-center gap-1.5"
+      >
+        <LogIn class="w-3.5 h-3.5" />
+        <span>Logg inn</span>
+      </button>
     {/if}
 
-    <!-- Convex Status Indikator -->
+    <!-- Tilkoblingsstatus -->
     <div
-      class="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-slate-400"
-      title={isConvexConnected ? "Tilkoblet Convex sanntidsdatabase" : "Frakoblet"}
+      class="hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded text-xs text-[#94A3B8]"
+      title={isConvexConnected
+        ? "Tilkoblet Convex sanntidsdatabase"
+        : "Frakoblet / Prøver å koble til..."}
     >
-      <Wifi class={`w-3 h-3 ${isConvexConnected ? "text-emerald-400" : "text-rose-500"}`} />
+      <Radio
+        class={`w-3.5 h-3.5 ${
+          isConvexConnected ? "text-[#9FE88D] animate-pulse" : "text-[#FB6F84]"
+        }`}
+      />
+      <span class="text-[11px] font-mono">
+        {isConvexConnected ? "Live" : "Offline"}
+      </span>
     </div>
 
-    <!-- Windows Window Controls -->
-    <div class="flex items-center">
+    <!-- Windows Vinduskontroller (Minimer, Maksimer, Lukk) -->
+    <div class="flex items-center -mr-1">
       <button
+        type="button"
         onclick={handleMinimize}
+        class="h-8 w-9 flex items-center justify-center hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors"
         title="Minimer"
-        class="h-11 w-11 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
       >
         <Minus class="w-3.5 h-3.5" />
       </button>
-
       <button
+        type="button"
         onclick={handleToggleMaximize}
+        class="h-8 w-9 flex items-center justify-center hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors"
         title={isMaximized ? "Gjenopprett" : "Maksimer"}
-        class="h-11 w-11 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
       >
         <Square class="w-3 h-3" />
       </button>
-
       <button
+        type="button"
         onclick={handleClose}
+        class="h-8 w-9 flex items-center justify-center hover:bg-[#FB6F84] text-[#94A3B8] hover:text-white transition-colors rounded-tr-lg"
         title="Lukk"
-        class="h-11 w-11 flex items-center justify-center text-slate-400 hover:text-white hover:bg-rose-600 transition-colors"
       >
         <X class="w-4 h-4" />
       </button>
     </div>
   </div>
 </header>
+
+<style>
+  @keyframes rollPast {
+    0% {
+      opacity: 0;
+      transform: translateX(-35px) rotate(0deg) scale(0.65);
+    }
+    8% {
+      opacity: 0.9;
+      transform: translateX(-15px) rotate(160deg) scale(1);
+    }
+    30% {
+      opacity: 0.9;
+      transform: translateX(120px) rotate(720deg) scale(1);
+    }
+    38% {
+      opacity: 0;
+      transform: translateX(145px) rotate(900deg) scale(0.65);
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(145px) rotate(900deg) scale(0.65);
+    }
+  }
+
+  .rolling-football {
+    animation: rollPast 9s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    left: 0;
+    top: 50%;
+    margin-top: -10px;
+  }
+</style>

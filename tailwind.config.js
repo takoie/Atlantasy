@@ -5,52 +5,62 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#0d1117',
+        background: '#1c2128', // DaisyUI Dim base-300
         surface: {
-          50: '#212c3f',
-          100: '#1b2434',
-          200: '#151d2c',
-          300: '#0f1724',
-          card: 'rgba(21, 29, 44, 0.85)',
+          50: '#384252',
+          100: '#2A303C', // Dim base-100
+          200: '#242B35', // Dim base-200
+          300: '#1c2128', // Dim base-300
+          card: '#2A303C',
+        },
+        dim: {
+          base: '#1c2128',
+          card: '#2A303C',
+          inset: '#242B35',
+          border: '#384252',
+          primary: '#9FE88D',
+          secondary: '#F471B5',
+          accent: '#70E1F8',
+          neutral: '#191E24',
+          content: '#E2E8F0',
+          muted: '#94A3B8',
         },
         fpl: {
-          cyan: '#10b981',     // Myk, moderne smaragdgrønn (daisyUI accent)
-          green: '#059669',    // Live poeng / suksess
-          purple: '#3b0764',   // Elegant dyp lilla
-          accent: '#f43f5e',   // Rose / Pink
-          violet: '#6366f1',   // Desktop aksent
-          indigo: '#4f46e5',   // Subtil UI-aksent
-          gold: '#f59e0b',     // 1. plass / Månedsvinner
-          silver: '#94a3b8',   // 2. plass
-          bronze: '#d97706',   // 3. plass
-          danger: '#f43f5e',   // Transfer hits / -4
-        },
-        brand: {
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
+          cyan: '#70E1F8',
+          green: '#9FE88D',    // DaisyUI Dim Primary Mint
+          purple: '#2E2836',
+          accent: '#F4C152',   // Dim Amber/Gold
+          violet: '#A78BFA',
+          indigo: '#9FE88D',
+          gold: '#F4C152',     // 1. plass / Månedsvinner
+          silver: '#94A3B8',   // 2. plass
+          bronze: '#D97706',   // 3. plass
+          danger: '#FB6F84',   // Dim Error / Transfer hits
         },
       },
       fontFamily: {
         sans: [
           'Inter',
+          'ui-sans-serif',
+          'system-ui',
           '-apple-system',
           'BlinkMacSystemFont',
           '"Segoe UI"',
           'Roboto',
+          '"Helvetica Neue"',
+          'Arial',
           'sans-serif',
         ],
-        mono: ['"JetBrains Mono"', 'Consolas', 'monospace'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       boxShadow: {
-        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.25)',
-        'glow-cyan': '0 0 12px -2px rgba(16, 185, 129, 0.25)',
-        'glow-purple': '0 0 12px -2px rgba(99, 102, 241, 0.25)',
-        'glass-card': '0 8px 30px 0 rgba(0, 0, 0, 0.28)',
+        'dim': '0 4px 20px -2px rgba(0, 0, 0, 0.45)',
+        'dim-sm': '0 2px 8px 0 rgba(0, 0, 0, 0.35)',
+        'glow-primary': '0 0 14px -2px rgba(159, 232, 141, 0.35)',
+        'glow-accent': '0 0 14px -2px rgba(244, 193, 82, 0.35)',
       },
     },
   },
   plugins: [],
 };
+

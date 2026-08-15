@@ -47,14 +47,17 @@ export default defineSchema({
     .index("by_roomId", ["roomId"])
     .index("by_totalPoints", ["totalPoints"]),
 
-  // Artikler, Runderapporter og Nyheter (med bildestøtte fra upload / clipboard paste)
+  // Artikler, Runderapporter og Nyheter (med ingress, inline bildestøtte, arkivering og pinning)
   articles: defineTable({
     title: v.string(),
-    content: v.string(),
-    imageUrl: v.optional(v.string()), // URL eller Base64 Data URL fra clipboard/upload
+    lead: v.optional(v.string()),     // Ingress / Sammendrag
+    content: v.string(),              // Hovedtekst med markdown / inline bilder
+    imageUrl: v.optional(v.string()), // Cover / Toppbilde (Base64 eller URL)
     authorName: v.string(),
     authorAvatar: v.optional(v.string()),
     tag: v.optional(v.string()),      // "Runderapport" | "Taktikk" | "Banter" | "Nyhet"
+    isArchived: v.optional(v.boolean()), // Arkivert artikkel
+    isPinned: v.optional(v.boolean()),   // Festet til toppen
     likes: v.number(),
     createdAt: v.number(),
   }).index("by_createdAt", ["createdAt"]),
