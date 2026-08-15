@@ -91,3 +91,37 @@ export const deleteMessage = mutation({
     await ctx.db.delete(args.messageId);
   },
 });
+
+/**
+ * Henter antall uleste meldinger siden et gitt tidsstempel
+ */
+export const getUnreadCount = query({
+  args: {
+    since: v.number(),
+    roomId: v.optional(v.id("rooms")),
+  },
+  handler: async (ctx, args) => {
+    if (!args.since || args.since <= 0) return 0;
+
+    const banterMessages = await ctx.db
+      .query("messages")
+      .withIndex("by_channel_and_createdAt", (q) =>
+        q.eq("channel", "banter").gt("createdAt", args.since)
+      )
+      .collect();
+
+    let roomMessagesCount = 0;
+    if (args.roomId) {
+      const roomMessages = await ctx.db
+        .query("messages")
+        .withIndex("by_roomId_and_createdAt", (q) =>
+          q.eq("roomId", args.roomId).gt("createdAt", args.since)
+        )
+        .collect();
+      roomMessagesCount = roomMessages.length;
+    }
+
+    return banterMessages.length + roomMessagesCount;
+  },
+});
+

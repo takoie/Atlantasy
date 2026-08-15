@@ -20,6 +20,7 @@
     currentUser = null,
     deadlineEpoch = null,
     deadlineLabel = "GW 1",
+    unreadChatCount = 0,
     onSelectView = (_view: string) => {},
     onOpenAdmin = () => {},
     onRefreshFpl = () => {},
@@ -31,6 +32,7 @@
     currentUser?: any;
     deadlineEpoch?: number | null;
     deadlineLabel?: string;
+    unreadChatCount?: number;
     onSelectView?: (view: string) => void;
     onOpenAdmin?: () => void;
     onRefreshFpl?: () => void;
@@ -222,7 +224,18 @@
             </div>
 
             <div class="flex items-center gap-2">
-              {#if item.badge}
+              {#if item.id === "chat"}
+                {#if unreadChatCount > 0}
+                  <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-[#FB6F84] text-white border border-[#FB6F84]/50 shadow-sm animate-pulse flex items-center gap-1">
+                    <span>+{unreadChatCount > 99 ? "99" : unreadChatCount}</span>
+                    <span class="hidden sm:inline text-[10px]">nye</span>
+                  </span>
+                {:else}
+                  <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-[#9FE88D]/20 text-[#9FE88D] border border-[#9FE88D]/40">
+                    Live
+                  </span>
+                {/if}
+              {:else if item.badge}
                 <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-[#9FE88D]/20 text-[#9FE88D] border border-[#9FE88D]/40">
                   {item.badge}
                 </span>

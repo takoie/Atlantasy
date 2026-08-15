@@ -126,11 +126,42 @@
   }));
   let messages = $derived(chatQuery.data ?? []);
 
+  // Tidsstempel for når brukeren sist åpnet chatten (hentes fra localStorage)
+  let lastVisitedChatTime = $state<number>(Date.now());
+
+  const unreadChatQuery = useQuery(api.chat.getUnreadCount, () => ({
+    since: lastVisitedChatTime,
+    roomId: (currentUser?.roomId ?? undefined) as any,
+  }));
+
+  let unreadChatCount = $derived(
+    activeView === "chat" || isChatOpen ? 0 : (unreadChatQuery.data ?? 0)
+  );
+
+  // Nullstill uleste meldinger når brukeren går inn på chat-modulen
+  $effect(() => {
+    if (activeView === "chat" || isChatOpen) {
+      const now = Date.now();
+      lastVisitedChatTime = now;
+      localStorage.setItem("atlantasy_last_visited_chat", String(now));
+    }
+  });
+
   let isConvexConnected = $derived(
     !roomsQuery.error && roomsQuery.data !== undefined
   );
 
   onMount(async () => {
+    // Hent tidsstempel for sist besøkte chat
+    const savedChatTime = localStorage.getItem("atlantasy_last_visited_chat");
+    if (savedChatTime) {
+      lastVisitedChatTime = parseInt(savedChatTime, 10);
+    } else {
+      const now = Date.now();
+      lastVisitedChatTime = now;
+      localStorage.setItem("atlantasy_last_visited_chat", String(now));
+    }
+
     // Sjekk om brukeren allerede har fullført onboarding / lagret profil
     const savedUserId = localStorage.getItem("atlantasy_current_user_id");
     if (savedUserId) {
@@ -259,6 +290,7 @@
       {isConvexConnected}
       {isSyncing}
       {currentUser}
+      {unreadChatCount}
       deadlineEpoch={nextDeadlineInfo?.deadlineEpoch}
       deadlineLabel={nextDeadlineInfo?.name ? (nextDeadlineInfo.name.match(/GW\s*\d+/i)?.[0] || `GW ${settings?.currentGameweek ?? 1}`) : `GW ${settings?.currentGameweek ?? 1}`}
       onSelectView={(view) => {
