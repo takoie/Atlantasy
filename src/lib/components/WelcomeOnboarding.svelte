@@ -84,12 +84,20 @@
     }
 
     isValidating = true;
+
     try {
-      const res = await onValidateStep1({
-        username: username.trim(),
-        password: password.trim(),
-        inviteCode: inviteCode.trim().toUpperCase(),
-      });
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Kunne ikke nå databasen (tidsavbrudd). Sjekk internettforbindelsen eller at Convex kjører.")), 8000)
+      );
+
+      const res = (await Promise.race([
+        onValidateStep1({
+          username: username.trim(),
+          password: password.trim(),
+          inviteCode: inviteCode.trim().toUpperCase(),
+        }),
+        timeoutPromise,
+      ])) as any;
 
       if (res && res.valid) {
         if (res.targetRoomId) {
@@ -127,16 +135,23 @@
     isSubmitting = true;
 
     try {
-      const res = await onLoginOrRegister({
-        username: username.trim(),
-        password: password.trim(),
-        inviteCode: mode === "register" ? inviteCode.trim().toUpperCase() : undefined,
-        fplEntryId: selectedFplEntryId ?? undefined,
-        fplTeamName: selectedTeamObj?.teamName || undefined,
-        fplManagerName: selectedTeamObj?.managerName || username.trim(),
-        preferredRoomId: selectedRoomId || undefined,
-        customRoomNickname: customRoomNickname.trim() || undefined,
-      });
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Kunne ikke nå databasen (tidsavbrudd). Sjekk at Convex-serveren kjører.")), 8000)
+      );
+
+      const res = (await Promise.race([
+        onLoginOrRegister({
+          username: username.trim(),
+          password: password.trim(),
+          inviteCode: mode === "register" ? inviteCode.trim().toUpperCase() : undefined,
+          fplEntryId: selectedFplEntryId ?? undefined,
+          fplTeamName: selectedTeamObj?.teamName || undefined,
+          fplManagerName: selectedTeamObj?.managerName || username.trim(),
+          preferredRoomId: selectedRoomId || undefined,
+          customRoomNickname: customRoomNickname.trim() || undefined,
+        }),
+        timeoutPromise,
+      ])) as any;
 
       if (res && res.userId) {
         onComplete(res.userId, {
