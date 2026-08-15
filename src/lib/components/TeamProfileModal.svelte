@@ -85,6 +85,8 @@
     Math.max(...(profile?.history?.map((h) => h.points) ?? [100]), 60)
   );
 
+  import { openExternalUrl } from "$lib/utils/openUrl";
+
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === "Escape" && isOpen) {
       onClose();
@@ -93,7 +95,7 @@
 
   function openExternalFpl(url?: string) {
     if (!url) return;
-    window.open(url, "_blank", "noopener,noreferrer");
+    openExternalUrl(url);
   }
 </script>
 
