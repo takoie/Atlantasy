@@ -118,28 +118,28 @@
   let editSuccessMessage = $state("");
   let fileInputRef = $state<HTMLInputElement | null>(null);
 
-  // Premier League Logo Presets (2024/2025 sesongens 20 lag)
+  // Premier League Logo Presets (2026/2027-sesongens 20 lag)
   const plClubPresets = [
     { name: "Arsenal", url: "https://resources.premierleague.com/premierleague/badges/70/t3.png" },
     { name: "Aston Villa", url: "https://resources.premierleague.com/premierleague/badges/70/t7.png" },
     { name: "Bournemouth", url: "https://resources.premierleague.com/premierleague/badges/70/t91.png" },
     { name: "Brentford", url: "https://resources.premierleague.com/premierleague/badges/70/t94.png" },
-    { name: "Brighton", url: "https://resources.premierleague.com/premierleague/badges/70/t36.png" },
+    { name: "Brighton & Hove Albion", url: "https://resources.premierleague.com/premierleague/badges/70/t36.png" },
     { name: "Chelsea", url: "https://resources.premierleague.com/premierleague/badges/70/t8.png" },
+    { name: "Coventry City", url: "https://resources.premierleague.com/premierleague/badges/70/t59.png" },
     { name: "Crystal Palace", url: "https://resources.premierleague.com/premierleague/badges/70/t31.png" },
     { name: "Everton", url: "https://resources.premierleague.com/premierleague/badges/70/t11.png" },
     { name: "Fulham", url: "https://resources.premierleague.com/premierleague/badges/70/t54.png" },
+    { name: "Hull City", url: "https://resources.premierleague.com/premierleague/badges/70/t88.png" },
     { name: "Ipswich Town", url: "https://resources.premierleague.com/premierleague/badges/70/t40.png" },
-    { name: "Leicester City", url: "https://resources.premierleague.com/premierleague/badges/70/t13.png" },
+    { name: "Leeds United", url: "https://resources.premierleague.com/premierleague/badges/70/t2.png" },
     { name: "Liverpool", url: "https://resources.premierleague.com/premierleague/badges/70/t14.png" },
-    { name: "Man City", url: "https://resources.premierleague.com/premierleague/badges/70/t43.png" },
-    { name: "Man United", url: "https://resources.premierleague.com/premierleague/badges/70/t1.png" },
-    { name: "Newcastle", url: "https://resources.premierleague.com/premierleague/badges/70/t4.png" },
-    { name: "Nott'm Forest", url: "https://resources.premierleague.com/premierleague/badges/70/t17.png" },
-    { name: "Southampton", url: "https://resources.premierleague.com/premierleague/badges/70/t20.png" },
-    { name: "Tottenham", url: "https://resources.premierleague.com/premierleague/badges/70/t6.png" },
-    { name: "West Ham", url: "https://resources.premierleague.com/premierleague/badges/70/t21.png" },
-    { name: "Wolves", url: "https://resources.premierleague.com/premierleague/badges/70/t39.png" },
+    { name: "Manchester City", url: "https://resources.premierleague.com/premierleague/badges/70/t43.png" },
+    { name: "Manchester United", url: "https://resources.premierleague.com/premierleague/badges/70/t1.png" },
+    { name: "Newcastle United", url: "https://resources.premierleague.com/premierleague/badges/70/t4.png" },
+    { name: "Nottingham Forest", url: "https://resources.premierleague.com/premierleague/badges/70/t17.png" },
+    { name: "Sunderland", url: "https://resources.premierleague.com/premierleague/badges/70/t56.png" },
+    { name: "Tottenham Hotspur", url: "https://resources.premierleague.com/premierleague/badges/70/t6.png" },
   ];
 
   // Fotball & Sport Avatar Presets
