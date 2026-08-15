@@ -10,7 +10,8 @@
     ArrowUpRight,
   } from "lucide-svelte";
   import { onMount } from "svelte";
-  import { invoke } from "@tauri-apps/api/core";
+  import { check, type Update } from "@tauri-apps/plugin-updater";
+  import { relaunch } from "@tauri-apps/plugin-process";
 
   let {
     isOpen = $bindable(false),
@@ -25,6 +26,7 @@
   let isTauriEnv = $state(false);
   let isChecking = $state(false);
   let updateObj = $state<any>(null);
+  let rawUpdateInstance = $state<Update | null>(null);
   let status = $state<"idle" | "available" | "downloading" | "installing" | "ready" | "up_to_date" | "error">("idle");
   let errorMessage = $state("");
   let downloadedBytes = $state(0);
@@ -62,17 +64,22 @@
     }
 
     try {
-      // 1. Sjekk via Tauri v2 updater IPC først
+      // 1. Sjekk via Tauri v2 updater plugin
       try {
-        const update: any = await invoke("plugin:updater|check");
-        if (update && (update.available || update.version)) {
-          updateObj = update;
+        const update = await check();
+        if (update) {
+          rawUpdateInstance = update;
+          updateObj = {
+            version: update.version,
+            body: update.body,
+            date: update.date,
+          };
           status = "available";
           isOpen = true;
           return;
         }
       } catch (tauriErr) {
-        console.warn("Tauri updater feilet, prøver direkte GitHub API:", tauriErr);
+        console.warn("Tauri updater plugin feilet, prøver direkte GitHub API:", tauriErr);
       }
 
       // 2. Fallback: Sjekk direkte mot GitHub Releases API
@@ -92,6 +99,7 @@
           const exeAsset = (release.assets || []).find((a: any) =>
             a.name.toLowerCase().endsWith(".exe")
           );
+          rawUpdateInstance = null;
           updateObj = {
             version: release.tag_name,
             body: release.body,
@@ -125,22 +133,32 @@
   }
 
   async function startDownloadAndInstall() {
-    if (updateObj?.downloadUrl) {
-      // Åpne direkte nedlastingslenke for oppdateringsfilen
-      window.open(updateObj.downloadUrl, "_blank");
-      status = "ready";
-      return;
-    }
-
     status = "downloading";
     downloadedBytes = 0;
     totalBytes = 0;
     errorMessage = "";
 
     try {
-      // Start nedlasting og installasjon via Tauri updater
-      await invoke("plugin:updater|download_and_install");
-      status = "ready";
+      if (rawUpdateInstance) {
+        // Offisiell Tauri updater download & install med progress
+        await rawUpdateInstance.downloadAndInstall((event) => {
+          if (event.event === "Started") {
+            totalBytes = event.data.contentLength || 0;
+            downloadedBytes = 0;
+          } else if (event.event === "Progress") {
+            downloadedBytes += event.data.chunkLength;
+          } else if (event.event === "Finished") {
+            status = "ready";
+          }
+        });
+        status = "ready";
+      } else if (updateObj?.downloadUrl) {
+        // Åpne direkte nedlasting i nettleser
+        window.open(updateObj.downloadUrl, "_blank");
+        status = "ready";
+      } else {
+        throw new Error("Ingen nedlastingskilde tilgjengelig.");
+      }
     } catch (err: any) {
       console.error("Feil ved nedlasting/installering:", err);
       status = "error";
@@ -150,9 +168,9 @@
 
   async function triggerRelaunch() {
     try {
-      await invoke("plugin:process|restart");
+      await relaunch();
     } catch (err: any) {
-      console.error("Kunne ikke restarte app via process plugin:", err);
+      console.error("Kunne ikke restarte app via relaunch():", err);
       window.location.reload();
     }
   }
