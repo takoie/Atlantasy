@@ -118,28 +118,28 @@
   let editSuccessMessage = $state("");
   let fileInputRef = $state<HTMLInputElement | null>(null);
 
-  // Premier League Logo Presets
+  // Premier League Logo Presets (2024/2025 sesongens 20 lag)
   const plClubPresets = [
-    { name: "Arsenal", url: "https://resources.premierleague.com/premierleague/badges/50/t3.png" },
-    { name: "Aston Villa", url: "https://resources.premierleague.com/premierleague/badges/50/t7.png" },
-    { name: "Bournemouth", url: "https://resources.premierleague.com/premierleague/badges/50/t91.png" },
-    { name: "Brentford", url: "https://resources.premierleague.com/premierleague/badges/50/t94.png" },
-    { name: "Brighton", url: "https://resources.premierleague.com/premierleague/badges/50/t36.png" },
-    { name: "Chelsea", url: "https://resources.premierleague.com/premierleague/badges/50/t8.png" },
-    { name: "Crystal Palace", url: "https://resources.premierleague.com/premierleague/badges/50/t31.png" },
-    { name: "Everton", url: "https://resources.premierleague.com/premierleague/badges/50/t11.png" },
-    { name: "Fulham", url: "https://resources.premierleague.com/premierleague/badges/50/t54.png" },
-    { name: "Ipswich", url: "https://resources.premierleague.com/premierleague/badges/50/t40.png" },
-    { name: "Leicester", url: "https://resources.premierleague.com/premierleague/badges/50/t13.png" },
-    { name: "Liverpool", url: "https://resources.premierleague.com/premierleague/badges/50/t14.png" },
-    { name: "Man City", url: "https://resources.premierleague.com/premierleague/badges/50/t43.png" },
-    { name: "Man United", url: "https://resources.premierleague.com/premierleague/badges/50/t1.png" },
-    { name: "Newcastle", url: "https://resources.premierleague.com/premierleague/badges/50/t4.png" },
-    { name: "Nott'm Forest", url: "https://resources.premierleague.com/premierleague/badges/50/t17.png" },
-    { name: "Southampton", url: "https://resources.premierleague.com/premierleague/badges/50/t20.png" },
-    { name: "Spurs", url: "https://resources.premierleague.com/premierleague/badges/50/t6.png" },
-    { name: "West Ham", url: "https://resources.premierleague.com/premierleague/badges/50/t21.png" },
-    { name: "Wolves", url: "https://resources.premierleague.com/premierleague/badges/50/t39.png" },
+    { name: "Arsenal", url: "https://resources.premierleague.com/premierleague/badges/70/t3.png" },
+    { name: "Aston Villa", url: "https://resources.premierleague.com/premierleague/badges/70/t7.png" },
+    { name: "Bournemouth", url: "https://resources.premierleague.com/premierleague/badges/70/t91.png" },
+    { name: "Brentford", url: "https://resources.premierleague.com/premierleague/badges/70/t94.png" },
+    { name: "Brighton", url: "https://resources.premierleague.com/premierleague/badges/70/t36.png" },
+    { name: "Chelsea", url: "https://resources.premierleague.com/premierleague/badges/70/t8.png" },
+    { name: "Crystal Palace", url: "https://resources.premierleague.com/premierleague/badges/70/t31.png" },
+    { name: "Everton", url: "https://resources.premierleague.com/premierleague/badges/70/t11.png" },
+    { name: "Fulham", url: "https://resources.premierleague.com/premierleague/badges/70/t54.png" },
+    { name: "Ipswich Town", url: "https://resources.premierleague.com/premierleague/badges/70/t40.png" },
+    { name: "Leicester City", url: "https://resources.premierleague.com/premierleague/badges/70/t13.png" },
+    { name: "Liverpool", url: "https://resources.premierleague.com/premierleague/badges/70/t14.png" },
+    { name: "Man City", url: "https://resources.premierleague.com/premierleague/badges/70/t43.png" },
+    { name: "Man United", url: "https://resources.premierleague.com/premierleague/badges/70/t1.png" },
+    { name: "Newcastle", url: "https://resources.premierleague.com/premierleague/badges/70/t4.png" },
+    { name: "Nott'm Forest", url: "https://resources.premierleague.com/premierleague/badges/70/t17.png" },
+    { name: "Southampton", url: "https://resources.premierleague.com/premierleague/badges/70/t20.png" },
+    { name: "Tottenham", url: "https://resources.premierleague.com/premierleague/badges/70/t6.png" },
+    { name: "West Ham", url: "https://resources.premierleague.com/premierleague/badges/70/t21.png" },
+    { name: "Wolves", url: "https://resources.premierleague.com/premierleague/badges/70/t39.png" },
   ];
 
   // Fotball & Sport Avatar Presets
@@ -429,7 +429,7 @@
         </div>
 
         <div class="p-2.5 rounded-xl bg-[#242B35] border border-[#384252]">
-          <span class="text-[10px] text-[#94A3B8] uppercase font-sans block">Meritter / Troféer</span>
+          <span class="text-[10px] text-[#94A3B8] uppercase font-sans block">Meritter og trofeer</span>
           <span class="text-base font-bold text-[#F4C152] flex items-center gap-1">
             <Crown class="w-4 h-4 text-[#F4C152]" />
             <span>{totalTrophiesCount}</span>
@@ -469,7 +469,7 @@
           }`}
         >
           <Trophy class="w-3.5 h-3.5 text-[#F4C152]" />
-          <span>Troféer & Pokaler ({totalTrophiesCount})</span>
+          <span>Trofeer og pokaler ({totalTrophiesCount})</span>
         </button>
 
         <button
@@ -482,7 +482,7 @@
           }`}
         >
           <TrendingUp class="w-3.5 h-3.5" />
-          <span>Klatregraf & Historikk</span>
+          <span>Klatregraf og historikk</span>
         </button>
 
         <button
@@ -593,14 +593,14 @@
             </div>
           </div>
 
-        <!-- FANE 2: TROFÉER & POKALER (CUP & MÅNEDENS ENER TOPP 3) -->
+        <!-- FANE 2: TROFEER OG POKALER (CUP OG MÅNEDENS ENER TOPP 3) -->
         {:else if activeTab === "trophies"}
           <div class="space-y-5">
             <!-- Cup Meritter & Sluttspill Pokaler -->
             <div class="space-y-3">
               <h4 class="text-xs font-bold text-[#F4C152] uppercase tracking-wider flex items-center gap-1.5">
                 <Trophy class="w-4 h-4 text-[#F4C152]" />
-                <span>Cup & Sluttspill Meritter</span>
+                <span>Cup- og sluttspillmeritter</span>
               </h4>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -623,7 +623,7 @@
                           ? "bg-slate-300/20 text-slate-300 border border-slate-300/40"
                           : "bg-amber-700/20 text-amber-500 border border-amber-700/40"
                       }`}>
-                        {trophy.place}. Plass
+                        {trophy.place}. plass
                       </span>
                     </div>
                   </div>
@@ -641,7 +641,7 @@
             <div class="space-y-3 pt-2">
               <h4 class="text-xs font-bold text-[#9FE88D] uppercase tracking-wider flex items-center gap-1.5">
                 <Crown class="w-4 h-4 text-[#9FE88D]" />
-                <span>Månedens Manager & Solovinnere</span>
+                <span>Månedens managere og solovinnere</span>
               </h4>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -727,7 +727,7 @@
       <div class="flex items-center justify-between pb-3 border-b border-[#384252]">
         <div class="flex items-center gap-2">
           <Edit3 class="w-5 h-5 text-[#F4C152]" />
-          <h3 class="font-bold text-white text-base">Rediger Profil & Avatar</h3>
+          <h3 class="font-bold text-white text-base">Rediger profil og avatar</h3>
         </div>
         <button
           type="button"
@@ -771,7 +771,7 @@
         <!-- 2. Nåværende Avatar & Egen bildeopplasting -->
         <div class="p-4 rounded-2xl bg-[#191E24] border border-[#384252] space-y-3">
           <div class="flex items-center justify-between">
-            <span class="font-bold text-white">Nåværende Avatar:</span>
+            <span class="font-bold text-white">Nåværende avatar:</span>
             <div class="flex items-center gap-2">
               {#if editAvatar}
                 <img src={editAvatar} alt="Valgt avatar" class="w-10 h-10 rounded-xl bg-[#2A303C] border border-[#384252] object-contain p-1" />
@@ -871,7 +871,7 @@
           class="px-5 py-2 rounded-xl bg-[#9FE88D] hover:bg-[#8ce078] text-[#16380c] font-bold text-xs transition-colors flex items-center gap-1.5 shadow-md"
         >
           <Check class="w-4 h-4" />
-          <span>{isSavingProfile ? "Lagrer..." : "Lagre Profil"}</span>
+          <span>{isSavingProfile ? "Lagrer..." : "Lagre profil"}</span>
         </button>
       </div>
     </div>
