@@ -400,13 +400,14 @@
           {currentUser}
           onBack={() => (activeView = "leaderboard")}
           onCreateArticle={(data) => {
-            createArticleMutation.mutate({
+            return createArticleMutation.mutate({
               ...data,
+              userId: currentUser?._id,
               authorId: currentUser?._id,
             });
           }}
           onUpdateArticle={(data) => {
-            updateArticleMutation.mutate({
+            return updateArticleMutation.mutate({
               ...data,
               userId: currentUser?._id,
             });

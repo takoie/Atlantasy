@@ -388,34 +388,51 @@
       const trimmed = raw.trim();
       if (!trimmed) continue;
 
-      // Bilde med valgfri alignment: ![caption|align=left](url) eller ![caption](url)
-      const imgMatch = trimmed.match(/^!\[(.*?)\]\((.*?)\)$/s);
-      if (imgMatch) {
-        let rawCaption = imgMatch[1] || "";
-        const src = imgMatch[2];
-        let align: "full" | "left" | "right" | "center" = "full";
+      // Sjekk om det finnes bilder i blokken
+      const imgRegex = /!\[(.*?)\]\((.*?)\)/g;
+      if (imgRegex.test(trimmed)) {
+        let lastIndex = 0;
+        imgRegex.lastIndex = 0;
+        let match;
+        while ((match = imgRegex.exec(trimmed)) !== null) {
+          const preText = trimmed.substring(lastIndex, match.index).trim();
+          if (preText) {
+            blocks.push({ type: "paragraph", text: preText });
+          }
 
-        if (rawCaption.includes("|align=")) {
-          const parts = rawCaption.split("|align=");
-          rawCaption = parts[0];
-          align = (parts[1].split("|")[0].trim() as any) || "full";
-        } else if (rawCaption.includes("|left")) {
-          rawCaption = rawCaption.replace("|left", "");
-          align = "left";
-        } else if (rawCaption.includes("|right")) {
-          rawCaption = rawCaption.replace("|right", "");
-          align = "right";
-        } else if (rawCaption.includes("|center")) {
-          rawCaption = rawCaption.replace("|center", "");
-          align = "center";
+          let rawCaption = match[1] || "";
+          const src = match[2];
+          let align: "full" | "left" | "right" | "center" = "full";
+
+          if (rawCaption.includes("|align=")) {
+            const parts = rawCaption.split("|align=");
+            rawCaption = parts[0];
+            align = (parts[1].split("|")[0].trim() as any) || "full";
+          } else if (rawCaption.includes("|left")) {
+            rawCaption = rawCaption.replace("|left", "");
+            align = "left";
+          } else if (rawCaption.includes("|right")) {
+            rawCaption = rawCaption.replace("|right", "");
+            align = "right";
+          } else if (rawCaption.includes("|center")) {
+            rawCaption = rawCaption.replace("|center", "");
+            align = "center";
+          }
+
+          blocks.push({
+            type: "image",
+            caption: rawCaption.trim(),
+            src,
+            align,
+          });
+
+          lastIndex = match.index + match[0].length;
         }
 
-        blocks.push({
-          type: "image",
-          caption: rawCaption.trim(),
-          src,
-          align,
-        });
+        const postText = trimmed.substring(lastIndex).trim();
+        if (postText) {
+          blocks.push({ type: "paragraph", text: postText });
+        }
         continue;
       }
 
