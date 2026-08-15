@@ -6,6 +6,7 @@ package-lock.json.bak
 dist/
 dist-ssr/
 *.local
+latest.json
 
 # Tauri Desktop
 src-tauri/target/
