@@ -3,7 +3,7 @@ import type { FunctionReference, FunctionReturnType, FunctionArgs } from "convex
 
 // Hent Convex URL fra miljøvariabler (settes automatisk av npx convex dev i .env.local)
 export const convexUrl: string =
-  ((import.meta as any).env?.VITE_CONVEX_URL as string) || "https://placeholder-url.convex.cloud";
+  ((import.meta as any).env?.VITE_CONVEX_URL as string) || "https://spotted-gecko-41.convex.cloud";
 
 export const convexClient = new ConvexClient(convexUrl);
 
