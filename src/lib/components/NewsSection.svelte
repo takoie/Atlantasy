@@ -3,7 +3,7 @@
     Newspaper,
     Plus,
     Heart,
-    Image,
+    Image as ImageIcon,
     X,
     Trash2,
     Send,
@@ -22,7 +22,17 @@
     ArchiveRestore,
     Check,
     AlertTriangle,
+    Sliders,
+    Maximize2,
+    AlignLeft,
+    AlignRight,
+    AlignCenter,
+    Info,
+    Flame,
   } from "lucide-svelte";
+  import { useMutation } from "$lib/convex.svelte";
+  import { api } from "../../../convex/_generated/api";
+  import { formatConvexError } from "$lib/utils/formatError";
 
   let {
     articles = [],
@@ -46,9 +56,13 @@
     onTogglePin?: (articleId: string) => void;
   } = $props();
 
+  const generateUploadUrlMutation = useMutation(api.articles.generateArticleUploadUrl);
+  const saveUploadedImageMutation = useMutation(api.articles.saveArticleUploadedImage);
+
   let isCreateModalOpen = $state(false);
   let editingArticleId = $state<string | null>(null);
   let selectedArticle = $state<any>(null);
+  let zoomedImageUrl = $state<string | null>(null);
   let editorTab = $state<"write" | "preview">("write");
   let activeFilterTab = $state<"active" | "archived" | "all">("active");
 
@@ -58,13 +72,29 @@
   let articleContent = $state("");
   let articleTag = $state("Runderapport");
   let articleCoverUrl = $state("");
+  let articleImagePosition = $state(50); // 0% - 100% vertikalt
+  let articleImageHeight = $state<"banner" | "standard" | "large" | "natural">("standard");
+  let articleImageFit = $state<"cover" | "contain">("cover");
   let isSubmitting = $state(false);
+  let isUploadingCover = $state(false);
+  let isUploadingInline = $state(false);
 
   // Inline bilde-dialog state
   let isImageModalOpen = $state(false);
   let inlineImageUrl = $state("");
   let inlineImageCaption = $state("");
+  let inlineImageAlign = $state<"full" | "left" | "right" | "center">("full");
   let textareaRef: HTMLTextAreaElement | null = $state(null);
+  let coverFileInputRef: HTMLInputElement | null = $state(null);
+  let inlineFileInputRef: HTMLInputElement | null = $state(null);
+
+  const presetCovers = [
+    { name: "Stadion", url: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80" },
+    { name: "Taktikktavle", url: "https://images.unsplash.com/photo-1518091043644-c1d4457512c6?auto=format&fit=crop&w=1200&q=80" },
+    { name: "Feiring", url: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80" },
+    { name: "Gulltrofé", url: "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80" },
+    { name: "Kampball", url: "https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&w=1200&q=80" },
+  ];
 
   // Filterte artikler basert på tab
   let displayedArticles = $derived(
@@ -78,12 +108,31 @@
   let activeCount = $derived(articles.filter((a) => !a.isArchived).length);
   let archivedCount = $derived(articles.filter((a) => a.isArchived).length);
 
+  // Sjekk om innlogget bruker har rettighet til å redigere/slette artikkelen (Forfatter eller Admin)
+  function canManageArticle(article: any): boolean {
+    if (!currentUser) return false;
+    if (currentUser.role === "admin") return true;
+    if (article.authorId && currentUser._id && article.authorId === currentUser._id) return true;
+    if (article.authorName && currentUser.username && article.authorName.toLowerCase() === currentUser.username.toLowerCase()) return true;
+    return false;
+  }
+
+  // Sjekk om innlogget bruker allerede har likt artikkelen
+  function hasUserLiked(article: any): boolean {
+    if (!currentUser) return false;
+    const userKey = currentUser._id || currentUser.username;
+    return article.likedBy?.includes(userKey) ?? false;
+  }
+
   function openCreateModal() {
     editingArticleId = null;
     articleTitle = "";
     articleLead = "";
     articleContent = "";
     articleCoverUrl = "";
+    articleImagePosition = 50;
+    articleImageHeight = "standard";
+    articleImageFit = "cover";
     articleTag = "Runderapport";
     editorTab = "write";
     isCreateModalOpen = true;
@@ -96,50 +145,108 @@
     articleLead = article.lead || "";
     articleContent = article.content || "";
     articleCoverUrl = article.imageUrl || "";
+    articleImagePosition = article.imagePosition ?? 50;
+    articleImageHeight = article.imageHeight || "standard";
+    articleImageFit = article.imageFit || "cover";
     articleTag = article.tag || "Runderapport";
     editorTab = "write";
     isCreateModalOpen = true;
-    if (selectedArticle?._id === article._id) {
+    if (selectedArticle && selectedArticle._id === article._id) {
       selectedArticle = null;
     }
   }
 
-  function handleCoverFileSelect(e: Event) {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        articleCoverUrl = event.target?.result as string;
-      };
-      reader.readAsDataURL(file);
+  // Last opp toppbilde / coverbilde via Convex Storage
+  async function handleCoverImageFile(e: Event) {
+    const target = e.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Bildet er for stort. Maks filstørrelse er 10 MB.");
+      return;
+    }
+
+    isUploadingCover = true;
+    try {
+      const postUrl = await generateUploadUrlMutation.mutate({});
+      const res = await fetch(postUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const { storageId } = await res.json();
+      const publicUrl = await saveUploadedImageMutation.mutate({ storageId });
+      if (publicUrl) {
+        articleCoverUrl = publicUrl;
+      }
+    } catch (err: any) {
+      alert(formatConvexError(err, "Kunne ikke laste opp toppbilde."));
+    } finally {
+      isUploadingCover = false;
     }
   }
 
-  function handleInlineFileSelect(e: Event) {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        inlineImageUrl = event.target?.result as string;
-      };
-      reader.readAsDataURL(file);
+  // Last opp bilde for innsetting i tekst via Convex Storage
+  async function handleInlineImageFile(file: File): Promise<string | null> {
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Bildet er for stort. Maks filstørrelse er 10 MB.");
+      return null;
+    }
+
+    isUploadingInline = true;
+    try {
+      const postUrl = await generateUploadUrlMutation.mutate({});
+      const res = await fetch(postUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const { storageId } = await res.json();
+      const publicUrl = await saveUploadedImageMutation.mutate({ storageId });
+      return publicUrl || null;
+    } catch (err: any) {
+      alert(formatConvexError(err, "Kunne ikke laste opp bilde til Convex storage."));
+      return null;
+    } finally {
+      isUploadingInline = false;
     }
   }
 
-  function handleInlinePaste(e: ClipboardEvent) {
+  // Håndter utklippstavle (Ctrl+V) direkte i teksteditoren
+  async function handleTextareaPaste(e: ClipboardEvent) {
     const items = e.clipboardData?.items;
     if (!items) return;
 
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.indexOf("image") !== -1) {
-        const blob = items[i].getAsFile();
-        if (blob) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            inlineImageUrl = event.target?.result as string;
-          };
-          reader.readAsDataURL(blob);
+        const file = items[i].getAsFile();
+        if (file) {
           e.preventDefault();
+          const uploadedUrl = await handleInlineImageFile(file);
+          if (uploadedUrl) {
+            insertAtCursor(`\n\n![Bilde](${uploadedUrl})\n\n`);
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  // Håndter modal utklippstavle
+  async function handleModalPaste(e: ClipboardEvent) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          const uploadedUrl = await handleInlineImageFile(file);
+          if (uploadedUrl) {
+            inlineImageUrl = uploadedUrl;
+          }
           break;
         }
       }
@@ -148,17 +255,21 @@
 
   function insertInlineImage() {
     if (!inlineImageUrl) {
-      alert("Vennligst velg eller lim inn et bilde først.");
+      alert("Vennligst last opp eller lim inn en bilde-URL først.");
       return;
     }
 
-    const caption = inlineImageCaption.trim() ? inlineImageCaption.trim() : "Bilde";
-    const markdown = `\n\n![${caption}](${inlineImageUrl})\n\n`;
+    const caption = inlineImageCaption.trim() || "Bilde";
+    let tag = `![${caption}](${inlineImageUrl})`;
+    if (inlineImageAlign !== "full") {
+      tag = `![${caption}|align=${inlineImageAlign}](${inlineImageUrl})`;
+    }
 
-    insertAtCursor(markdown);
+    insertAtCursor(`\n\n${tag}\n\n`);
 
     inlineImageUrl = "";
     inlineImageCaption = "";
+    inlineImageAlign = "full";
     isImageModalOpen = false;
   }
 
@@ -176,7 +287,7 @@
     articleContent = before + text + after;
   }
 
-  function insertFormat(type: "h2" | "bold" | "italic" | "quote" | "list") {
+  function insertFormat(type: "h2" | "bold" | "italic" | "quote" | "list" | "callout" | "matchbox") {
     switch (type) {
       case "h2":
         insertAtCursor("\n\n## Underoverskrift\n\n");
@@ -188,10 +299,16 @@
         insertAtCursor(" *kursiv tekst* ");
         break;
       case "quote":
-        insertAtCursor('\n\n> "Dette er et viktig sitat fra runden..."\n\n');
+        insertAtCursor('\n\n> "Dette er et uforglemmelig sitat fra runden..."\n\n');
         break;
       case "list":
-        insertAtCursor("\n\n- Punkt 1\n- Punkt 2\n- Punkt 3\n\n");
+        insertAtCursor("\n\n- Viktig høydepunkt 1\n- Viktig høydepunkt 2\n- Viktig høydepunkt 3\n\n");
+        break;
+      case "callout":
+        insertAtCursor("\n\n> [!NOTE]\n> **Viktig liganyhet:** Fristen for neste runde stenger fredag 19:30!\n\n");
+        break;
+      case "matchbox":
+        insertAtCursor("\n\n> [!TIP]\n> 🏆 **Ukens Toppoppgjør:**\n> Rom 1 (142p) slo Rom 4 (138p) med kun 4 poengs margin!\n\n");
         break;
     }
   }
@@ -213,6 +330,9 @@
           content: articleContent.trim(),
           tag: articleTag,
           imageUrl: articleCoverUrl || undefined,
+          imagePosition: articleImagePosition,
+          imageFit: articleImageFit,
+          imageHeight: articleImageHeight,
         });
       } else {
         // Opprett ny artikkel
@@ -222,6 +342,9 @@
           content: articleContent.trim(),
           tag: articleTag,
           imageUrl: articleCoverUrl || undefined,
+          imagePosition: articleImagePosition,
+          imageFit: articleImageFit,
+          imageHeight: articleImageHeight,
           authorName: currentUser?.username || "Admin",
           authorAvatar: currentUser?.avatar,
         });
@@ -232,24 +355,30 @@
       articleLead = "";
       articleContent = "";
       articleCoverUrl = "";
+      articleImagePosition = 50;
+      articleImageHeight = "standard";
+      articleImageFit = "cover";
       articleTag = "Runderapport";
       isCreateModalOpen = false;
       editorTab = "write";
     } catch (err: any) {
-      alert(err.message || "Kunne ikke lagre artikkel.");
+      alert(formatConvexError(err, "Kunne ikke lagre artikkel."));
     } finally {
       isSubmitting = false;
     }
   }
 
+  // Robust Markdown & Block parser
   function renderFormattedArticle(content: string) {
     if (!content) return [];
 
     const blocks: Array<{
-      type: "paragraph" | "heading" | "quote" | "image" | "list";
+      type: "paragraph" | "heading" | "quote" | "callout" | "image" | "list";
       text?: string;
       src?: string;
       caption?: string;
+      align?: "full" | "left" | "right" | "center";
+      calloutType?: "NOTE" | "TIP" | "WARNING" | "IMPORTANT";
       items?: string[];
     }> = [];
 
@@ -259,16 +388,51 @@
       const trimmed = raw.trim();
       if (!trimmed) continue;
 
+      // Bilde med valgfri alignment: ![caption|align=left](url) eller ![caption](url)
       const imgMatch = trimmed.match(/^!\[(.*?)\]\((.*?)\)$/s);
       if (imgMatch) {
+        let rawCaption = imgMatch[1] || "";
+        const src = imgMatch[2];
+        let align: "full" | "left" | "right" | "center" = "full";
+
+        if (rawCaption.includes("|align=")) {
+          const parts = rawCaption.split("|align=");
+          rawCaption = parts[0];
+          align = (parts[1].split("|")[0].trim() as any) || "full";
+        } else if (rawCaption.includes("|left")) {
+          rawCaption = rawCaption.replace("|left", "");
+          align = "left";
+        } else if (rawCaption.includes("|right")) {
+          rawCaption = rawCaption.replace("|right", "");
+          align = "right";
+        } else if (rawCaption.includes("|center")) {
+          rawCaption = rawCaption.replace("|center", "");
+          align = "center";
+        }
+
         blocks.push({
           type: "image",
-          caption: imgMatch[1],
-          src: imgMatch[2],
+          caption: rawCaption.trim(),
+          src,
+          align,
         });
         continue;
       }
 
+      // Callout boks: > [!NOTE] eller > [!TIP]
+      const calloutMatch = trimmed.match(/^>\s*\[!(NOTE|TIP|WARNING|IMPORTANT)\]\s*\n?([\s\S]*)/i);
+      if (calloutMatch) {
+        const cType = calloutMatch[1].toUpperCase() as any;
+        const cText = calloutMatch[2].replace(/^>\s?/gm, "").trim();
+        blocks.push({
+          type: "callout",
+          calloutType: cType,
+          text: cText,
+        });
+        continue;
+      }
+
+      // Overskrift
       if (trimmed.startsWith("## ")) {
         blocks.push({
           type: "heading",
@@ -277,6 +441,7 @@
         continue;
       }
 
+      // Sitat
       if (trimmed.startsWith("> ")) {
         blocks.push({
           type: "quote",
@@ -285,6 +450,7 @@
         continue;
       }
 
+      // Punktliste
       if (trimmed.startsWith("- ")) {
         const items = trimmed
           .split("\n")
@@ -297,6 +463,7 @@
         continue;
       }
 
+      // Standard avsnitt
       blocks.push({
         type: "paragraph",
         text: trimmed,
@@ -305,246 +472,202 @@
 
     return blocks;
   }
+
+  function getCoverHeightClass(height?: string) {
+    switch (height) {
+      case "banner":
+        return "h-40 sm:h-48";
+      case "large":
+        return "h-72 sm:h-96";
+      case "natural":
+        return "max-h-[500px] h-auto";
+      default:
+        return "h-56 sm:h-64";
+    }
+  }
 </script>
 
-<div class="flex-1 flex flex-col h-full overflow-hidden space-y-3.5 text-[#E2E8F0] font-sans">
-  <!-- Header Bar -->
-  <div class="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-[#384252] shrink-0">
+<div class="flex-1 flex flex-col h-full bg-[#2A303C] rounded-2xl border border-[#384252] shadow-sm overflow-hidden text-[#E2E8F0] font-sans">
+  <!-- Toppheader med faner og Opprett-knapp -->
+  <div class="p-4 border-b border-[#384252] bg-[#191E24] flex flex-wrap items-center justify-between gap-3 shrink-0">
     <div class="flex items-center gap-3">
-      <div class="p-2 rounded-xl bg-[#9FE88D]/15 text-[#9FE88D] border border-[#9FE88D]/30">
+      <div class="p-2 rounded-xl bg-[#F471B5]/15 border border-[#F471B5]/30 text-[#F471B5]">
         <Newspaper class="w-5 h-5" />
       </div>
       <div>
-        <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-          <span>Atlantasy Nyheter & Avisen</span>
-          <span class="text-xs px-2.5 py-0.5 rounded-full bg-[#191E24] text-[#9FE88D] border border-[#384252] font-mono font-bold">
-            {activeCount} aktive
+        <h2 class="text-base font-bold text-white flex items-center gap-2">
+          <span>Atlantasy Nyheter</span>
+          <span class="text-xs px-2.5 py-0.5 rounded-full bg-[#2A303C] text-[#F471B5] font-bold border border-[#384252]">
+            {activeCount} artikler
           </span>
         </h2>
-        <p class="text-xs text-[#94A3B8]">Runderapporter, analyser, overganger og redaksjonelle saker</p>
+        <p class="text-xs text-[#94A3B8]">Runderapporter, taktikkspalter, overgangsrykter og analyser</p>
       </div>
     </div>
 
-    <!-- Handlinger og Filter faner -->
-    <div class="flex flex-wrap items-center gap-2">
-      <!-- Arkiv / Aktiv Tabs -->
-      <div class="flex items-center p-1 rounded-xl bg-[#191E24] border border-[#384252] text-xs font-bold">
+    <!-- Høyre: Filterfaner & Opprett Nyhet (for Admin) -->
+    <div class="flex items-center gap-2">
+      <!-- Faner: Aktive / Arkiv -->
+      <div class="flex items-center gap-1 p-1 bg-[#242B35] rounded-xl border border-[#384252] text-xs">
         <button
           onclick={() => (activeFilterTab = "active")}
-          class={`px-3 py-1.5 rounded-lg transition-colors ${
+          class={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
             activeFilterTab === "active"
-              ? "bg-[#9FE88D] text-[#16380c] shadow-sm font-bold"
+              ? "bg-[#F471B5] text-black shadow-sm"
               : "text-[#94A3B8] hover:text-white"
           }`}
         >
-          <span>Aktive ({activeCount})</span>
+          Aktive ({activeCount})
         </button>
-
         <button
           onclick={() => (activeFilterTab = "archived")}
-          class={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 ${
+          class={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
             activeFilterTab === "archived"
-              ? "bg-[#F4C152] text-black shadow-sm font-bold"
+              ? "bg-[#F471B5] text-black shadow-sm"
               : "text-[#94A3B8] hover:text-white"
           }`}
         >
-          <Archive class="w-3 h-3" />
-          <span>Arkiv ({archivedCount})</span>
+          Arkiv ({archivedCount})
         </button>
       </div>
 
-      <!-- Skriv ny artikkel knapp -->
-      <button
-        onclick={openCreateModal}
-        class="px-4 py-2 rounded-xl bg-[#9FE88D] hover:bg-[#8ce078] text-[#16380c] text-xs sm:text-sm font-bold transition-all shadow-sm flex items-center gap-1.5"
-      >
-        <Plus class="w-4 h-4" />
-        <span>Skriv artikkel</span>
-      </button>
-
-      <button
-        onclick={onBack}
-        class="px-3.5 py-2 rounded-xl bg-[#242B35] hover:bg-[#2A303C] text-xs sm:text-sm font-semibold text-[#E2E8F0] border border-[#384252] transition-colors flex items-center gap-1.5"
-      >
-        <ArrowLeft class="w-4 h-4" />
-        <span>Tilbake</span>
-      </button>
+      {#if currentUser}
+        <button
+          onclick={openCreateModal}
+          class="px-3.5 py-2 rounded-xl bg-[#9FE88D] hover:bg-[#8fd97e] text-[#16380c] text-xs font-bold transition-all shadow-md flex items-center gap-1.5"
+        >
+          <Plus class="w-4 h-4" />
+          <span>Skriv Nyhet</span>
+        </button>
+      {/if}
     </div>
   </div>
 
-  <!-- Artikkelliste / Avis Rutenett (DaisyUI Dim) -->
-  <div class="flex-1 overflow-y-auto pr-1 custom-scrollbar">
+  <!-- Artikkelstrøm (Nettavis Grid) -->
+  <div class="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
     {#if displayedArticles.length === 0}
-      <div class="h-80 flex flex-col items-center justify-center text-center p-8 bg-[#2A303C] rounded-2xl border border-[#384252] space-y-3">
-        <div class="w-14 h-14 rounded-2xl bg-[#191E24] border border-[#384252] flex items-center justify-center text-[#9FE88D]">
+      <div class="h-full flex flex-col items-center justify-center text-center p-8 space-y-3 text-[#94A3B8]">
+        <div class="w-14 h-14 rounded-2xl bg-[#242B35] border border-[#384252] flex items-center justify-center text-[#F471B5] mb-1">
           <Newspaper class="w-7 h-7" />
         </div>
-        <div>
-          <h3 class="text-base font-bold text-white">
-            {activeFilterTab === "archived" ? "Ingen arkiverte artikler" : "Ingen artikler publisert enda"}
-          </h3>
-          <p class="text-xs sm:text-sm text-[#94A3B8] mt-1 max-w-md">
-            {activeFilterTab === "archived"
-              ? "Artikler du arkiverer flyttes hit, og kan gjenopprettes når som helst."
-              : "Skriv den første runderapporten med overskrift, ingress, avsnitt og bilder!"}
-          </p>
-        </div>
-        {#if activeFilterTab !== "archived"}
-          <button
-            onclick={openCreateModal}
-            class="px-4 py-2 rounded-xl bg-[#9FE88D] hover:bg-[#8ce078] text-[#16380c] text-xs sm:text-sm font-bold transition-colors"
-          >
-            Skriv artikkel nå
-          </button>
-        {/if}
+        <p class="text-base font-bold text-white">Ingen nyheter publisert her enda</p>
+        <p class="text-xs text-[#94A3B8] max-w-sm">
+          {currentUser?.role === "admin"
+            ? "Trykk på 'Skriv Nyhet' øverst for å publisere den første runderapporten med bilder og sitater!"
+            : "Ligaledelsen vil publisere runderapporter og nyheter her etter hvert som runden spilles."}
+        </p>
       </div>
     {:else}
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
         {#each displayedArticles as article (article._id)}
+          {@const liked = hasUserLiked(article)}
           <div
             role="button"
             tabindex="0"
             onclick={() => (selectedArticle = article)}
             onkeydown={(e) => (e.key === "Enter" || e.key === " ") && (selectedArticle = article)}
-            class={`bg-[#2A303C] border rounded-2xl overflow-hidden flex flex-col justify-between transition-all duration-200 hover:shadow-lg cursor-pointer group relative ${
+            class={`rounded-2xl bg-[#242B35] border transition-all cursor-pointer flex flex-col overflow-hidden group shadow-sm hover:shadow-xl hover:-translate-y-0.5 ${
               article.isPinned
-                ? "border-[#F4C152]/60 hover:border-[#F4C152] shadow-md shadow-[#F4C152]/5"
-                : article.isArchived
-                ? "border-[#384252] opacity-75 hover:opacity-100"
-                : "border-[#384252] hover:border-[#9FE88D]"
+                ? "border-[#F4C152]/70 ring-1 ring-[#F4C152]/20"
+                : "border-[#384252] hover:border-[#F471B5]/60"
             }`}
           >
-            <div>
-              <!-- Coverbilde hvis tilstede -->
-              {#if article.imageUrl}
-                <div class="h-48 w-full overflow-hidden bg-[#191E24] relative">
-                  <img
-                    src={article.imageUrl}
-                    alt={article.title}
-                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div class="absolute top-3 left-3 flex items-center gap-1.5">
-                    <span class="px-2.5 py-1 rounded-lg bg-[#191E24]/90 text-xs font-bold text-[#9FE88D] border border-[#9FE88D]/40 uppercase shadow">
-                      {article.tag || "Nyhet"}
-                    </span>
-                    {#if article.isPinned}
-                      <span class="px-2 py-1 rounded-lg bg-[#F4C152] text-black text-xs font-bold flex items-center gap-1 shadow">
-                        <Pin class="w-3 h-3 fill-black" />
-                        <span>Festet</span>
-                      </span>
-                    {/if}
-                    {#if article.isArchived}
-                      <span class="px-2 py-1 rounded-lg bg-[#242B35] text-[#F4C152] text-xs font-bold border border-[#F4C152]/30 shadow">
-                        Arkivert
-                      </span>
-                    {/if}
-                  </div>
-                </div>
-              {/if}
-
-              <div class="p-4 space-y-2.5">
-                {#if !article.imageUrl}
-                  <div class="flex items-center gap-2">
-                    <span class="inline-block px-2.5 py-0.5 rounded-md bg-[#191E24] text-xs font-bold text-[#9FE88D] border border-[#384252] uppercase">
-                      {article.tag || "Nyhet"}
-                    </span>
-                    {#if article.isPinned}
-                      <span class="px-2 py-0.5 rounded-md bg-[#F4C152]/20 text-[#F4C152] border border-[#F4C152]/40 text-xs font-bold flex items-center gap-1">
-                        <Pin class="w-3 h-3 fill-[#F4C152]" />
-                        <span>Festet</span>
-                      </span>
-                    {/if}
-                    {#if article.isArchived}
-                      <span class="px-2 py-0.5 rounded-md bg-[#242B35] text-[#F4C152] text-xs font-bold border border-[#F4C152]/30">
-                        Arkivert
-                      </span>
-                    {/if}
-                  </div>
+            <!-- Toppbilde / Cover hvis finnes -->
+            {#if article.imageUrl}
+              <div class="relative h-44 w-full bg-[#191E24] overflow-hidden shrink-0 border-b border-[#384252]">
+                <img
+                  src={article.imageUrl}
+                  alt={article.title}
+                  style={`object-position: center ${article.imagePosition ?? 50}%; object-fit: ${article.imageFit || "cover"};`}
+                  class="w-full h-full group-hover:scale-105 transition-transform duration-300"
+                />
+                {#if article.isPinned}
+                  <span class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-[#F4C152] text-black text-[10px] font-bold flex items-center gap-1 shadow-md">
+                    <Pin class="w-3 h-3 fill-black" />
+                    <span>Festet</span>
+                  </span>
                 {/if}
+              </div>
+            {/if}
 
-                <h3 class="text-base font-bold text-white group-hover:text-[#9FE88D] transition-colors line-clamp-2 leading-snug">
+            <div class="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
+              <div class="space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-[10px] uppercase font-bold text-[#F471B5] bg-[#F471B5]/15 px-2 py-0.5 rounded-md border border-[#F471B5]/30">
+                    {article.tag || "Nyhet"}
+                  </span>
+                  <span class="text-[11px] text-[#94A3B8] font-mono">
+                    {new Date(article.createdAt).toLocaleDateString("no-NO", { month: "short", day: "numeric" })}
+                  </span>
+                </div>
+
+                <h3 class="text-base font-bold text-white group-hover:text-[#F471B5] transition-colors leading-snug line-clamp-2">
                   {article.title}
                 </h3>
 
                 {#if article.lead}
-                  <p class="text-xs sm:text-sm font-semibold text-[#E2E8F0] line-clamp-2 leading-relaxed italic">
+                  <p class="text-xs text-[#94A3B8] line-clamp-2 leading-relaxed">
                     {article.lead}
                   </p>
                 {/if}
-
-                <p class="text-xs text-[#94A3B8] line-clamp-3 leading-relaxed">
-                  {article.content.replace(/!\[.*?\]\(.*?\)/g, "[Bilde]").replace(/^##\s+/gm, "")}
-                </p>
-              </div>
-            </div>
-
-            <!-- Footer med Forfatter & Admin Hurtigknapper -->
-            <div class="p-4 pt-2.5 border-t border-[#384252] flex items-center justify-between text-xs text-[#94A3B8]">
-              <div class="flex items-center gap-2 truncate">
-                <img
-                  src={article.authorAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${article.authorName}`}
-                  alt="Avatar"
-                  class="w-6 h-6 rounded-full bg-[#191E24] border border-[#384252] object-cover shrink-0"
-                />
-                <span class="truncate font-medium text-[#E2E8F0]">{article.authorName}</span>
               </div>
 
-              <!-- Admin Hurtighandlinger på kortet -->
-              <div class="flex items-center gap-2 shrink-0">
-                {#if currentUser?.role === "admin"}
-                  <!-- Rediger-knapp -->
-                  <button
-                    onclick={(e) => openEditModal(article, e)}
-                    class="p-1.5 rounded-lg bg-[#242B35] hover:bg-[#384252] text-[#9FE88D] border border-[#384252] transition-colors"
-                    title="Rediger artikkel"
-                  >
-                    <Edit3 class="w-3.5 h-3.5" />
-                  </button>
+              <!-- Footer med forfatter og handlinger -->
+              <div class="pt-3 border-t border-[#384252] flex items-center justify-between text-xs text-[#94A3B8]">
+                <div class="flex items-center gap-2 truncate">
+                  <img
+                    src={article.authorAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${article.authorName}`}
+                    alt="Avatar"
+                    class="w-5 h-5 rounded-full bg-[#191E24] border border-[#384252] object-cover"
+                  />
+                  <span class="font-medium text-white truncate text-[11px]">{article.authorName}</span>
+                </div>
 
-                  <!-- Pin-knapp -->
+                <div class="flex items-center gap-2">
+                  {#if canManageArticle(article)}
+                    <!-- Rediger-knapp (Forfatter eller Admin) -->
+                    <button
+                      onclick={(e) => openEditModal(article, e)}
+                      class="p-1 rounded text-[#94A3B8] hover:text-[#9FE88D] transition-colors"
+                      title="Rediger artikkel"
+                    >
+                      <Edit3 class="w-3.5 h-3.5" />
+                    </button>
+                  {/if}
+
+                  {#if currentUser?.role === "admin"}
+                    <!-- Pin-knapp (Kun Admin) -->
+                    <button
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        onTogglePin(article._id);
+                      }}
+                      class={`p-1 rounded transition-colors ${
+                        article.isPinned ? "text-[#F4C152]" : "text-[#94A3B8] hover:text-[#F4C152]"
+                      }`}
+                      title={article.isPinned ? "Avfest fra toppen" : "Fest til toppen"}
+                    >
+                      <Pin class="w-3.5 h-3.5" />
+                    </button>
+                  {/if}
+
+                  <!-- Likes (1 per bruker toggle) -->
                   <button
                     onclick={(e) => {
                       e.stopPropagation();
-                      onTogglePin(article._id);
+                      onLikeArticle(article._id);
                     }}
-                    class={`p-1.5 rounded-lg border transition-colors ${
-                      article.isPinned
-                        ? "bg-[#F4C152] text-black border-[#F4C152]"
-                        : "bg-[#242B35] hover:bg-[#384252] text-[#F4C152] border-[#384252]"
+                    class={`flex items-center gap-1 transition-colors font-mono text-xs px-2 py-0.5 rounded-lg border ${
+                      liked
+                        ? "bg-[#FB6F84]/20 text-[#FB6F84] border-[#FB6F84]/40 font-bold"
+                        : "text-[#94A3B8] hover:text-[#FB6F84] border-transparent hover:border-[#384252]"
                     }`}
-                    title={article.isPinned ? "Avfest fra toppen" : "Fest til toppen"}
+                    title={liked ? "Fjern likerklikk" : "Lik denne artikkelen (1 per bruker)"}
                   >
-                    <Pin class="w-3.5 h-3.5" />
+                    <Heart class={`w-3.5 h-3.5 ${liked ? "fill-[#FB6F84] text-[#FB6F84]" : "text-[#FB6F84]"}`} />
+                    <span>{article.likes || 0}</span>
                   </button>
-
-                  <!-- Arkiver-knapp -->
-                  <button
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      onToggleArchive(article._id);
-                    }}
-                    class="p-1.5 rounded-lg bg-[#242B35] hover:bg-[#384252] text-[#94A3B8] hover:text-white border border-[#384252] transition-colors"
-                    title={article.isArchived ? "Gjenopprett artikkel" : "Arkiver artikkel"}
-                  >
-                    {#if article.isArchived}
-                      <ArchiveRestore class="w-3.5 h-3.5 text-[#9FE88D]" />
-                    {:else}
-                      <Archive class="w-3.5 h-3.5" />
-                    {/if}
-                  </button>
-                {/if}
-
-                <!-- Like knapp -->
-                <button
-                  onclick={(e) => {
-                    e.stopPropagation();
-                    onLikeArticle(article._id);
-                  }}
-                  class="flex items-center gap-1 hover:text-[#FB6F84] transition-colors font-mono ml-1"
-                >
-                  <Heart class="w-3.5 h-3.5 text-[#FB6F84]" />
-                  <span>{article.likes || 0}</span>
-                </button>
+                </div>
               </div>
             </div>
           </div>
@@ -554,27 +677,29 @@
   </div>
 </div>
 
-<!-- ========================================== -->
-<!-- MODAL 1: LES FULL ARTIKKEL (AVIS-FORMAT)   -->
-<!-- ========================================== -->
+<!-- ============================================================== -->
+<!-- MODAL 1: LES FULL ARTIKKEL (EKTE NETTAVIS-DESIGN)               -->
+<!-- ============================================================== -->
 {#if selectedArticle}
-  <div
-    role="presentation"
-    onclick={() => (selectedArticle = null)}
-    class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto"
-  >
+  {@const modalLiked = hasUserLiked(selectedArticle)}
+  <div class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+    <button
+      type="button"
+      aria-label="Lukk modal"
+      onclick={() => (selectedArticle = null)}
+      class="fixed inset-0 w-full h-full cursor-default border-0 bg-transparent"
+    ></button>
+
     <div
       role="dialog"
       aria-modal="true"
       tabindex="-1"
-      onclick={(e) => e.stopPropagation()}
-      onkeydown={(e) => e.stopPropagation()}
-      class="bg-[#2A303C] border border-[#384252] rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-[#E2E8F0] font-sans"
+      class="relative z-10 bg-[#2A303C] border border-[#384252] rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-[#E2E8F0] font-sans"
     >
-      <!-- Toppheader med Admin-handlinger -->
+      <!-- Toppheader -->
       <div class="p-4 bg-[#191E24] border-b border-[#384252] flex items-center justify-between shrink-0">
         <div class="flex items-center gap-2">
-          <span class="text-xs uppercase font-bold text-[#9FE88D] bg-[#9FE88D]/15 px-3 py-1 rounded-lg border border-[#9FE88D]/30">
+          <span class="text-xs uppercase font-bold text-[#F471B5] bg-[#F471B5]/15 px-3 py-1 rounded-lg border border-[#F471B5]/30">
             {selectedArticle.tag || "Nyhet"}
           </span>
           {#if selectedArticle.isPinned}
@@ -583,54 +708,18 @@
               <span>Festet</span>
             </span>
           {/if}
-          {#if selectedArticle.isArchived}
-            <span class="text-xs font-bold text-[#94A3B8] bg-[#242B35] px-2.5 py-1 rounded-lg border border-[#384252]">
-              Arkivert
-            </span>
-          {/if}
         </div>
 
         <div class="flex items-center gap-2">
-          {#if currentUser?.role === "admin"}
-            <!-- Rediger -->
+          {#if canManageArticle(selectedArticle)}
             <button
               onclick={() => openEditModal(selectedArticle)}
               class="px-3 py-1.5 rounded-xl bg-[#242B35] hover:bg-[#384252] text-white text-xs font-bold border border-[#384252] flex items-center gap-1.5 transition-colors"
-              title="Rediger artikkel"
             >
               <Edit3 class="w-3.5 h-3.5 text-[#9FE88D]" />
               <span>Rediger</span>
             </button>
 
-            <!-- Pin -->
-            <button
-              onclick={() => {
-                onTogglePin(selectedArticle._id);
-                selectedArticle.isPinned = !selectedArticle.isPinned;
-              }}
-              class="p-2 rounded-xl bg-[#242B35] hover:bg-[#384252] text-[#F4C152] border border-[#384252] transition-colors"
-              title="Fest/avfest"
-            >
-              <Pin class="w-4 h-4" />
-            </button>
-
-            <!-- Arkiver -->
-            <button
-              onclick={() => {
-                onToggleArchive(selectedArticle._id);
-                selectedArticle.isArchived = !selectedArticle.isArchived;
-              }}
-              class="p-2 rounded-xl bg-[#242B35] hover:bg-[#384252] text-[#94A3B8] hover:text-white border border-[#384252] transition-colors"
-              title="Arkiver / Gjenopprett"
-            >
-              {#if selectedArticle.isArchived}
-                <ArchiveRestore class="w-4 h-4 text-[#9FE88D]" />
-              {:else}
-                <Archive class="w-4 h-4" />
-              {/if}
-            </button>
-
-            <!-- Slett -->
             <button
               onclick={() => {
                 if (confirm("Er du sikker på at du vil slette denne artikkelen permanent?")) {
@@ -639,7 +728,7 @@
                 }
               }}
               class="p-2 rounded-xl text-[#FB6F84] hover:bg-[#3b2222] transition-colors"
-              title="Slett artikkel permanent (Admin)"
+              title="Slett artikkel"
             >
               <Trash2 class="w-4 h-4" />
             </button>
@@ -654,15 +743,25 @@
         </div>
       </div>
 
-      <!-- Artikkelinnhold i ekte nettavis-stil -->
-      <div class="flex-1 overflow-y-auto p-5 sm:p-8 space-y-5 custom-scrollbar">
+      <!-- Artikkelinnhold -->
+      <div class="flex-1 overflow-y-auto p-5 sm:p-8 space-y-6 custom-scrollbar">
+        <!-- Toppbilde med fokuspunktjustering -->
         {#if selectedArticle.imageUrl}
-          <div class="rounded-2xl overflow-hidden bg-[#191E24] border border-[#384252] max-h-96 shadow-md">
+          <div class={`rounded-2xl overflow-hidden bg-[#191E24] border border-[#384252] shadow-lg relative group ${getCoverHeightClass(selectedArticle.imageHeight)}`}>
             <img
               src={selectedArticle.imageUrl}
               alt={selectedArticle.title}
-              class="w-full h-full object-cover"
+              style={`object-position: center ${selectedArticle.imagePosition ?? 50}%; object-fit: ${selectedArticle.imageFit || "cover"};`}
+              class="w-full h-full cursor-zoom-in"
+              onclick={() => (zoomedImageUrl = selectedArticle.imageUrl)}
             />
+            <button
+              onclick={() => (zoomedImageUrl = selectedArticle.imageUrl)}
+              class="absolute bottom-2.5 right-2.5 p-1.5 rounded-lg bg-black/70 hover:bg-black text-white text-xs backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1"
+            >
+              <Maximize2 class="w-3.5 h-3.5" />
+              <span>Forstørr</span>
+            </button>
           </div>
         {/if}
 
@@ -670,6 +769,7 @@
           {selectedArticle.title}
         </h1>
 
+        <!-- Forfatter og Dato rad -->
         <div class="flex items-center justify-between pb-4 border-b border-[#384252] text-xs text-[#94A3B8]">
           <div class="flex items-center gap-2.5">
             <img
@@ -685,52 +785,92 @@
 
           <button
             onclick={() => onLikeArticle(selectedArticle._id)}
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#242B35] hover:bg-[#384252] text-white border border-[#384252] transition-colors"
+            class={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border transition-colors shadow-sm ${
+              modalLiked
+                ? "bg-[#FB6F84]/20 text-[#FB6F84] border-[#FB6F84]/40 font-bold"
+                : "bg-[#242B35] hover:bg-[#384252] text-white border-[#384252]"
+            }`}
+            title={modalLiked ? "Fjern likerklikk" : "Lik denne artikkelen (1 per bruker)"}
           >
-            <Heart class="w-4 h-4 text-[#FB6F84] fill-[#FB6F84]/20" />
+            <Heart class={`w-4 h-4 ${modalLiked ? "fill-[#FB6F84] text-[#FB6F84]" : "text-[#FB6F84]"}`} />
             <span class="font-mono font-bold text-xs">{selectedArticle.likes || 0}</span>
           </button>
         </div>
 
         {#if selectedArticle.lead}
-          <div class="p-4 rounded-xl bg-[#242B35] border-l-4 border-[#9FE88D] text-base sm:text-lg font-semibold text-white leading-relaxed italic shadow-sm">
+          <div class="p-4 rounded-xl bg-[#242B35] border-l-4 border-[#F471B5] text-base sm:text-lg font-semibold text-white leading-relaxed italic shadow-sm">
             {selectedArticle.lead}
           </div>
         {/if}
 
-        <div class="space-y-4 text-sm sm:text-base text-[#E2E8F0] leading-relaxed">
+        <!-- Blokker i teksten -->
+        <div class="space-y-4 text-[#E2E8F0] leading-relaxed text-sm sm:text-base">
           {#each renderFormattedArticle(selectedArticle.content) as block}
             {#if block.type === "heading"}
-              <h2 class="text-xl sm:text-2xl font-bold text-white pt-4 pb-1 border-b border-[#384252]">
-                {block.text}
+              <h2 class="text-xl font-bold text-white pt-3 pb-1 border-b border-[#384252]/60 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-[#F471B5]"></span>
+                <span>{block.text}</span>
               </h2>
             {:else if block.type === "quote"}
-              <blockquote class="p-4 my-3 rounded-r-xl bg-[#242B35] border-l-4 border-[#F4C152] text-base font-serif italic text-[#F4C152]">
+              <blockquote class="p-4 rounded-xl bg-[#191E24] border-l-4 border-[#F4C152] italic text-[#E2E8F0] font-serif text-base sm:text-lg my-3 shadow-inner">
                 "{block.text}"
               </blockquote>
+            {:else if block.type === "callout"}
+              <div class={`p-4 rounded-xl border flex items-start gap-3 my-3 shadow-sm ${
+                block.calloutType === "TIP"
+                  ? "bg-[#9FE88D]/10 border-[#9FE88D]/30 text-[#E2E8F0]"
+                  : block.calloutType === "WARNING"
+                  ? "bg-[#FB6F84]/10 border-[#FB6F84]/30 text-[#E2E8F0]"
+                  : "bg-[#70E1F8]/10 border-[#70E1F8]/30 text-[#E2E8F0]"
+              }`}>
+                <Info class={`w-5 h-5 shrink-0 mt-0.5 ${
+                  block.calloutType === "TIP" ? "text-[#9FE88D]" : block.calloutType === "WARNING" ? "text-[#FB6F84]" : "text-[#70E1F8]"
+                }`} />
+                <div class="text-sm space-y-1">
+                  <p class="whitespace-pre-wrap">{block.text}</p>
+                </div>
+              </div>
             {:else if block.type === "image"}
-              <figure class="my-5 rounded-2xl overflow-hidden bg-[#191E24] border border-[#384252]">
-                <img
-                  src={block.src}
-                  alt={block.caption || "Artikkelbilde"}
-                  class="w-full max-h-[450px] object-cover"
-                />
+              <div class={`my-4 ${
+                block.align === "left"
+                  ? "float-left sm:w-1/2 mr-4 mb-3"
+                  : block.align === "right"
+                  ? "float-right sm:w-1/2 ml-4 mb-3"
+                  : block.align === "center"
+                  ? "max-w-md mx-auto"
+                  : "w-full"
+              }`}>
+                <div class="rounded-2xl overflow-hidden bg-[#191E24] border border-[#384252] shadow-md group relative">
+                  <img
+                    src={block.src}
+                    alt={block.caption || "Artikkelbilde"}
+                    class="w-full h-auto max-h-[480px] object-cover cursor-zoom-in group-hover:scale-102 transition-transform duration-200"
+                    onclick={() => (zoomedImageUrl = block.src || null)}
+                  />
+                  <button
+                    onclick={() => (zoomedImageUrl = block.src || null)}
+                    class="absolute bottom-2 right-2 p-1 rounded bg-black/70 text-white text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Maximize2 class="w-3 h-3" />
+                  </button>
+                </div>
                 {#if block.caption}
-                  <figcaption class="p-2.5 text-xs text-[#94A3B8] bg-[#191E24] border-t border-[#384252] italic text-center">
+                  <p class="text-xs text-[#94A3B8] italic mt-1.5 text-center">
                     📸 {block.caption}
-                  </figcaption>
+                  </p>
                 {/if}
-              </figure>
+              </div>
             {:else if block.type === "list"}
-              <ul class="list-disc list-inside space-y-1.5 pl-2 my-2 text-sm text-[#E2E8F0]">
+              <ul class="space-y-1.5 pl-2 my-2">
                 {#each block.items || [] as item}
-                  <li>{item}</li>
+                  <li class="flex items-start gap-2 text-sm">
+                    <span class="text-[#F471B5] font-bold">•</span>
+                    <span>{item}</span>
+                  </li>
                 {/each}
               </ul>
             {:else}
-              <p class="whitespace-pre-wrap leading-relaxed">
-                {block.text}
-              </p>
+              <p class="whitespace-pre-wrap leading-relaxed">{block.text}</p>
             {/if}
           {/each}
         </div>
@@ -739,290 +879,467 @@
   </div>
 {/if}
 
-<!-- ========================================== -->
-<!-- MODAL 2: OPPRETT / REDIGER ARTIKKEL        -->
-<!-- ========================================== -->
-{#if isCreateModalOpen}
+<!-- ============================================================== -->
+<!-- MODAL 2: FORSTØRRET BILDEVISNING (LIGHTBOX)                    -->
+<!-- ============================================================== -->
+{#if zoomedImageUrl}
   <div
     role="presentation"
-    onclick={() => (isCreateModalOpen = false)}
-    class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+    onclick={() => (zoomedImageUrl = null)}
+    class="fixed inset-0 z-[80] bg-black/95 backdrop-blur-lg flex items-center justify-center p-4 cursor-zoom-out"
   >
-    <div
-      role="dialog"
-      aria-modal="true"
-      tabindex="-1"
-      onclick={(e) => e.stopPropagation()}
-      onkeydown={(e) => e.stopPropagation()}
-      class="bg-[#2A303C] border border-[#384252] rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-[#E2E8F0] font-sans"
+    <button
+      onclick={() => (zoomedImageUrl = null)}
+      class="absolute top-4 right-4 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
     >
-      <!-- Header med Rediger/Forhåndsvisning Faner -->
+      <X class="w-6 h-6" />
+    </button>
+    <img
+      src={zoomedImageUrl}
+      alt="Forstørret bilde"
+      class="max-w-[95vw] max-h-[90vh] object-contain rounded-xl shadow-2xl"
+    />
+  </div>
+{/if}
+
+<!-- ============================================================== -->
+<!-- MODAL 3: REDIGER / PUBLISER ARTIKKEL (STUDIO)                  -->
+<!-- ============================================================== -->
+{#if isCreateModalOpen}
+  <div class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+    <div class="bg-[#2A303C] border border-[#384252] rounded-2xl w-full max-w-4xl max-h-[94vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-[#E2E8F0] font-sans">
+      <!-- Toppbar -->
       <div class="p-4 bg-[#191E24] border-b border-[#384252] flex items-center justify-between shrink-0">
-        <div class="flex items-center gap-3">
-          <div class="p-2 rounded-xl bg-[#9FE88D]/15 text-[#9FE88D]">
-            <Edit3 class="w-4 h-4" />
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-xl bg-[#F471B5]/20 text-[#F471B5]">
+            <Edit3 class="w-5 h-5" />
           </div>
-          <span class="font-bold text-sm sm:text-base text-white">
-            {editingArticleId ? "Rediger artikkel" : "Skriv ny artikkel eller runderapport"}
-          </span>
+          <div>
+            <h3 class="text-base font-bold text-white">
+              {editingArticleId ? "Rediger Artikkel" : "Nyhetsstudio & Runderapport"}
+            </h3>
+            <p class="text-xs text-[#94A3B8]">Bygg opp en artikkel med tilpasset toppbilde, avsnitt og medier</p>
+          </div>
         </div>
 
-        <!-- Faner -->
         <div class="flex items-center gap-2">
-          <div class="flex items-center p-0.5 rounded-lg bg-[#191E24] border border-[#384252] text-xs">
+          <!-- Skriv / Forhåndsvisning toggle -->
+          <div class="flex items-center gap-1 p-1 bg-[#242B35] rounded-xl border border-[#384252] text-xs">
             <button
+              type="button"
               onclick={() => (editorTab = "write")}
-              class={`px-3 py-1 rounded-md font-bold transition-colors flex items-center gap-1.5 ${
-                editorTab === "write"
-                  ? "bg-[#9FE88D] text-[#16380c] shadow-sm"
-                  : "text-[#94A3B8] hover:text-white"
+              class={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
+                editorTab === "write" ? "bg-[#F471B5] text-black" : "text-[#94A3B8] hover:text-white"
               }`}
             >
-              <Edit3 class="w-3.5 h-3.5" />
-              <span>Skriv</span>
+              Rediger
             </button>
-
             <button
+              type="button"
               onclick={() => (editorTab = "preview")}
-              class={`px-3 py-1 rounded-md font-bold transition-colors flex items-center gap-1.5 ${
-                editorTab === "preview"
-                  ? "bg-[#9FE88D] text-[#16380c] shadow-sm"
-                  : "text-[#94A3B8] hover:text-white"
+              class={`px-3 py-1.5 rounded-lg font-bold transition-colors flex items-center gap-1 ${
+                editorTab === "preview" ? "bg-[#F471B5] text-black" : "text-[#94A3B8] hover:text-white"
               }`}
             >
               <Eye class="w-3.5 h-3.5" />
-              <span>Forhåndsvisning</span>
+              <span>Forhåndsvis</span>
             </button>
           </div>
 
           <button
+            type="button"
             onclick={() => (isCreateModalOpen = false)}
-            class="p-1.5 rounded-lg text-[#94A3B8] hover:text-white hover:bg-[#242B35] transition-colors"
+            class="p-2 rounded-xl text-[#94A3B8] hover:text-white hover:bg-[#242B35]"
           >
             <X class="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      <!-- Skriveområde -->
-      <div class="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar">
+      <!-- Innhold i Studio -->
+      <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 custom-scrollbar">
         {#if editorTab === "write"}
-          <!-- Tittel & Kategori -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div class="sm:col-span-2">
-              <label for="art-edit-title" class="block text-xs font-bold text-[#94A3B8] uppercase mb-1">
-                Artikkeltittel / Hovedoverskrift *
-              </label>
-              <input
-                id="art-edit-title"
-                type="text"
-                bind:value={articleTitle}
-                placeholder="f.eks. Taktisk mesterstykke fra A1 i Gameweek 1"
-                class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white text-sm font-bold focus:outline-none focus:border-[#9FE88D]"
-              />
-            </div>
+          <div class="space-y-4">
+            <!-- Tittel og Kategori -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="sm:col-span-2">
+                <label for="art-title" class="block text-xs font-bold text-white mb-1">
+                  Artikkeltittel:
+                </label>
+                <input
+                  id="art-title"
+                  type="text"
+                  bind:value={articleTitle}
+                  placeholder="f.eks. Ellevill målfest og overraskende seier for Rom 3!"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#F471B5] focus:outline-none text-sm font-bold placeholder-[#94A3B8]"
+                />
+              </div>
 
-            <div>
-              <label for="art-edit-tag" class="block text-xs font-bold text-[#94A3B8] uppercase mb-1">
-                Kategori
-              </label>
-              <select
-                id="art-edit-tag"
-                bind:value={articleTag}
-                class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white text-sm focus:outline-none focus:border-[#9FE88D]"
-              >
-                <option value="Runderapport">Runderapport</option>
-                <option value="Taktikk">Taktisk Analyse</option>
-                <option value="Overganger">Overganger & Råd</option>
-                <option value="Banter">Banter & Reaksjoner</option>
-                <option value="Nyhet">Offisiell Nyhet</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Cover / Header Bilde (Valgfritt) -->
-          <div class="p-3.5 rounded-xl bg-[#191E24] border border-[#384252] space-y-2">
-            <div class="flex items-center justify-between">
-              <label for="art-cover-input" class="text-xs font-bold text-[#94A3B8] uppercase flex items-center gap-1.5">
-                <Image class="w-3.5 h-3.5 text-[#9FE88D]" />
-                <span>Header / Coverbilde (Toppen av artikkelen - Valgfritt)</span>
-              </label>
-              {#if articleCoverUrl}
-                <button
-                  type="button"
-                  onclick={() => (articleCoverUrl = "")}
-                  class="text-xs text-[#FB6F84] hover:underline"
+              <div>
+                <label for="art-tag" class="block text-xs font-bold text-white mb-1">
+                  Kategori:
+                </label>
+                <select
+                  id="art-tag"
+                  bind:value={articleTag}
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#F471B5] focus:outline-none text-sm font-semibold"
                 >
-                  Fjern coverbilde
-                </button>
+                  <option value="Runderapport">Runderapport</option>
+                  <option value="Taktikk">Taktikk & Overganger</option>
+                  <option value="Banter">Banter & Drama</option>
+                  <option value="Cup">Cup / Sluttspill</option>
+                  <option value="Nyhet">Offisiell Nyhet</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Ingress -->
+            <div>
+              <label for="art-lead" class="block text-xs font-bold text-white mb-1">
+                Ingress / Sammendrag (Valgfritt):
+              </label>
+              <textarea
+                id="art-lead"
+                bind:value={articleLead}
+                rows="2"
+                placeholder="Kort sammendrag som vises i fet kursiv øverst i artikkelen..."
+                class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#F471B5] focus:outline-none text-xs leading-relaxed"
+              ></textarea>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- TOPPBILDE / COVER SECTION MED JUSTERING        -->
+            <!-- ============================================== -->
+            <div class="p-4 rounded-2xl bg-[#191E24] border border-[#384252] space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <ImageIcon class="w-4 h-4 text-[#F471B5]" />
+                  <span class="text-xs font-bold text-white">Toppbilde / Cover Header:</span>
+                </div>
+
+                {#if articleCoverUrl}
+                  <button
+                    type="button"
+                    onclick={() => (articleCoverUrl = "")}
+                    class="text-xs text-[#FB6F84] hover:underline font-semibold"
+                  >
+                    Fjern toppbilde
+                  </button>
+                {/if}
+              </div>
+
+              {#if !articleCoverUrl}
+                <!-- Opplaster & URL -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    bind:this={coverFileInputRef}
+                    onchange={handleCoverImageFile}
+                    class="hidden"
+                  />
+                  <button
+                    type="button"
+                    onclick={() => coverFileInputRef?.click()}
+                    disabled={isUploadingCover}
+                    class="p-3 rounded-xl bg-[#242B35] hover:bg-[#2A303C] border border-dashed border-[#384252] hover:border-[#F471B5] text-xs font-bold transition-all flex items-center justify-center gap-2 text-white"
+                  >
+                    <Upload class={`w-4 h-4 text-[#F471B5] ${isUploadingCover ? "animate-bounce" : ""}`} />
+                    <span>{isUploadingCover ? "Laster opp til Convex..." : "Last opp toppbilde fra maskinen"}</span>
+                  </button>
+
+                  <input
+                    type="text"
+                    bind:value={articleCoverUrl}
+                    placeholder="Eller lim inn bilde-URL (https://...)"
+                    class="px-3 py-2 rounded-xl bg-[#242B35] border border-[#384252] text-xs text-white focus:border-[#F471B5] focus:outline-none"
+                  />
+                </div>
+
+                <!-- Hurtigvalg / Standardbilder -->
+                <div class="space-y-1.5 pt-1">
+                  <span class="text-[11px] text-[#94A3B8] font-semibold block">Eller velg et ferdig FPL-toppbilde:</span>
+                  <div class="flex items-center flex-wrap gap-1.5">
+                    {#each presetCovers as preset}
+                      <button
+                        type="button"
+                        onclick={() => (articleCoverUrl = preset.url)}
+                        class="px-2.5 py-1 rounded-lg bg-[#242B35] hover:bg-[#384252] border border-[#384252] hover:border-[#F471B5] text-[11px] font-semibold text-[#E2E8F0] transition-colors flex items-center gap-1.5"
+                      >
+                        <ImageIcon class="w-3 h-3 text-[#F471B5]" />
+                        <span>{preset.name}</span>
+                      </button>
+                    {/each}
+                  </div>
+                </div>
+              {:else}
+                <!-- Justeringskontroller for toppbilde -->
+                <div class="space-y-3 pt-1">
+                  <!-- Live Forhåndsvisningsramme med justert posisjon -->
+                  <div class={`rounded-xl overflow-hidden bg-[#242B35] border border-[#384252] relative group ${getCoverHeightClass(articleImageHeight)}`}>
+                    <img
+                      src={articleCoverUrl}
+                      alt="Toppbilde forhåndsvisning"
+                      style={`object-position: center ${articleImagePosition}%; object-fit: ${articleImageFit};`}
+                      class="w-full h-full transition-all duration-75"
+                    />
+                    <div class="absolute top-2 left-2 px-2 py-1 rounded bg-black/70 text-[10px] font-mono text-white backdrop-blur-sm">
+                      Fokusposisjon: {articleImagePosition}%
+                    </div>
+                  </div>
+
+                  <!-- Kontroll-sliders og valg -->
+                  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3 rounded-xl bg-[#242B35] border border-[#384252] text-xs">
+                    <!-- Vertikal justering slider -->
+                    <div class="space-y-1">
+                      <div class="flex items-center justify-between">
+                        <span class="font-bold text-[#F471B5] flex items-center gap-1">
+                          <Sliders class="w-3.5 h-3.5" />
+                          <span>Vertikal justering:</span>
+                        </span>
+                        <span class="font-mono text-[#94A3B8]">{articleImagePosition}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        bind:value={articleImagePosition}
+                        class="w-full accent-[#F471B5] cursor-pointer"
+                      />
+                      <div class="flex justify-between text-[9px] text-[#94A3B8]">
+                        <button type="button" onclick={() => (articleImagePosition = 0)} class="hover:text-white">Topp (0%)</button>
+                        <button type="button" onclick={() => (articleImagePosition = 50)} class="hover:text-white">Midten (50%)</button>
+                        <button type="button" onclick={() => (articleImagePosition = 100)} class="hover:text-white">Bunn (100%)</button>
+                      </div>
+                    </div>
+
+                    <!-- Bildehøyde -->
+                    <div class="space-y-1">
+                      <span class="font-bold text-white block">Visningshøyde:</span>
+                      <div class="grid grid-cols-2 gap-1">
+                        <button
+                          type="button"
+                          onclick={() => (articleImageHeight = "banner")}
+                          class={`py-1 px-2 rounded-lg text-[11px] font-bold border transition-colors ${
+                            articleImageHeight === "banner" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+                          }`}
+                        >
+                          Slank (180px)
+                        </button>
+                        <button
+                          type="button"
+                          onclick={() => (articleImageHeight = "standard")}
+                          class={`py-1 px-2 rounded-lg text-[11px] font-bold border transition-colors ${
+                            articleImageHeight === "standard" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+                          }`}
+                        >
+                          Standard (260px)
+                        </button>
+                        <button
+                          type="button"
+                          onclick={() => (articleImageHeight = "large")}
+                          class={`py-1 px-2 rounded-lg text-[11px] font-bold border transition-colors ${
+                            articleImageHeight === "large" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+                          }`}
+                        >
+                          Stor (360px)
+                        </button>
+                        <button
+                          type="button"
+                          onclick={() => (articleImageHeight = "natural")}
+                          class={`py-1 px-2 rounded-lg text-[11px] font-bold border transition-colors ${
+                            articleImageHeight === "natural" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+                          }`}
+                        >
+                          Full / Auto
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Tilpasning (Fit) -->
+                    <div class="space-y-1 col-span-1 sm:col-span-2 lg:col-span-1">
+                      <span class="font-bold text-white block">Tilpasning:</span>
+                      <div class="flex gap-1.5">
+                        <button
+                          type="button"
+                          onclick={() => (articleImageFit = "cover")}
+                          class={`flex-1 py-1.5 rounded-lg text-[11px] font-bold border transition-colors ${
+                            articleImageFit === "cover" ? "bg-[#9FE88D] text-black border-[#9FE88D]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+                          }`}
+                        >
+                          Fyll ut (Cover)
+                        </button>
+                        <button
+                          type="button"
+                          onclick={() => (articleImageFit = "contain")}
+                          class={`flex-1 py-1.5 rounded-lg text-[11px] font-bold border transition-colors ${
+                            articleImageFit === "contain" ? "bg-[#9FE88D] text-black border-[#9FE88D]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+                          }`}
+                        >
+                          Hele bildet (Contain)
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               {/if}
             </div>
 
-            {#if articleCoverUrl}
-              <div class="relative max-h-36 rounded-lg overflow-hidden border border-[#384252]">
-                <img src={articleCoverUrl} alt="Cover" class="w-full h-36 object-cover" />
+            <!-- ============================================== -->
+            <!-- HOVEDINNHOLD & FORMATERINGSTOOLBAR             -->
+            <!-- ============================================== -->
+            <div>
+              <div class="flex items-center justify-between pb-1.5">
+                <label for="art-content" class="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span>Hovedtekst & Medier:</span>
+                  <span class="text-[10px] text-[#94A3B8] font-normal">(Du kan lime inn bilder direkte med Ctrl+V)</span>
+                </label>
+
+                <!-- Hurtigknapp for bildeopplasting -->
+                <button
+                  type="button"
+                  onclick={() => (isImageModalOpen = true)}
+                  class="px-2.5 py-1 rounded-lg bg-[#F471B5]/20 text-[#F471B5] hover:bg-[#F471B5]/30 text-xs font-bold border border-[#F471B5]/40 flex items-center gap-1.5 transition-colors"
+                >
+                  <ImageIcon class="w-3.5 h-3.5" />
+                  <span>Sett inn bilde / oppsett</span>
+                </button>
               </div>
-            {:else}
-              <input
-                id="art-cover-input"
-                type="file"
-                accept="image/*"
-                onchange={handleCoverFileSelect}
-                class="text-xs text-[#94A3B8] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#242B35] file:text-[#9FE88D] hover:file:bg-[#384252] cursor-pointer"
-              />
-            {/if}
-          </div>
 
-          <!-- Ingress (Lead Paragraph) -->
-          <div>
-            <label for="art-edit-lead" class="block text-xs font-bold text-[#9FE88D] uppercase mb-1 flex items-center gap-1.5">
-              <Sparkles class="w-3.5 h-3.5 text-[#9FE88D]" />
-              <span>Ingress (Kort, fengende oppsummering / innledning)</span>
-            </label>
-            <textarea
-              id="art-edit-lead"
-              rows="2"
-              bind:value={articleLead}
-              placeholder="Skriv 1-2 setninger som fanger oppmerksomheten og oppsummerer saken..."
-              class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#9FE88D]/40 text-white text-sm font-medium focus:outline-none focus:border-[#9FE88D] custom-scrollbar leading-relaxed"
-            ></textarea>
-          </div>
+              <!-- Formaterings-verktøylinje -->
+              <div class="flex items-center flex-wrap gap-1 p-1.5 bg-[#191E24] border border-[#384252] rounded-t-xl text-xs">
+                <button
+                  type="button"
+                  onclick={() => insertFormat("h2")}
+                  class="px-2.5 py-1 rounded hover:bg-[#2A303C] text-[#E2E8F0] flex items-center gap-1 font-bold"
+                  title="Sett inn Underoverskrift (H2)"
+                >
+                  <Heading2 class="w-3.5 h-3.5 text-[#F471B5]" />
+                  <span>H2</span>
+                </button>
 
-          <!-- Verktøylinje for skriveverktøy -->
-          <div class="space-y-1.5">
-            <div class="flex items-center justify-between text-xs text-[#94A3B8] font-bold uppercase">
-              <span>Hovedtekst & Avsnitt *</span>
-              <span class="text-[11px] font-normal normal-case text-[#94A3B8]">Bruk verktøylinjen for overskrifter og bilder</span>
+                <button
+                  type="button"
+                  onclick={() => insertFormat("bold")}
+                  class="px-2 py-1 rounded hover:bg-[#2A303C] text-[#E2E8F0] font-bold"
+                  title="Fet tekst"
+                >
+                  <Bold class="w-3.5 h-3.5" />
+                </button>
+
+                <button
+                  type="button"
+                  onclick={() => insertFormat("italic")}
+                  class="px-2 py-1 rounded hover:bg-[#2A303C] text-[#E2E8F0] italic"
+                  title="Kursiv tekst"
+                >
+                  <Italic class="w-3.5 h-3.5" />
+                </button>
+
+                <div class="h-4 w-px bg-[#384252] mx-1"></div>
+
+                <button
+                  type="button"
+                  onclick={() => insertFormat("quote")}
+                  class="px-2.5 py-1 rounded hover:bg-[#2A303C] text-[#E2E8F0] flex items-center gap-1"
+                  title="Sitatboks"
+                >
+                  <Quote class="w-3.5 h-3.5 text-[#F4C152]" />
+                  <span>Sitat</span>
+                </button>
+
+                <button
+                  type="button"
+                  onclick={() => insertFormat("list")}
+                  class="px-2.5 py-1 rounded hover:bg-[#2A303C] text-[#E2E8F0] flex items-center gap-1"
+                  title="Punktliste"
+                >
+                  <List class="w-3.5 h-3.5 text-[#70E1F8]" />
+                  <span>Liste</span>
+                </button>
+
+                <button
+                  type="button"
+                  onclick={() => insertFormat("callout")}
+                  class="px-2.5 py-1 rounded hover:bg-[#2A303C] text-[#E2E8F0] flex items-center gap-1"
+                  title="Uthevet Infoboks"
+                >
+                  <Info class="w-3.5 h-3.5 text-[#9FE88D]" />
+                  <span>Infoboks</span>
+                </button>
+
+                <button
+                  type="button"
+                  onclick={() => insertFormat("matchbox")}
+                  class="px-2.5 py-1 rounded hover:bg-[#2A303C] text-[#E2E8F0] flex items-center gap-1"
+                  title="Ukens Kampboks"
+                >
+                  <Flame class="w-3.5 h-3.5 text-[#FB6F84]" />
+                  <span>Kampboks</span>
+                </button>
+              </div>
+
+              <!-- Tekstområde med utklippstavle-opplasting -->
+              <textarea
+                id="art-content"
+                bind:this={textareaRef}
+                bind:value={articleContent}
+                onpaste={handleTextareaPaste}
+                rows="10"
+                placeholder="Skriv artikkelen din her... Du kan sette inn bilder hvor du vil, bruke avsnitt, lister og sitater."
+                class="w-full p-4 rounded-b-xl bg-[#191E24] border-x border-b border-[#384252] text-white focus:border-[#F471B5] focus:outline-none text-sm font-sans leading-relaxed custom-scrollbar font-mono"
+              ></textarea>
             </div>
-
-            <!-- Toolbar -->
-            <div class="p-1.5 rounded-xl bg-[#191E24] border border-[#384252] flex flex-wrap items-center gap-1.5 text-xs">
-              <button
-                type="button"
-                onclick={() => insertFormat("h2")}
-                class="px-2.5 py-1 rounded-lg bg-[#242B35] hover:bg-[#384252] text-white flex items-center gap-1 font-bold"
-                title="Sett inn underoverskrift"
-              >
-                <Heading2 class="w-3.5 h-3.5 text-[#9FE88D]" />
-                <span>Overskrift</span>
-              </button>
-
-              <button
-                type="button"
-                onclick={() => insertFormat("bold")}
-                class="px-2.5 py-1 rounded-lg bg-[#242B35] hover:bg-[#384252] text-white flex items-center gap-1 font-bold"
-                title="Fet tekst"
-              >
-                <Bold class="w-3.5 h-3.5 text-white" />
-                <span>Fet</span>
-              </button>
-
-              <button
-                type="button"
-                onclick={() => insertFormat("italic")}
-                class="px-2.5 py-1 rounded-lg bg-[#242B35] hover:bg-[#384252] text-white flex items-center gap-1 italic"
-                title="Kursiv tekst"
-              >
-                <Italic class="w-3.5 h-3.5 text-white" />
-                <span>Kursiv</span>
-              </button>
-
-              <button
-                type="button"
-                onclick={() => insertFormat("quote")}
-                class="px-2.5 py-1 rounded-lg bg-[#242B35] hover:bg-[#384252] text-white flex items-center gap-1"
-                title="Sett inn sitat / pull-quote"
-              >
-                <Quote class="w-3.5 h-3.5 text-[#F4C152]" />
-                <span>Sitat</span>
-              </button>
-
-              <button
-                type="button"
-                onclick={() => insertFormat("list")}
-                class="px-2.5 py-1 rounded-lg bg-[#242B35] hover:bg-[#384252] text-white flex items-center gap-1"
-                title="Punktliste"
-              >
-                <List class="w-3.5 h-3.5 text-[#70E1F8]" />
-                <span>Liste</span>
-              </button>
-
-              <div class="h-4 w-[1px] bg-[#384252] mx-1"></div>
-
-              <!-- Sett inn bilde i artikkelen knapp -->
-              <button
-                type="button"
-                onclick={() => (isImageModalOpen = true)}
-                class="px-3 py-1 rounded-lg bg-[#9FE88D]/20 hover:bg-[#9FE88D]/30 text-[#9FE88D] border border-[#9FE88D]/40 flex items-center gap-1.5 font-bold"
-                title="Sett inn bilde inne i artikkelteksten med bildetekst"
-              >
-                <Image class="w-3.5 h-3.5 text-[#9FE88D]" />
-                <span>+ Sett inn bilde i teksten</span>
-              </button>
-            </div>
-
-            <!-- Hovedtekst textarea -->
-            <textarea
-              bind:this={textareaRef}
-              rows="10"
-              bind:value={articleContent}
-              placeholder="Skriv artikkelen din her. Bruk verktøylinjen over for å sette inn underoverskrifter, sitater og bilder direkte i teksten..."
-              class="w-full p-4 rounded-xl bg-[#191E24] border border-[#384252] text-white text-sm focus:outline-none focus:border-[#9FE88D] custom-scrollbar leading-relaxed font-sans"
-            ></textarea>
           </div>
-
         {:else}
-          <!-- LIVE FORHÅNDSVISNING AV ARTIKKELEN -->
-          <div class="p-4 sm:p-6 rounded-2xl bg-[#191E24] border border-[#384252] space-y-4">
-            <span class="text-xs uppercase font-bold text-[#9FE88D] bg-[#9FE88D]/15 px-2.5 py-0.5 rounded border border-[#9FE88D]/30">
-              {articleTag}
-            </span>
-
+          <!-- FORHÅNDSVISNINGSFANE -->
+          <div class="space-y-5 bg-[#191E24] p-6 rounded-2xl border border-[#384252]">
             {#if articleCoverUrl}
-              <div class="rounded-xl overflow-hidden max-h-72 border border-[#384252]">
-                <img src={articleCoverUrl} alt="Cover" class="w-full h-full object-cover" />
+              <div class={`rounded-xl overflow-hidden bg-[#242B35] border border-[#384252] ${getCoverHeightClass(articleImageHeight)}`}>
+                <img
+                  src={articleCoverUrl}
+                  alt={articleTitle}
+                  style={`object-position: center ${articleImagePosition}%; object-fit: ${articleImageFit};`}
+                  class="w-full h-full"
+                />
               </div>
             {/if}
 
             <h1 class="text-2xl sm:text-3xl font-black text-white leading-tight">
-              {articleTitle || "Uten tittel"}
+              {articleTitle || "Forhåndsvisningstittel"}
             </h1>
 
-            <div class="flex items-center gap-2 text-xs text-[#94A3B8] pb-3 border-b border-[#384252]">
-              <span class="font-bold text-white">{currentUser?.username || "Admin"}</span>
-              <span>•</span>
-              <span>{new Date().toLocaleDateString("no-NO")}</span>
-            </div>
-
             {#if articleLead}
-              <div class="p-3.5 rounded-xl bg-[#242B35] border-l-4 border-[#9FE88D] text-base font-semibold text-white italic">
+              <div class="p-3.5 rounded-xl bg-[#242B35] border-l-4 border-[#F471B5] text-base font-semibold text-white italic">
                 {articleLead}
               </div>
             {/if}
 
-            <div class="space-y-3.5 text-sm sm:text-base text-[#E2E8F0] leading-relaxed">
+            <div class="space-y-4 text-sm leading-relaxed">
               {#each renderFormattedArticle(articleContent) as block}
                 {#if block.type === "heading"}
-                  <h2 class="text-xl font-bold text-white pt-3 pb-1 border-b border-[#384252]">
-                    {block.text}
-                  </h2>
+                  <h2 class="text-lg font-bold text-white pt-2 border-b border-[#384252]/60">{block.text}</h2>
                 {:else if block.type === "quote"}
-                  <blockquote class="p-3.5 my-2 rounded-r-xl bg-[#242B35] border-l-4 border-[#F4C152] font-serif italic text-[#F4C152]">
-                    "{block.text}"
-                  </blockquote>
+                  <blockquote class="p-3.5 rounded-xl bg-[#242B35] border-l-4 border-[#F4C152] italic font-serif">"{block.text}"</blockquote>
+                {:else if block.type === "callout"}
+                  <div class="p-3.5 rounded-xl bg-[#70E1F8]/10 border border-[#70E1F8]/30 flex items-start gap-2.5 text-xs">
+                    <Info class="w-4 h-4 text-[#70E1F8] shrink-0 mt-0.5" />
+                    <span>{block.text}</span>
+                  </div>
                 {:else if block.type === "image"}
-                  <figure class="my-4 rounded-xl overflow-hidden bg-[#191E24] border border-[#384252]">
-                    <img src={block.src} alt={block.caption} class="w-full max-h-96 object-cover" />
+                  <div class={`my-3 ${block.align === "left" ? "float-left w-1/2 mr-3" : block.align === "right" ? "float-right w-1/2 ml-3" : "w-full"}`}>
+                    <img src={block.src} alt={block.caption || ""} class="rounded-xl border border-[#384252] max-h-72 w-full object-cover" />
                     {#if block.caption}
-                      <figcaption class="p-2 text-xs text-[#94A3B8] bg-[#191E24] text-center italic">
-                        📸 {block.caption}
-                      </figcaption>
+                      <p class="text-xs text-[#94A3B8] italic mt-1 text-center">📸 {block.caption}</p>
                     {/if}
-                  </figure>
+                  </div>
                 {:else if block.type === "list"}
-                  <ul class="list-disc list-inside space-y-1 pl-2 text-sm">
+                  <ul class="space-y-1 pl-2">
                     {#each block.items || [] as item}
-                      <li>{item}</li>
+                      <li class="flex items-start gap-2 text-xs">
+                        <span class="text-[#F471B5]">•</span>
+                        <span>{item}</span>
+                      </li>
                     {/each}
                   </ul>
                 {:else}
@@ -1034,135 +1351,177 @@
         {/if}
       </div>
 
-      <!-- Footer Handlinger -->
-      <div class="p-4 bg-[#191E24] border-t border-[#384252] flex items-center justify-between shrink-0">
-        <div class="text-xs text-[#94A3B8]">
-          {#if editorTab === "write"}
-            <span>Trykk <strong>Forhåndsvisning</strong> øverst for å se ferdig layout</span>
-          {:else}
-            <span>Klar til å lagre!</span>
-          {/if}
-        </div>
-
-        <div class="flex items-center gap-2">
-          <button
-            onclick={() => (isCreateModalOpen = false)}
-            class="px-4 py-2 rounded-xl bg-[#242B35] hover:bg-[#384252] text-xs sm:text-sm font-semibold text-[#E2E8F0] border border-[#384252] transition-colors"
-          >
-            Avbryt
-          </button>
-
-          <button
-            onclick={handleSaveArticle}
-            disabled={isSubmitting || !articleTitle.trim() || !articleContent.trim()}
-            class="px-5 py-2 rounded-xl bg-[#9FE88D] hover:bg-[#8ce078] text-[#16380c] font-bold text-xs sm:text-sm transition-all flex items-center gap-2 disabled:opacity-40 shadow-sm"
-          >
-            {#if editingArticleId}
-              <Check class="w-4 h-4" />
-              <span>{isSubmitting ? "Lagrer endringer..." : "Lagre endringer"}</span>
-            {:else}
-              <Send class="w-4 h-4" />
-              <span>{isSubmitting ? "Publiserer..." : "Publiser artikkel"}</span>
-            {/if}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-{/if}
-
-<!-- ========================================== -->
-<!-- MODAL 3: SETT INN BILDE I ARTIKKELEN DIALOG-->
-<!-- ========================================== -->
-{#if isImageModalOpen}
-  <div
-    role="presentation"
-    onclick={() => (isImageModalOpen = false)}
-    class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4"
-  >
-    <div
-      role="dialog"
-      aria-modal="true"
-      tabindex="-1"
-      onclick={(e) => e.stopPropagation()}
-      onkeydown={(e) => e.stopPropagation()}
-      class="bg-[#2A303C] border border-[#384252] rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl animate-in zoom-in-95 text-[#E2E8F0]"
-    >
-      <div class="flex items-center justify-between pb-2 border-b border-[#384252]">
-        <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-          <Image class="w-4 h-4 text-[#9FE88D]" />
-          <span>Sett inn bilde i artikkelen</span>
-        </h3>
+      <!-- Bunnknapper -->
+      <div class="p-4 bg-[#191E24] border-t border-[#384252] flex items-center justify-end gap-3 shrink-0">
         <button
-          onclick={() => (isImageModalOpen = false)}
-          class="p-1 rounded-lg text-[#94A3B8] hover:text-white"
-        >
-          <X class="w-5 h-5" />
-        </button>
-      </div>
-
-      <!-- Dra/Slipp & Utklippstavle sone -->
-      <div
-        role="region"
-        aria-label="Område for bilde"
-        tabindex="0"
-        onpaste={handleInlinePaste}
-        class="border-2 border-dashed border-[#384252] hover:border-[#9FE88D] rounded-xl p-5 text-center bg-[#191E24] space-y-2 focus:outline-none focus:border-[#9FE88D]"
-      >
-        {#if inlineImageUrl}
-          <div class="relative max-h-48 rounded-lg overflow-hidden border border-[#384252] inline-block">
-            <img src={inlineImageUrl} alt="Forhåndsvisning" class="max-h-48 object-cover rounded-lg" />
-            <button
-              type="button"
-              onclick={() => (inlineImageUrl = "")}
-              class="absolute top-2 right-2 p-1.5 bg-black/80 rounded-full text-white hover:bg-black"
-            >
-              <X class="w-4 h-4" />
-            </button>
-          </div>
-        {:else}
-          <div class="flex flex-col items-center justify-center space-y-1 text-xs text-[#94A3B8]">
-            <Upload class="w-7 h-7 text-[#9FE88D] mb-1" />
-            <p class="font-bold text-white text-sm">Lim inn fra utklippstavle (Ctrl+V) eller velg fil</p>
-            <p class="text-xs">Bildet legges inn der markøren står i teksten.</p>
-            <input
-              type="file"
-              accept="image/*"
-              onchange={handleInlineFileSelect}
-              class="mt-2 text-xs text-[#94A3B8] file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#242B35] file:text-[#9FE88D] hover:file:bg-[#384252] cursor-pointer"
-            />
-          </div>
-        {/if}
-      </div>
-
-      <!-- Bildetekst (Caption) -->
-      <div>
-        <label for="img-caption" class="block text-xs font-bold text-[#94A3B8] uppercase mb-1">
-          Bildetekst / Caption (Valgfritt)
-        </label>
-        <input
-          id="img-caption"
-          type="text"
-          bind:value={inlineImageCaption}
-          placeholder="f.eks. A1 feirer 3 poeng på overtid"
-          class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs sm:text-sm focus:outline-none focus:border-[#9FE88D]"
-        />
-      </div>
-
-      <!-- Handlinger -->
-      <div class="flex items-center justify-end gap-2 pt-2 border-t border-[#384252]">
-        <button
-          onclick={() => (isImageModalOpen = false)}
-          class="px-3.5 py-2 rounded-xl bg-[#242B35] hover:bg-[#384252] text-xs font-semibold text-[#E2E8F0]"
+          type="button"
+          onclick={() => (isCreateModalOpen = false)}
+          class="px-4 py-2 rounded-xl bg-[#242B35] hover:bg-[#384252] text-xs font-semibold text-[#94A3B8] hover:text-white transition-colors"
         >
           Avbryt
         </button>
 
         <button
+          type="button"
+          onclick={handleSaveArticle}
+          disabled={isSubmitting}
+          class="px-5 py-2.5 rounded-xl bg-[#9FE88D] hover:bg-[#8fd97e] text-[#16380c] font-bold text-xs transition-all shadow-md flex items-center gap-1.5"
+        >
+          <Check class="w-4 h-4" />
+          <span>{isSubmitting ? "Lagrer..." : editingArticleId ? "Lagre Endringer" : "Publiser Artikkel"}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- ============================================================== -->
+<!-- MODAL 4: SETT INN INLINE BILDE (MED OPPLASTING & JUSTERING)    -->
+<!-- ============================================================== -->
+{#if isImageModalOpen}
+  <div class="fixed inset-0 bg-black/90 backdrop-blur-md z-[70] flex items-center justify-center p-4">
+    <div class="bg-[#2A303C] border border-[#384252] rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 text-[#E2E8F0] font-sans">
+      <div class="flex items-center justify-between pb-2 border-b border-[#384252]">
+        <div class="flex items-center gap-2">
+          <ImageIcon class="w-5 h-5 text-[#F471B5]" />
+          <h4 class="font-bold text-white text-sm sm:text-base">Sett inn bilde i artikkelen</h4>
+        </div>
+        <button
+          type="button"
+          onclick={() => (isImageModalOpen = false)}
+          class="text-[#94A3B8] hover:text-white"
+        >
+          <X class="w-5 h-5" />
+        </button>
+      </div>
+
+      <!-- Opplastingsvalg -->
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-white mb-1.5">Last opp bildefil:</label>
+          <input
+            type="file"
+            accept="image/*"
+            bind:this={inlineFileInputRef}
+            onchange={async (e) => {
+              const f = (e.target as HTMLInputElement).files?.[0];
+              if (f) {
+                const u = await handleInlineImageFile(f);
+                if (u) inlineImageUrl = u;
+              }
+            }}
+            class="hidden"
+          />
+
+          <div
+            role="button"
+            tabindex="0"
+            onpaste={handleModalPaste}
+            onclick={() => inlineFileInputRef?.click()}
+            onkeydown={(e) => (e.key === "Enter" || e.key === " ") && inlineFileInputRef?.click()}
+            class="p-4 rounded-xl border-2 border-dashed border-[#384252] hover:border-[#F471B5] text-center bg-[#191E24] cursor-pointer transition-colors space-y-1.5"
+          >
+            {#if isUploadingInline}
+              <Upload class="w-6 h-6 text-[#F471B5] mx-auto animate-bounce" />
+              <p class="font-bold text-white">Laster opp til Convex...</p>
+            {:else if inlineImageUrl}
+              <img src={inlineImageUrl} alt="Forhåndsvisning" class="max-h-36 mx-auto rounded-lg object-contain border border-[#384252]" />
+              <p class="text-[11px] text-[#9FE88D] font-semibold">✓ Bilde lastet opp og klart</p>
+            {:else}
+              <Upload class="w-6 h-6 text-[#94A3B8] mx-auto" />
+              <p class="font-bold text-white">Klikk for å velge fil, eller lim inn bilde (Ctrl+V)</p>
+              <p class="text-[11px] text-[#94A3B8]">PNG, JPG, SVG eller WebP (maks 10 MB)</p>
+            {/if}
+          </div>
+        </div>
+
+        <div>
+          <label for="img-url-in" class="block font-bold text-white mb-1">Eller oppgi direkte bilde-URL:</label>
+          <input
+            id="img-url-in"
+            type="text"
+            bind:value={inlineImageUrl}
+            placeholder="https://images.unsplash.com/..."
+            class="w-full px-3 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#F471B5] focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label for="img-caption-in" class="block font-bold text-white mb-1">Bildetekst / Caption (valgfritt):</label>
+          <input
+            id="img-caption-in"
+            type="text"
+            bind:value={inlineImageCaption}
+            placeholder="f.eks. Jublende managere etter scoring på overtid..."
+            class="w-full px-3 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#F471B5] focus:outline-none"
+          />
+        </div>
+
+        <!-- Justering i teksten -->
+        <div>
+          <span class="block font-bold text-white mb-1">Justering og tekstflyt:</span>
+          <div class="grid grid-cols-4 gap-1.5">
+            <button
+              type="button"
+              onclick={() => (inlineImageAlign = "full")}
+              class={`py-2 rounded-xl border text-[11px] font-bold transition-all flex flex-col items-center gap-1 ${
+                inlineImageAlign === "full" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+              }`}
+            >
+              <Maximize2 class="w-3.5 h-3.5" />
+              <span>Full bredde</span>
+            </button>
+            <button
+              type="button"
+              onclick={() => (inlineImageAlign = "left")}
+              class={`py-2 rounded-xl border text-[11px] font-bold transition-all flex flex-col items-center gap-1 ${
+                inlineImageAlign === "left" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+              }`}
+            >
+              <AlignLeft class="w-3.5 h-3.5" />
+              <span>Venstrestilt</span>
+            </button>
+            <button
+              type="button"
+              onclick={() => (inlineImageAlign = "right")}
+              class={`py-2 rounded-xl border text-[11px] font-bold transition-all flex flex-col items-center gap-1 ${
+                inlineImageAlign === "right" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+              }`}
+            >
+              <AlignRight class="w-3.5 h-3.5" />
+              <span>Høyrestilt</span>
+            </button>
+            <button
+              type="button"
+              onclick={() => (inlineImageAlign = "center")}
+              class={`py-2 rounded-xl border text-[11px] font-bold transition-all flex flex-col items-center gap-1 ${
+                inlineImageAlign === "center" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+              }`}
+            >
+              <AlignCenter class="w-3.5 h-3.5" />
+              <span>Sentrert</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Knapper -->
+      <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-[#384252]">
+        <button
+          type="button"
+          onclick={() => (isImageModalOpen = false)}
+          class="px-4 py-2 rounded-xl bg-[#242B35] text-[#94A3B8] hover:text-white text-xs border border-[#384252]"
+        >
+          Avbryt
+        </button>
+
+        <button
+          type="button"
           onclick={insertInlineImage}
           disabled={!inlineImageUrl}
-          class="px-4 py-2 rounded-xl bg-[#9FE88D] hover:bg-[#8ce078] text-[#16380c] text-xs font-bold disabled:opacity-40 transition-all flex items-center gap-1.5"
+          class="px-5 py-2 rounded-xl bg-[#9FE88D] hover:bg-[#8fd97e] text-[#16380c] font-bold text-xs transition-colors flex items-center gap-1.5 shadow-md disabled:opacity-50"
         >
+          <Check class="w-4 h-4" />
           <span>Sett inn i teksten</span>
         </button>
       </div>

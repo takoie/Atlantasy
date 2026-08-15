@@ -47,7 +47,7 @@
       </div>
       <div>
         <h2 class="text-sm font-bold text-white flex items-center gap-2">
-          <span>Individuell Tabell</span>
+          <span>Alle mot alle</span>
           <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#191E24] text-[#70E1F8] font-mono font-bold border border-[#384252]">
             {filteredPlayers.length} spillere
           </span>
@@ -169,23 +169,37 @@
             {/if}
           </div>
 
-          <div class="min-w-0">
-            <div class="flex items-center gap-2">
-              <span class="font-bold text-white text-xs sm:text-sm truncate hover:text-[#9FE88D] transition-colors">
-                {player.managerName}
-              </span>
-              {#if player.roomName}
-                <span
-                  class="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider border shrink-0 font-mono"
-                  style={`border-color: ${player.roomColor || "#9FE88D"}40; color: ${player.roomColor || "#9FE88D"}; background-color: ${player.roomColor || "#9FE88D"}15;`}
-                >
-                  {player.roomName}
+          <div class="min-w-0 flex items-center gap-2.5">
+            {#if player.avatar}
+              <img
+                src={player.avatar}
+                alt="Avatar"
+                class="w-7 h-7 rounded-lg bg-[#191E24] border border-[#384252] object-contain p-0.5 shrink-0 shadow-sm"
+              />
+            {:else}
+              <div class="w-7 h-7 rounded-lg bg-[#9FE88D]/20 text-[#9FE88D] border border-[#9FE88D]/30 font-bold text-xs flex items-center justify-center shrink-0">
+                {player.managerName.charAt(0) || "M"}
+              </div>
+            {/if}
+
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-white text-xs sm:text-sm truncate hover:text-[#9FE88D] transition-colors">
+                  {player.managerName}
                 </span>
-              {/if}
+                {#if player.roomName}
+                  <span
+                    class="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider border shrink-0 font-mono"
+                    style={`border-color: ${player.roomColor || "#9FE88D"}40; color: ${player.roomColor || "#9FE88D"}; background-color: ${player.roomColor || "#9FE88D"}15;`}
+                  >
+                    {player.roomName}
+                  </span>
+                {/if}
+              </div>
+              <p class="text-xs text-[#94A3B8] truncate mt-0.5">
+                {player.teamName}
+              </p>
             </div>
-            <p class="text-xs text-[#94A3B8] truncate mt-0.5">
-              {player.teamName}
-            </p>
           </div>
         </div>
 

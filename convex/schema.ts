@@ -2,10 +2,13 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  // Brukere og tilknyttede profiler (Enkel pålogging med brukernavn + passord, epost er valgfri)
+// Brukere og tilknyttede profiler (Enkel pålogging med brukernavn + passord, epost er valgfri)
+// Convex Schema v2.1 (inkludert Cup & Sluttspill)
   users: defineTable({
     username: v.string(),
-    password: v.optional(v.string()), // Enkelt passord for innlogging
+    password: v.optional(v.string()), // Deprecated: erstattes av passwordHash og passwordSalt
+    passwordHash: v.optional(v.string()), // Sikker PBKDF2-hash
+    passwordSalt: v.optional(v.string()), // Unikt salt per bruker
     email: v.optional(v.string()),    // Valgfri epost
     fplEntryId: v.optional(v.number()),
     fplTeamName: v.optional(v.string()),
@@ -14,6 +17,7 @@ export default defineSchema({
     role: v.string(), // "admin" | "user"
     avatar: v.optional(v.string()),
     createdAt: v.number(),
+    lastActiveAt: v.optional(v.number()),
   })
     .index("by_username", ["username"])
     .index("by_role", ["role"])
@@ -52,13 +56,18 @@ export default defineSchema({
     title: v.string(),
     lead: v.optional(v.string()),     // Ingress / Sammendrag
     content: v.string(),              // Hovedtekst med markdown / inline bilder
-    imageUrl: v.optional(v.string()), // Cover / Toppbilde (Base64 eller URL)
+    imageUrl: v.optional(v.string()), // Cover / Toppbilde
+    imagePosition: v.optional(v.number()), // 0-100% vertikal posisjon (default 50)
+    imageFit: v.optional(v.string()),      // "cover" | "contain" | "natural"
+    imageHeight: v.optional(v.string()),   // "banner" | "standard" | "large" | "natural"
+    authorId: v.optional(v.id("users")),
     authorName: v.string(),
     authorAvatar: v.optional(v.string()),
     tag: v.optional(v.string()),      // "Runderapport" | "Taktikk" | "Banter" | "Nyhet"
     isArchived: v.optional(v.boolean()), // Arkivert artikkel
     isPinned: v.optional(v.boolean()),   // Festet til toppen
     likes: v.number(),
+    likedBy: v.optional(v.array(v.string())), // Bruker-IDer som har likt (maks 1 per bruker)
     createdAt: v.number(),
   }).index("by_createdAt", ["createdAt"]),
 
@@ -160,4 +169,94 @@ export default defineSchema({
     lastSyncedAt: v.number(),
     adminPin: v.string(),          // Sikret admin-pin
   }),
+
+  // Turneringer / Sluttspill (Double Elimination Cup)
+  cups: defineTable({
+    name: v.string(),                  // f.eks. "Atlantasy Vintercup 2025/2026"
+    season: v.optional(v.string()),    // "2025/2026"
+    status: v.string(),                // "draft" | "active" | "completed"
+    startGameweek: v.number(),         // F.eks. GW 20
+    currentRound: v.number(),          // Nåværende aktiv runde
+    totalRounds: v.number(),
+    format: v.string(),                // "double_elimination"
+    winnerRoomId: v.optional(v.id("rooms")),
+    runnerUpRoomId: v.optional(v.id("rooms")),
+    thirdPlaceRoomId: v.optional(v.id("rooms")),
+    roundGwMap: v.optional(
+      v.array(
+        v.object({
+          roundNumber: v.number(),
+          roundTitle: v.string(),
+          gameweek: v.number(),
+        })
+      )
+    ),
+    groupStandings: v.optional(
+      v.array(
+        v.object({
+          group: v.string(), // "A" | "B"
+          roomId: v.id("rooms"),
+          played: v.number(),
+          won: v.number(),
+          drawn: v.number(),
+          lost: v.number(),
+          points: v.number(), // 3 per seier, 1 uavgjort, 0 tap
+          totalRoomScore: v.number(), // akkumulert romsnitt
+        })
+      )
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_status", ["status"]),
+
+  // Kampoppsett i Cupen (Double Elimination Matches, Knockout & Gruppespill)
+  cup_matches: defineTable({
+    cupId: v.id("cups"),
+    bracketType: v.string(),           // "winners" | "losers" | "grand_final" | "knockout" | "group"
+    stage: v.optional(v.string()),     // "group" | "knockout" | "bracket"
+    group: v.optional(v.string()),     // "A" | "B" (ved gruppespill)
+    isLuckyLoser: v.optional(v.boolean()), // true dersom rommet gikk videre som Lucky Loser
+    roundNumber: v.number(),           // Runde 1, 2, 3, etc.
+    roundTitle: v.string(),            // f.eks. "Vinnerbrakett Runde 1", "Kvartfinale", "Gruppe A - Runde 1"
+    matchIndex: v.number(),            // Kamp 1, 2, 3... innenfor runden
+    gameweek: v.number(),              // Tilknyttet FPL Gameweek
+    room1Id: v.optional(v.id("rooms")),
+    room2Id: v.optional(v.id("rooms")),
+    room1Score: v.optional(v.number()), // Romsnitt av de 2 beste spillerne
+    room2Score: v.optional(v.number()), // Romsnitt av de 2 beste spillerne
+    room1TopPlayers: v.optional(
+      v.array(
+        v.object({
+          entryId: v.number(),
+          name: v.string(),
+          points: v.number(),
+          hits: v.optional(v.number()),
+        })
+      )
+    ),
+    room2TopPlayers: v.optional(
+      v.array(
+        v.object({
+          entryId: v.number(),
+          name: v.string(),
+          points: v.number(),
+          hits: v.optional(v.number()),
+        })
+      )
+    ),
+    winnerRoomId: v.optional(v.id("rooms")),
+    loserRoomId: v.optional(v.id("rooms")),
+    status: v.string(),                // "scheduled" | "live" | "completed"
+    nextMatchId: v.optional(v.id("cup_matches")),       // Vinnerens neste kamp
+    nextMatchSlot: v.optional(v.number()),             // 1 eller 2 (posisjon i neste kamp)
+    nextLoserMatchId: v.optional(v.id("cup_matches")),  // Taperens neste kamp (for Winners bracket)
+    nextLoserMatchSlot: v.optional(v.number()),         // 1 eller 2
+    isBye: v.optional(v.boolean()),                     // Om kampen er en automatisk videreføring
+    customNote: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_cupId", ["cupId"])
+    .index("by_cupId_and_round", ["cupId", "roundNumber"])
+    .index("by_cupId_and_bracket", ["cupId", "bracketType"]),
 });
+

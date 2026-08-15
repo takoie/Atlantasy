@@ -21,10 +21,19 @@
     AlertTriangle,
     Layers,
     GripVertical,
+    Swords,
+    Calendar,
+    Flame,
+    RefreshCw,
+    CheckCircle2,
   } from "lucide-svelte";
+  import { useQuery, useMutation } from "$lib/convex.svelte";
+  import { api } from "../../../convex/_generated/api";
+  import { formatConvexError } from "$lib/utils/formatError";
 
   let {
     isOpen = false,
+    currentUser = null,
     settings = null,
     rooms = [],
     inviteCodes = [],
@@ -50,6 +59,7 @@
     onDeleteInviteCode = (_codeId: string) => {},
   }: {
     isOpen?: boolean;
+    currentUser?: any;
     settings?: any;
     rooms?: any[];
     inviteCodes?: any[];
@@ -132,6 +142,29 @@
     confirmText: "Bekreft",
     onConfirm: () => {},
   });
+
+  // Cup & Sluttspill State & Mutations
+  const activeCupQuery = useQuery(api.cups.getActiveCup);
+  let activeCup = $derived(activeCupQuery.data ?? null);
+  const createCupMutation = useMutation(api.cups.createCupWithBracket);
+  const updateCupSettingsMutation = useMutation(api.cups.updateCupSettings);
+  const updateMatchMutation = useMutation(api.cups.updateMatch);
+  const calculateCupScoresMutation = useMutation(api.cups.calculateCupRoundScores);
+  const deleteCupMutation = useMutation(api.cups.deleteCup);
+
+  let newCupName = $state("Atlantasy Vintercup 2025/2026");
+  let newCupStartGw = $state(20);
+  let newCupFormat = $state<"lucky_loser_12" | "double_elimination_12" | "top8_single" | "group_stage_12">("lucky_loser_12");
+  let newCupSeedMethod = $state<"leaderboard" | "manual" | "random">("leaderboard");
+  let isCreatingCup = $state(false);
+  let isCalculatingCupRound = $state(false);
+  let selectedMatchForEdit = $state<any>(null);
+  let editMatchRoom1Id = $state("");
+  let editMatchRoom2Id = $state("");
+  let editMatchWinnerId = $state("");
+  let editMatchScore1 = $state<number | undefined>(undefined);
+  let editMatchScore2 = $state<number | undefined>(undefined);
+
 
   // FPL Import & Drag-and-Drop Matching State
   let isFetchingFpl = $state(false);
@@ -230,7 +263,7 @@
           : "FPL ligaen har ingen nye påmeldte lag for øyeblikket."
       );
     } catch (err: any) {
-      showSuccess("Kunne ikke hente FPL liga: " + (err.message || ""));
+      showSuccess("Kunne ikke hente FPL liga: " + formatConvexError(err));
     } finally {
       isFetchingFpl = false;
     }
@@ -755,6 +788,95 @@
     showSuccess(`Kåret månedens ${winnerCategory === "room" ? "romvinner" : "solovinner"} for ${winningMonthName}!`);
   }
 
+  // --- Cup / Sluttspill Handlers ---
+  async function handleCreateCupSubmit() {
+    if (!newCupName.trim()) {
+      alert("Vennligst oppgi et navn på cupen.");
+      return;
+    }
+    isCreatingCup = true;
+    try {
+      await createCupMutation.mutate({
+        adminUserId: currentUser?._id,
+        name: newCupName.trim(),
+        startGameweek: Number(newCupStartGw),
+        format: newCupFormat,
+        seedMethod: newCupSeedMethod,
+      });
+      showSuccess(`Cup "${newCupName.trim()}" opprettet!`);
+    } catch (err: any) {
+      alert(formatConvexError(err, "Kunne ikke opprette cup."));
+    } finally {
+      isCreatingCup = false;
+    }
+  }
+
+  async function handleCalculateCupRound(cupId: string, roundNumber: number) {
+    isCalculatingCupRound = true;
+    try {
+      const res = await calculateCupScoresMutation.mutate({
+        adminUserId: currentUser?._id,
+        cupId: cupId as any,
+        roundNumber,
+      });
+      showSuccess(`Oppdaterte ${res.updatedMatchesCount} kamper for runde ${roundNumber}!`);
+    } catch (err: any) {
+      alert(formatConvexError(err, "Kunne ikke beregne runderesultater."));
+    } finally {
+      isCalculatingCupRound = false;
+    }
+  }
+
+  function startEditingMatch(match: any) {
+    selectedMatchForEdit = match;
+    editMatchRoom1Id = match.room1Id || "";
+    editMatchRoom2Id = match.room2Id || "";
+    editMatchWinnerId = match.winnerRoomId || "";
+    editMatchScore1 = match.room1Score;
+    editMatchScore2 = match.room2Score;
+  }
+
+  async function handleSaveEditMatch() {
+    if (!selectedMatchForEdit) return;
+    try {
+      await updateMatchMutation.mutate({
+        adminUserId: currentUser?._id,
+        matchId: selectedMatchForEdit._id,
+        room1Id: editMatchRoom1Id ? (editMatchRoom1Id as any) : undefined,
+        room2Id: editMatchRoom2Id ? (editMatchRoom2Id as any) : undefined,
+        winnerRoomId: editMatchWinnerId ? (editMatchWinnerId as any) : undefined,
+        room1Score: editMatchScore1 !== undefined && editMatchScore1 !== null ? Number(editMatchScore1) : undefined,
+        room2Score: editMatchScore2 !== undefined && editMatchScore2 !== null ? Number(editMatchScore2) : undefined,
+      });
+      selectedMatchForEdit = null;
+      showSuccess("Kampoppsett oppdatert!");
+    } catch (err: any) {
+      alert(formatConvexError(err, "Kunne ikke oppdatere kamp."));
+    }
+  }
+
+  function promptDeleteCup(cupId: string) {
+    confirmDialog = {
+      show: true,
+      title: "Slett og nullstill Cup?",
+      message: "Dette vil slette hele turneringen, alle genererte kamper og bracket-strukturen.",
+      confirmText: "Ja, slett cup",
+      onConfirm: async () => {
+        try {
+          await deleteCupMutation.mutate({
+            adminUserId: currentUser?._id,
+            cupId: cupId as any,
+          });
+          confirmDialog.show = false;
+          showSuccess("Cupen ble slettet.");
+        } catch (err: any) {
+          alert(formatConvexError(err, "Kunne ikke slette cup."));
+        }
+      },
+    };
+  }
+
+
   function showSuccess(msg: string) {
     successMessage = msg;
     setTimeout(() => {
@@ -907,6 +1029,18 @@
           >
             <span>🎟️</span>
             <span>Invitasjonskoder</span>
+          </button>
+
+          <button
+            onclick={() => (activeTab = "cup")}
+            class={`px-4 py-3 border-b-2 text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 ${
+              activeTab === "cup"
+                ? "border-[#F4C152] text-[#F4C152] font-bold"
+                : "border-transparent text-[#94A3B8] hover:text-white"
+            }`}
+          >
+            <Swords class="w-4 h-4 text-[#F4C152]" />
+            <span>Cup & Sluttspill</span>
           </button>
         </div>
 
@@ -1069,9 +1203,16 @@
                   {#each filteredPool as team (team.entryId)}
                     {@const isSelected = selectedPlayerForMove?.team?.entryId === team.entryId}
                     <div
-                      role="listitem"
+                      role="button"
+                      tabindex="0"
                       onpointerdown={(e) => startPointerDrag(team, null, e)}
                       onclick={(e) => toggleSelectPlayerForMove(team, null, e)}
+                      onkeydown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          toggleSelectPlayerForMove(team, null);
+                        }
+                      }}
                       class={`p-2.5 rounded-lg border text-xs transition-all space-y-1.5 shadow-sm group select-none ${
                         isSelected
                           ? "bg-[#9FE88D]/20 border-[#9FE88D] ring-2 ring-[#9FE88D]"
@@ -1083,12 +1224,7 @@
                       <div class="flex items-start justify-between gap-2">
                         <div class="min-w-0 flex-1">
                           {#if editingTeamEntryId === team.entryId}
-                            <div
-                              class="flex items-center gap-1 mb-1"
-                              onclick={(e) => e.stopPropagation()}
-                              onmousedown={(e) => e.stopPropagation()}
-                              role="presentation"
-                            >
+                            <div class="flex items-center gap-1 mb-1">
                               <input
                                 type="text"
                                 draggable="false"
@@ -1167,7 +1303,7 @@
                     {@const teamsInRoom = roomAssignments[room._id] || []}
                     {@const isHovered = dragHoverTarget === room._id || hoveredTargetId === room._id}
                     <div
-                      role="region"
+                      role="button"
                       aria-label={`Rom ${room.name}`}
                       data-drop-room-id={room._id}
                       onclick={() => handleRoomClickToPlace(room._id)}
@@ -1186,7 +1322,7 @@
                       }`}
                     >
                       <!-- Drawer Header (med inline redigering av romnavn) -->
-                      <div class="flex items-center justify-between pb-2 border-b border-[#384252] shrink-0" onclick={(e) => e.stopPropagation()} role="presentation">
+                      <div class="flex items-center justify-between pb-2 border-b border-[#384252] shrink-0">
                         <div class="flex items-center gap-2 min-w-0 flex-1">
                           <span
                             class="w-3 h-3 rounded-full shrink-0 shadow-sm"
@@ -1265,9 +1401,16 @@
                         {#each teamsInRoom as team (team.entryId)}
                           {@const isSelectedTeam = selectedPlayerForMove?.team?.entryId === team.entryId}
                           <div
-                            role="listitem"
+                            role="button"
+                            tabindex="0"
                             onpointerdown={(e) => startPointerDrag(team, room._id, e)}
                             onclick={(e) => toggleSelectPlayerForMove(team, room._id, e)}
+                            onkeydown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                toggleSelectPlayerForMove(team, room._id);
+                              }
+                            }}
                             class={`p-2 rounded-lg border text-xs flex items-center justify-between gap-2 transition-all shadow-sm group select-none ${
                               isSelectedTeam
                                 ? "bg-[#9FE88D]/20 border-[#9FE88D] ring-2 ring-[#9FE88D]"
@@ -1278,12 +1421,7 @@
                           >
                             <div class="min-w-0 flex-1">
                               {#if editingTeamEntryId === team.entryId}
-                                <div
-                                  class="flex items-center gap-1"
-                                  onclick={(e) => e.stopPropagation()}
-                                  onmousedown={(e) => e.stopPropagation()}
-                                  role="presentation"
-                                >
+                                <div class="flex items-center gap-1">
                                   <input
                                     type="text"
                                     draggable="false"
@@ -1797,6 +1935,7 @@
                             confirmText: "Slett kode",
                             onConfirm: () => {
                               onDeleteInviteCode(inv._id);
+                              confirmDialog.show = false;
                               showSuccess(`Invitasjonskode ${inv.code} ble slettet.`);
                             },
                           };
@@ -1811,6 +1950,371 @@
                 {/each}
               {/if}
             </div>
+          </div>
+
+        <!-- Tab 6: Cup & Sluttspill Styring (Double Elimination) -->
+        {:else if activeTab === "cup"}
+          <div class="p-4 sm:p-5 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
+            {#if !activeCup}
+              <!-- Ingen aktiv cup: Opprettelsesskjema -->
+              <div class="max-w-2xl mx-auto p-6 rounded-2xl bg-[#242B35] border border-[#384252] space-y-5 shadow-lg">
+                <div class="flex items-center gap-3 pb-3 border-b border-[#384252]">
+                  <div class="p-2.5 rounded-xl bg-[#F4C152]/15 text-[#F4C152] border border-[#F4C152]/30">
+                    <Swords class="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 class="text-base font-bold text-white">Opprett Ny Cup & Sluttspill</h3>
+                    <p class="text-xs text-[#94A3B8]">
+                      Genererer et komplett Double Elimination turneringsformat (Winners & Losers bracket)
+                    </p>
+                  </div>
+                </div>
+
+                <div class="space-y-4 text-xs">
+                  <div>
+                    <label for="admin-cup-name" class="block font-bold text-white mb-1.5">
+                      Navn på Cup / Turnering:
+                    </label>
+                    <input
+                      id="admin-cup-name"
+                      type="text"
+                      bind:value={newCupName}
+                      placeholder="f.eks. Atlantasy Vintercup 2025/2026"
+                      class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#F4C152] focus:outline-none text-sm"
+                    />
+                  </div>
+
+                  <!-- Valg av Turneringsmodell -->
+                  <div>
+                    <label for="admin-cup-format" class="block font-bold text-white mb-1.5">
+                      Velg Turneringsmodell:
+                    </label>
+                    <select
+                      id="admin-cup-format"
+                      bind:value={newCupFormat}
+                      class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#F4C152]/60 text-white focus:border-[#F4C152] focus:outline-none font-semibold"
+                    >
+                      <option value="lucky_loser_12">
+                        🌟 12 Lag: Alle spiller i R1 (6 kamper) + 2 Lucky Losers til Kvartfinale (4 runder)
+                      </option>
+                      <option value="double_elimination_12">
+                        ⚔️ 12 Lag: Standard Double Elimination med Topp 4 Byes (Challonge-stil, 7 runder)
+                      </option>
+                      <option value="top8_single">
+                        🏆 Topp 8: Rent Sluttspill (Kvartfinaler, Semifinaler, Finale - 3 runder)
+                      </option>
+                      <option value="group_stage_12">
+                        🌐 12 Lag: Gruppespill (2 puljer à 6) + Sluttspill (5 runder)
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label for="admin-cup-start-gw" class="block font-bold text-white mb-1.5">
+                        Start-Gameweek (Første runde):
+                      </label>
+                      <input
+                        id="admin-cup-start-gw"
+                        type="number"
+                        min="1"
+                        max="38"
+                        bind:value={newCupStartGw}
+                        class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#F4C152] focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label for="admin-cup-seeding" class="block font-bold text-white mb-1.5">
+                        Seeding-metode for Rommene:
+                      </label>
+                      <select
+                        id="admin-cup-seeding"
+                        bind:value={newCupSeedMethod}
+                        class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#F4C152] focus:outline-none"
+                      >
+                        <option value="leaderboard">Basert på tabell & romsnitt (Anbefalt)</option>
+                        <option value="manual">Standard romrekkefølge (A1 - A12)</option>
+                        <option value="random">Helt tilfeldig trekning</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Format og runder forhåndsvisning -->
+                  <div class="p-3.5 rounded-xl bg-[#191E24] border border-[#384252] space-y-2">
+                    {#if newCupFormat === "lucky_loser_12"}
+                      <span class="text-xs font-bold text-[#9FE88D] uppercase tracking-wider block flex items-center gap-1.5">
+                        <Sparkles class="w-3.5 h-3.5" />
+                        <span>12 Lag: 6 Kamper i R1 + 2 Lucky Losers (4 Runder)</span>
+                      </span>
+                      <ul class="space-y-1 text-xs text-[#94A3B8]">
+                        <li>• <strong>Runde 1 (GW {newCupStartGw}):</strong> Alle 12 lag i ilden (6 kamper). Ingen har fri.</li>
+                        <li>• <strong>Kvartfinaler (GW {newCupStartGw + 1}):</strong> De 6 vinnerne + de 2 taperne med høyest romsnitt («Lucky Losers») avanserer til 4 kvartfinaler.</li>
+                        <li>• <strong>Semifinaler (GW {newCupStartGw + 2}):</strong> 4 lag kjemper om finaleplass.</li>
+                        <li>• <strong>Storfinale (GW {newCupStartGw + 3}):</strong> De 2 beste rommene kjemper om trofeet!</li>
+                      </ul>
+                    {:else if newCupFormat === "double_elimination_12"}
+                      <span class="text-xs font-bold text-[#F4C152] uppercase tracking-wider block flex items-center gap-1.5">
+                        <Swords class="w-3.5 h-3.5" />
+                        <span>Challonge Standard Double Elimination (7 Runder)</span>
+                      </span>
+                      <ul class="space-y-1 text-xs text-[#94A3B8]">
+                        <li>• <strong>Topp 4 Byes:</strong> Seeds 1–4 belønnes med frirunde i GW {newCupStartGw}.</li>
+                        <li>• <strong>Innledende runde:</strong> Seeds 5–12 spiller 4 kamper i GW {newCupStartGw}.</li>
+                        <li>• <strong>Taperbrakett:</strong> Taperne faller ned i Losers Bracket og får en ekstra sjanse.</li>
+                        <li>• <strong>Grand Final (GW {newCupStartGw + 6}):</strong> Vinner WB mot Vinner LB!</li>
+                      </ul>
+                    {:else if newCupFormat === "top8_single"}
+                      <span class="text-xs font-bold text-[#70E1F8] uppercase tracking-wider block flex items-center gap-1.5">
+                        <Trophy class="w-3.5 h-3.5" />
+                        <span>Topp 8 Sluttspill (3 Runder)</span>
+                      </span>
+                      <ul class="space-y-1 text-xs text-[#94A3B8]">
+                        <li>• <strong>Kvartfinaler (GW {newCupStartGw}):</strong> Kun de 8 beste rommene deltar (4 kamper).</li>
+                        <li>• <strong>Semifinaler (GW {newCupStartGw + 1}):</strong> De 4 vinnerne.</li>
+                        <li>• <strong>Storfinale (GW {newCupStartGw + 2}):</strong> Titteloppgjør!</li>
+                      </ul>
+                    {:else if newCupFormat === "group_stage_12"}
+                      <span class="text-xs font-bold text-[#F4C152] uppercase tracking-wider block flex items-center gap-1.5">
+                        <Crown class="w-3.5 h-3.5" />
+                        <span>Gruppespill (2 puljer à 6) + Sluttspill (5 Runder)</span>
+                      </span>
+                      <ul class="space-y-1 text-xs text-[#94A3B8]">
+                        <li>• <strong>Gruppespill (GW {newCupStartGw}–{newCupStartGw + 2}):</strong> Gruppe A og B spiller innledende kamper for puljepoeng.</li>
+                        <li>• <strong>Semifinaler (GW {newCupStartGw + 3}):</strong> Nr 1 i Gruppe A møter Nr 2 i Gruppe B, og Nr 1 i Gruppe B møter Nr 2 i Gruppe A.</li>
+                        <li>• <strong>Storfinale (GW {newCupStartGw + 4}):</strong> Vinnerne av semifinalene møtes til finale.</li>
+                      </ul>
+                    {/if}
+                  </div>
+
+                  <button
+                    onclick={handleCreateCupSubmit}
+                    disabled={isCreatingCup}
+                    class="w-full py-3 rounded-xl bg-[#9FE88D] hover:bg-[#8ee07b] text-[#16380c] font-bold text-sm transition-all shadow-md flex items-center justify-center gap-2"
+                  >
+                    <Swords class={`w-4 h-4 ${isCreatingCup ? "animate-spin" : ""}`} />
+                    <span>{isCreatingCup ? "Genererer cup..." : "Generer og Start Turnering"}</span>
+                  </button>
+                </div>
+              </div>
+            {:else}
+              <!-- Aktiv Cup Kontrollpanel -->
+              <div class="space-y-4">
+                <!-- Cup Oversikt Header -->
+                <div class="p-4 rounded-2xl bg-[#242B35] border border-[#384252] flex flex-wrap items-center justify-between gap-3 shadow-sm">
+                  <div class="flex items-center gap-3">
+                    <div class="p-2.5 rounded-xl bg-[#F4C152]/15 text-[#F4C152] border border-[#F4C152]/30">
+                      <Trophy class="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <h3 class="text-base font-bold text-white">{activeCup.name}</h3>
+                        <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-[#9FE88D]/15 text-[#9FE88D] border border-[#9FE88D]/30">
+                          {activeCup.status === "completed" ? "Fullført" : "Aktiv"}
+                        </span>
+                      </div>
+                      <p class="text-xs text-[#94A3B8]">
+                        Aktiv runde: <strong class="text-white">Runde {activeCup.currentRound}</strong> av {activeCup.totalRounds} • Format: Double Elimination
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <button
+                      onclick={() => handleCalculateCupRound(activeCup._id, activeCup.currentRound)}
+                      disabled={isCalculatingCupRound}
+                      class="px-4 py-2 rounded-xl bg-[#9FE88D] hover:bg-[#8ee07b] text-[#16380c] text-xs font-bold transition-all shadow-md flex items-center gap-2"
+                    >
+                      <RefreshCw class={`w-4 h-4 ${isCalculatingCupRound ? "animate-spin" : ""}`} />
+                      <span>{isCalculatingCupRound ? "Beregner..." : `Beregn Runde ${activeCup.currentRound}`}</span>
+                    </button>
+
+                    <button
+                      onclick={() => promptDeleteCup(activeCup._id)}
+                      class="px-3 py-2 rounded-xl bg-[#FB6F84]/15 hover:bg-[#FB6F84]/25 text-[#FB6F84] border border-[#FB6F84]/30 text-xs font-bold transition-colors flex items-center gap-1.5"
+                    >
+                      <Trash2 class="w-3.5 h-3.5" />
+                      <span>Slett Cup</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Redigeringsmodal / Boks for valgt kamp -->
+                {#if selectedMatchForEdit}
+                  <div class="p-4 rounded-2xl bg-[#191E24] border border-[#F4C152]/40 space-y-3 shadow-md">
+                    <div class="flex items-center justify-between pb-2 border-b border-[#384252]">
+                      <div class="flex items-center gap-2">
+                        <Shield class="w-4 h-4 text-[#F4C152]" />
+                        <h4 class="text-xs font-bold uppercase text-white">
+                          Rediger Kamp: {selectedMatchForEdit.roundTitle} (GW {selectedMatchForEdit.gameweek})
+                        </h4>
+                      </div>
+                      <button
+                        onclick={() => (selectedMatchForEdit = null)}
+                        class="text-[#94A3B8] hover:text-white"
+                      >
+                        <X class="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                      <div>
+                        <label for="edit-match-r1" class="block font-bold text-white mb-1">Rom 1:</label>
+                        <select
+                          id="edit-match-r1"
+                          bind:value={editMatchRoom1Id}
+                          class="w-full px-3 py-2 rounded-xl bg-[#242B35] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+                        >
+                          <option value="">-- Ingen / Avventer --</option>
+                          {#each rooms as r}
+                            <option value={r._id}>{r.name}</option>
+                          {/each}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label for="edit-match-r2" class="block font-bold text-white mb-1">Rom 2:</label>
+                        <select
+                          id="edit-match-r2"
+                          bind:value={editMatchRoom2Id}
+                          class="w-full px-3 py-2 rounded-xl bg-[#242B35] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+                        >
+                          <option value="">-- Ingen / Avventer --</option>
+                          {#each rooms as r}
+                            <option value={r._id}>{r.name}</option>
+                          {/each}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label for="edit-match-winner" class="block font-bold text-[#F4C152] mb-1">Sett Vinner:</label>
+                        <select
+                          id="edit-match-winner"
+                          bind:value={editMatchWinnerId}
+                          class="w-full px-3 py-2 rounded-xl bg-[#242B35] border border-[#F4C152]/50 text-white focus:border-[#F4C152] focus:outline-none"
+                        >
+                          <option value="">-- Ingen vinner kåret ennå --</option>
+                          {#if editMatchRoom1Id}
+                            <option value={editMatchRoom1Id}>
+                              {rooms.find((r) => r._id === editMatchRoom1Id)?.name || "Rom 1"} (Vinner)
+                            </option>
+                          {/if}
+                          {#if editMatchRoom2Id}
+                            <option value={editMatchRoom2Id}>
+                              {rooms.find((r) => r._id === editMatchRoom2Id)?.name || "Rom 2"} (Vinner)
+                            </option>
+                          {/if}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label for="edit-match-score1" class="block font-bold text-white mb-1">Score Rom 1 (Snitt):</label>
+                        <input
+                          id="edit-match-score1"
+                          type="number"
+                          step="0.1"
+                          bind:value={editMatchScore1}
+                          placeholder="f.eks. 68.5"
+                          class="w-full px-3 py-2 rounded-xl bg-[#242B35] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label for="edit-match-score2" class="block font-bold text-white mb-1">Score Rom 2 (Snitt):</label>
+                        <input
+                          id="edit-match-score2"
+                          type="number"
+                          step="0.1"
+                          bind:value={editMatchScore2}
+                          placeholder="f.eks. 72.0"
+                          class="w-full px-3 py-2 rounded-xl bg-[#242B35] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2 pt-2 border-t border-[#384252]">
+                      <button
+                        onclick={() => (selectedMatchForEdit = null)}
+                        class="px-3 py-1.5 rounded-xl bg-[#242B35] text-[#94A3B8] hover:text-white text-xs border border-[#384252]"
+                      >
+                        Avbryt
+                      </button>
+                      <button
+                        onclick={handleSaveEditMatch}
+                        class="px-4 py-1.5 rounded-xl bg-[#9FE88D] hover:bg-[#8ee07b] text-[#16380c] font-bold text-xs transition-colors"
+                      >
+                        Lagre Kampendringer
+                      </button>
+                    </div>
+                  </div>
+                {/if}
+
+                <!-- Liste over alle kamper i cupen -->
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-bold text-[#94A3B8] uppercase tracking-wider">
+                      Alle Kamper i Cupen ({activeCup.matches?.length || 0})
+                    </h4>
+                    <span class="text-[11px] text-[#94A3B8]">
+                      Trykk "Rediger" for manuell overstyring
+                    </span>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[420px] overflow-y-auto custom-scrollbar pr-1">
+                    {#each activeCup.matches || [] as match}
+                      <div class="p-3 rounded-xl bg-[#242B35] border border-[#384252] space-y-2 text-xs">
+                        <div class="flex items-center justify-between pb-1.5 border-b border-[#384252]/60">
+                          <span class="font-bold text-white text-[11px]">
+                            {match.roundTitle} (Runde {match.roundNumber})
+                          </span>
+                          <div class="flex items-center gap-2">
+                            <span class="font-mono text-[10px] text-[#F4C152] bg-[#191E24] px-1.5 py-0.5 rounded border border-[#384252]">
+                              GW {match.gameweek}
+                            </span>
+                            <span
+                              class={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                match.status === "completed"
+                                  ? "text-[#9FE88D] bg-[#9FE88D]/15"
+                                  : "text-[#94A3B8] bg-[#191E24]"
+                              }`}
+                            >
+                              {match.status === "completed" ? "Ferdig" : "Kommende"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                          <div class="space-y-1 min-w-0">
+                            <div class={`flex items-center gap-1.5 truncate ${match.winnerRoomId && match.room1Id === match.winnerRoomId ? "font-bold text-[#9FE88D]" : "text-white"}`}>
+                              <span class="w-2 h-2 rounded-full" style={`background-color: ${match.room1?.accentColor || "#1eb854"}`}></span>
+                              <span>{match.room1?.name || "TBD"}</span>
+                              {#if match.room1Score !== undefined}
+                                <span class="font-mono text-[11px] text-[#94A3B8]">({match.room1Score}p)</span>
+                              {/if}
+                            </div>
+
+                            <div class={`flex items-center gap-1.5 truncate ${match.winnerRoomId && match.room2Id === match.winnerRoomId ? "font-bold text-[#9FE88D]" : "text-white"}`}>
+                              <span class="w-2 h-2 rounded-full" style={`background-color: ${match.room2?.accentColor || "#38bdf8"}`}></span>
+                              <span>{match.room2?.name || "TBD"}</span>
+                              {#if match.room2Score !== undefined}
+                                <span class="font-mono text-[11px] text-[#94A3B8]">({match.room2Score}p)</span>
+                              {/if}
+                            </div>
+                          </div>
+
+                          <button
+                            onclick={() => startEditingMatch(match)}
+                            class="px-2.5 py-1 rounded-lg bg-[#191E24] hover:bg-[#384252] text-[#F4C152] border border-[#384252] text-[11px] font-bold transition-colors shrink-0"
+                          >
+                            Rediger
+                          </button>
+                        </div>
+                      </div>
+                    {/each}
+                  </div>
+                </div>
+              </div>
+            {/if}
           </div>
         {/if}
       {/if}
@@ -1891,7 +2395,11 @@
           Avbryt
         </button>
         <button
-          onclick={confirmDialog.onConfirm}
+          onclick={() => {
+            const fn = confirmDialog.onConfirm;
+            confirmDialog.show = false;
+            if (fn) fn();
+          }}
           class="px-5 py-2 rounded-xl bg-[#FB6F84] hover:bg-[#fa5b73] text-white font-bold text-xs transition-colors"
         >
           {confirmDialog.confirmText}

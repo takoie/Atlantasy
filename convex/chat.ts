@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { requireUser } from "./security";
 
 /**
  * Henter meldinger for enten felleskanalen 'banter' eller et spesifikt rom
@@ -29,13 +30,12 @@ export const getMessages = query({
     }
 
     const messages = await messagesQuery;
-    // Returner i kronologisk rekkefølge for chat-visning (eldste øverst, nyeste nederst)
     return messages.reverse();
   },
 });
 
 /**
- * Sender en ny chat-melding
+ * Sender en ny chat-melding (Server-verifisert avsenderidentitet)
  */
 export const sendMessage = mutation({
   args: {
@@ -49,18 +49,25 @@ export const sendMessage = mutation({
     type: v.optional(v.string()), // "chat" | "announcement" | "fpl_bot" | "banter"
   },
   handler: async (ctx, args) => {
-    if (!args.content.trim()) {
+    const cleanContent = args.content.trim();
+    if (!cleanContent) {
       throw new Error("Meldingen kan ikke være tom.");
     }
 
+    // Slå opp den faktiske brukeren for å forhindre rolle- eller navneforfalskning
+    const user = await ctx.db.get(args.senderId);
+    const resolvedName = user ? user.username : args.senderName.trim();
+    const resolvedRole = user ? user.role : (args.senderRole === "admin" ? "user" : args.senderRole);
+    const resolvedAvatar = user?.avatar || args.senderAvatar;
+
     const messageId = await ctx.db.insert("messages", {
       senderId: args.senderId,
-      senderName: args.senderName.trim(),
-      senderRole: args.senderRole || "user",
-      senderAvatar: args.senderAvatar,
+      senderName: resolvedName,
+      senderRole: resolvedRole,
+      senderAvatar: resolvedAvatar,
       channel: args.channel,
       roomId: args.roomId,
-      content: args.content.trim(),
+      content: cleanContent,
       type: args.type ?? "chat",
       createdAt: Date.now(),
     });
@@ -81,14 +88,17 @@ export const deleteMessage = mutation({
     const message = await ctx.db.get(args.messageId);
     if (!message) return;
 
-    const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("Bruker ikke funnet.");
+    const user = await requireUser(ctx, args.userId);
 
-    if (user.role !== "admin" && message.senderId !== user._id) {
+    const isAuthor = message.senderId === user._id;
+    const isAdmin = user.role === "admin";
+
+    if (!isAuthor && !isAdmin) {
       throw new Error("Du har ikke tillatelse til å slette denne meldingen.");
     }
 
     await ctx.db.delete(args.messageId);
+    return { success: true };
   },
 });
 
@@ -124,4 +134,3 @@ export const getUnreadCount = query({
     return banterMessages.length + roomMessagesCount;
   },
 });
-

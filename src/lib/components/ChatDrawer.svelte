@@ -86,9 +86,9 @@
         </div>
         <div>
           <h2 class="text-base font-bold text-white flex items-center gap-2">
-            Sanntids-Chat & Liga-Banter
+            Banter
           </h2>
-          <p class="text-xs text-[#94A3B8]">Diskuter runden, del reaksjoner og snakk med romkameratene dine</p>
+          <p class="text-xs text-[#94A3B8]">Diskuter runden, trekk fram egne prestasjoner og gi oppløftende kommentarer til de som trenger det</p>
         </div>
       </div>
 
@@ -103,7 +103,7 @@
           }`}
         >
           <Users class="w-3.5 h-3.5" />
-          <span>Felles Banter</span>
+          <span>Banter</span>
         </button>
 
         <button
@@ -209,10 +209,12 @@
 
 {:else if isOpen}
   <!-- Slide-over Drawer Mode -->
-  <div
+  <button
+    type="button"
+    aria-label="Lukk chat"
     onclick={onClose}
-    class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 transition-opacity duration-200"
-  ></div>
+    class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 transition-opacity duration-200 cursor-default border-0"
+  ></button>
 
   <aside
     class="fixed top-0 right-0 h-full w-full max-w-md bg-[#2A303C] border-l border-[#384252] shadow-2xl z-50 flex flex-col justify-between select-none animate-in slide-in-from-right duration-200 text-[#E2E8F0] font-sans"
@@ -224,9 +226,9 @@
         </div>
         <div>
           <h2 class="text-sm font-bold text-white flex items-center gap-2">
-            Sanntids-Chat & Banter
+            Banter
           </h2>
-          <p class="text-[11px] text-[#94A3B8]">Diskuter runden og del banter</p>
+          <p class="text-[11px] text-[#94A3B8]">Diskuter runden, trekk fram egne prestasjoner og gi oppløftende kommentarer til de som trenger det</p>
         </div>
       </div>
 
@@ -249,7 +251,7 @@
           }`}
         >
           <Users class="w-3.5 h-3.5" />
-          <span>Banter (Felles)</span>
+          <span>Banter</span>
         </button>
 
         <button

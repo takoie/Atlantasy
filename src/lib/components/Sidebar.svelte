@@ -2,6 +2,7 @@
   import {
     Trophy,
     Users,
+    Swords,
     Sparkles,
     MessageSquare,
     Crown,
@@ -24,6 +25,7 @@
     onSelectView = (_view: string) => {},
     onOpenAdmin = () => {},
     onRefreshFpl = () => {},
+    onOpenProfile = (_entryId?: number | null) => {},
   }: {
     activeView?: string;
     currentGw?: number;
@@ -36,6 +38,7 @@
     onSelectView?: (view: string) => void;
     onOpenAdmin?: () => void;
     onRefreshFpl?: () => void;
+    onOpenProfile?: (entryId?: number | null) => void;
   } = $props();
 
   // Norsk formatering av fristtidspunkt (f.eks. "Fredag 19:30")
@@ -100,19 +103,27 @@
   const navItems = [
     {
       id: "leaderboard",
-      label: "Rom-tabell",
-      sublabel: "A1–A12 & Topp 2",
+      label: "Arbeidsrom",
+      sublabel: "Rom vs. rom",
       icon: Trophy,
       color: "text-[#9FE88D]",
       badge: null,
     },
     {
       id: "individual",
-      label: "Individuell",
+      label: "Alle mot alle",
       sublabel: "Alle FPL-spillere",
       icon: Users,
       color: "text-[#70E1F8]",
       badge: null,
+    },
+    {
+      id: "cup",
+      label: "Cup",
+      sublabel: "",
+      icon: Swords,
+      color: "text-[#F4C152]",
+      badge: "Cup",
     },
     {
       id: "insights",
@@ -124,7 +135,7 @@
     },
     {
       id: "chat",
-      label: "Liga-Chat",
+      label: "Chat",
       sublabel: "Banter & romprat",
       icon: MessageSquare,
       color: "text-[#9FE88D]",
@@ -140,7 +151,7 @@
     },
     {
       id: "news",
-      label: "Nyheter & Avis",
+      label: "Nyheter",
       sublabel: "Rapporter & runder",
       icon: Newspaper,
       color: "text-[#F471B5]",
@@ -187,8 +198,8 @@
 
     <!-- Menyliste (DaisyUI Dim Design) -->
     <nav class="space-y-1.5">
-      <span class="text-xs uppercase font-bold text-[#94A3B8] px-2.5 tracking-wider">
-        Hovedmenyer
+      <span class="text-xs uppercase font-bold text-[#94A3B8] px-2.5 tracking-wider block text-center">
+        Meny
       </span>
 
       <div class="space-y-1.5 pt-1">
@@ -217,9 +228,11 @@
                 <span class="block font-bold text-sm truncate leading-tight">
                   {item.label}
                 </span>
-                <span class="text-xs text-[#94A3B8] block truncate leading-tight mt-0.5">
-                  {item.sublabel}
-                </span>
+                {#if item.sublabel}
+                  <span class="text-xs text-[#94A3B8] block truncate leading-tight mt-0.5">
+                    {item.sublabel}
+                  </span>
+                {/if}
               </div>
             </div>
 
@@ -253,7 +266,7 @@
   <!-- Bunnseksjon: Admin, Synkronisering & Brukerstatus -->
   <div class="p-4 border-t border-[#384252] space-y-3 bg-[#191E24]">
     <!-- Handlinger -->
-    <div class="grid grid-cols-2 gap-2">
+    <div class={`grid ${currentUser?.role === "admin" ? "grid-cols-2" : "grid-cols-1"} gap-2`}>
       <button
         onclick={onRefreshFpl}
         disabled={isSyncing}
@@ -264,41 +277,48 @@
         <span>{isSyncing ? "Synker..." : "Synk FPL"}</span>
       </button>
 
-      <button
-        onclick={onOpenAdmin}
-        class="px-3 py-2.5 rounded-xl bg-[#2A303C] hover:bg-[#384252] text-[#E2E8F0] border border-[#384252] text-xs font-bold transition-colors flex items-center justify-center gap-2"
-        title="Åpne administratorpanelet"
-      >
-        <Shield class="w-4 h-4 text-[#F4C152]" />
-        <span>Admin</span>
-      </button>
+      {#if currentUser?.role === "admin"}
+        <button
+          onclick={onOpenAdmin}
+          class="px-3 py-2.5 rounded-xl bg-[#2A303C] hover:bg-[#384252] text-[#E2E8F0] border border-[#384252] text-xs font-bold transition-colors flex items-center justify-center gap-2"
+          title="Åpne administratorpanelet"
+        >
+          <Shield class="w-4 h-4 text-[#F4C152]" />
+          <span>Admin</span>
+        </button>
+      {/if}
     </div>
 
-    <!-- Brukerprofil & Sanntidsstatus -->
-    <div class="p-3 rounded-xl bg-[#2A303C] border border-[#384252] flex items-center justify-between">
+    <!-- Brukerprofil & Sanntidsstatus (Snarvei til Min Profil) -->
+    <button
+      type="button"
+      onclick={() => onOpenProfile(currentUser?.fplEntryId)}
+      title="Åpne min profil, troféer og avatar-innstillinger"
+      class="w-full text-left p-3 rounded-xl bg-[#2A303C] hover:bg-[#323947] border border-[#384252] hover:border-[#9FE88D]/60 transition-all flex items-center justify-between group shadow-sm focus:outline-none focus:ring-1 focus:ring-[#9FE88D]"
+    >
       <div class="flex items-center gap-2.5 min-w-0">
         {#if currentUser?.avatar}
           <img
             src={currentUser.avatar}
             alt="Avatar"
-            class="w-8 h-8 rounded-xl border border-[#384252] object-cover shrink-0"
+            class="w-8 h-8 rounded-xl border border-[#384252] group-hover:border-[#9FE88D] object-contain bg-[#191E24] p-0.5 shrink-0 transition-colors"
           />
         {:else}
-          <div class="w-8 h-8 rounded-xl bg-[#9FE88D] text-[#16380c] font-black flex items-center justify-center text-sm shrink-0">
+          <div class="w-8 h-8 rounded-xl bg-[#9FE88D] text-[#16380c] font-black flex items-center justify-center text-sm shrink-0 shadow-sm">
             {currentUser?.username?.charAt(0) || "U"}
           </div>
         {/if}
         <div class="min-w-0">
-          <p class="text-sm font-bold text-white truncate leading-tight">
+          <p class="text-sm font-bold text-white group-hover:text-[#9FE88D] transition-colors truncate leading-tight">
             {currentUser?.username || "Gjest"}
           </p>
           <p class="text-xs text-[#94A3B8] truncate leading-tight mt-0.5">
-            {currentUser?.role === "admin" ? "Administrator" : (currentUser?.fplTeamName || "Deltaker")}
+            {currentUser?.role === "admin" ? "Administrator" : (currentUser?.fplTeamName || "Se min profil")}
           </p>
         </div>
       </div>
 
-      <div class="flex items-center gap-1">
+      <div class="flex items-center gap-1.5 shrink-0">
         <span
           class={`w-2.5 h-2.5 rounded-full ${
             isConvexConnected ? "bg-[#9FE88D]" : "bg-[#FB6F84]"
@@ -306,6 +326,6 @@
           title={isConvexConnected ? "Tilkoblet Convex sanntidsdatabase" : "Frakoblet"}
         ></span>
       </div>
-    </div>
+    </button>
   </div>
 </aside>

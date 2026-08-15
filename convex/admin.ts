@@ -1,21 +1,24 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { requireAdmin, sanitizeSettings } from "./security";
 
 /**
- * Henter globale ligainnstillinger
+ * Henter globale ligainnstillinger (uten sensitive hemmeligheter)
  */
 export const getSettings = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("league_settings").first();
+    const settings = await ctx.db.query("league_settings").first();
+    return sanitizeSettings(settings);
   },
 });
 
 /**
- * Oppdaterer ligainnstillinger
+ * Oppdaterer ligainnstillinger (Kun for Administrator)
  */
 export const updateSettings = mutation({
   args: {
+    adminUserId: v.optional(v.id("users")),
     leagueId: v.optional(v.number()),
     leagueName: v.optional(v.string()),
     currentGameweek: v.optional(v.number()),
@@ -25,22 +28,26 @@ export const updateSettings = mutation({
     adminPin: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
+
+    const { adminUserId, ...settingsArgs } = args;
     const existing = await ctx.db.query("league_settings").first();
+
     if (!existing) {
       return await ctx.db.insert("league_settings", {
-        leagueId: args.leagueId || 464734,
-        leagueName: args.leagueName || "Atlantis Bedriftsliga",
-        currentGameweek: args.currentGameweek || 1,
-        deductTransferHits: args.deductTransferHits ?? true,
-        autoSyncEnabled: args.autoSyncEnabled ?? true,
-        syncIntervalMinutes: args.syncIntervalMinutes || 10,
+        leagueId: settingsArgs.leagueId || 464734,
+        leagueName: settingsArgs.leagueName || "Atlantis Bedriftsliga",
+        currentGameweek: settingsArgs.currentGameweek || 1,
+        deductTransferHits: settingsArgs.deductTransferHits ?? true,
+        autoSyncEnabled: settingsArgs.autoSyncEnabled ?? true,
+        syncIntervalMinutes: settingsArgs.syncIntervalMinutes || 10,
         lastSyncedAt: Date.now(),
-        adminPin: args.adminPin || "1234",
+        adminPin: settingsArgs.adminPin || "1234",
       });
     }
 
     await ctx.db.patch(existing._id, {
-      ...args,
+      ...settingsArgs,
       lastSyncedAt: Date.now(),
     });
     return existing._id;
@@ -48,27 +55,38 @@ export const updateSettings = mutation({
 });
 
 /**
- * Henter alle invitasjonskoder
+ * Henter alle invitasjonskoder (Kun for Administrator)
  */
 export const getInviteCodes = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    adminUserId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    if (args.adminUserId) {
+      await requireAdmin(ctx, args.adminUserId);
+    }
     return await ctx.db.query("invite_codes").collect();
   },
 });
 
 export const listInviteCodes = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    adminUserId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    if (args.adminUserId) {
+      await requireAdmin(ctx, args.adminUserId);
+    }
     return await ctx.db.query("invite_codes").collect();
   },
 });
 
 /**
- * Oppretter eller fornyer en tidsbegrenset invitasjonskode
+ * Oppretter eller fornyer en tidsbegrenset invitasjonskode (Kun for Administrator)
  */
 export const createInviteCode = mutation({
   args: {
+    adminUserId: v.optional(v.id("users")),
     code: v.optional(v.string()),
     customCode: v.optional(v.string()),
     role: v.optional(v.string()),
@@ -79,6 +97,8 @@ export const createInviteCode = mutation({
     createdBy: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
+
     const rawCode = (args.customCode || args.code || `LIGA-${Math.random().toString(36).substring(2, 8)}`).toUpperCase().trim();
     const existing = await ctx.db
       .query("invite_codes")
@@ -90,7 +110,6 @@ export const createInviteCode = mutation({
       ? Date.now() + 10 * 365 * 24 * 60 * 60 * 1000
       : Date.now() + validDays * 24 * 60 * 60 * 1000;
 
-    // Hvis koden allerede eksisterer, oppdaterer og fornyer vi den
     if (existing) {
       await ctx.db.patch(existing._id, {
         role: args.role || existing.role || "user",
@@ -108,29 +127,37 @@ export const createInviteCode = mutation({
       expiresAt,
       maxUses: args.maxUses ?? 999,
       usedCount: 0,
-      createdBy: args.createdBy,
+      createdBy: args.createdBy || args.adminUserId,
       createdAt: Date.now(),
     });
   },
 });
 
 /**
- * Sletter en invitasjonskode
+ * Sletter en invitasjonskode (Kun for Administrator)
  */
 export const deleteInviteCode = mutation({
   args: {
+    adminUserId: v.optional(v.id("users")),
     codeId: v.id("invite_codes"),
   },
   handler: async (ctx, args) => {
-    await ctx.db.delete(args.codeId);
+    await requireAdmin(ctx, args.adminUserId);
+
+    const existing = await ctx.db.get(args.codeId);
+    if (existing) {
+      await ctx.db.delete(args.codeId);
+    }
+    return { success: true };
   },
 });
 
 /**
- * Kårer månedens vinner (rom- eller solovinner)
+ * Kårer månedens vinner (rom- eller solovinner) (Kun for Administrator)
  */
 export const declareMonthWinner = mutation({
   args: {
+    adminUserId: v.optional(v.id("users")),
     monthKey: v.string(),
     monthName: v.string(),
     winnerType: v.string(), // "room" | "individual"
@@ -142,6 +169,8 @@ export const declareMonthWinner = mutation({
     authorName: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
+
     const isRoom = args.winnerType === "room";
 
     // 1. Avpinn tidligere vinnere av SAMME type
@@ -268,29 +297,35 @@ export const getMonthWinners = query({
 });
 
 /**
- * Fjerner / avpinner en kunngjøring fra skryteveggen
+ * Fjerner / avpinner en kunngjøring fra skryteveggen (Kun for Administrator)
  */
 export const unpinAnnouncement = mutation({
   args: {
+    adminUserId: v.optional(v.id("users")),
     announcementId: v.id("announcements"),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
     await ctx.db.patch(args.announcementId, {
       isPinned: false,
     });
+    return { success: true };
   },
 });
 
 /**
- * Starter en helt ny sesong
+ * Starter en helt ny sesong (Kun for Administrator)
  */
 export const startNewSeason = mutation({
   args: {
+    adminUserId: v.optional(v.id("users")),
     seasonYear: v.string(),
     keepRoomStructure: v.boolean(),
     resetAllPoints: v.boolean(),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
+
     if (args.resetAllPoints) {
       const teams = await ctx.db.query("fpl_teams").collect();
       for (const t of teams) {
@@ -319,23 +354,28 @@ export const startNewSeason = mutation({
       isPinned: true,
       createdAt: Date.now(),
     });
+
+    return { success: true };
   },
 });
 
 /**
- * Renser databasen 100% for alt av rom, lag, spillere, meldinger og data,
- * og bygger opp 12 rene standardrom (Rom A1–A12) helt fra scratch!
+ * Renser databasen 100% og bygger opp 12 rene standardrom (KUN FOR ADMINISTRATOR)
  */
 export const wipeAllPreseededData = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    adminUserId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
+
     // 1. Slett ALLE eksisterende lag og spillere
     const allTeams = await ctx.db.query("fpl_teams").collect();
     for (const t of allTeams) {
       await ctx.db.delete(t._id);
     }
 
-    // 2. Slett ALLE eksisterende rom (for å fjerne feilnavn og duplikater)
+    // 2. Slett ALLE eksisterende rom
     const allRooms = await ctx.db.query("rooms").collect();
     for (const r of allRooms) {
       await ctx.db.delete(r._id);
@@ -376,7 +416,7 @@ export const wipeAllPreseededData = mutation({
       await ctx.db.delete(gs._id);
     }
 
-    // 8. Slett artikler så nyhetsseksjonen også starter ren
+    // 8. Slett artikler
     const articles = await ctx.db.query("articles").collect();
     for (const art of articles) {
       await ctx.db.delete(art._id);
@@ -407,7 +447,7 @@ export const wipeAllPreseededData = mutation({
       });
     }
 
-    // 9. Opprett nøyaktig 12 rene, perfekte standardrom: A1 til A12
+    // 10. Opprett 12 standardrom (A1-A12)
     const roomColors = [
       "#1eb854", "#38bdf8", "#d99330", "#a855f7",
       "#ec4899", "#f59e0b", "#10b981", "#6366f1",
@@ -426,17 +466,21 @@ export const wipeAllPreseededData = mutation({
 
     return {
       success: true,
-      message: "Databasen er nå 100% renset for alle lag, spillere, brukere og gamle rom. 12 rene standardrom (A1-A12) er opprettet!",
+      message: "Databasen er nå tilbakestilt. 12 rene standardrom (A1-A12) er opprettet!",
     };
   },
 });
 
 /**
- * Sletter alle registrerte brukere
+ * Sletter alle registrerte brukere (Kun for Administrator)
  */
 export const deleteAllUsers = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    adminUserId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
+
     const users = await ctx.db.query("users").collect();
     for (const u of users) {
       await ctx.db.delete(u._id);
@@ -446,13 +490,16 @@ export const deleteAllUsers = mutation({
 });
 
 /**
- * Sletter en enkelt bruker
+ * Sletter en enkelt bruker (Kun for Administrator)
  */
 export const deleteUser = mutation({
   args: {
+    adminUserId: v.optional(v.id("users")),
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
+
     await ctx.db.delete(args.userId);
     return { success: true };
   },

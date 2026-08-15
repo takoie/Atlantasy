@@ -26,7 +26,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; connect-src 'self' https://*.convex.cloud wss://*.convex.cloud http://127.0.0.1:* ws://127.0.0.1:* http://localhost:* ws://localhost:* https://fantasy.premierleague.com; img-src 'self' data: blob: https://*.convex.cloud https://api.dicebear.com https://resources.premierleague.com https://images.unsplash.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; media-src 'self' https://*.convex.cloud;"
     }
   },
   "bundle": {

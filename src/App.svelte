@@ -11,6 +11,7 @@
   import WelcomeOnboarding from "$lib/components/WelcomeOnboarding.svelte";
   import NewsSection from "$lib/components/NewsSection.svelte";
   import TeamProfileModal from "$lib/components/TeamProfileModal.svelte";
+  import CupView from "$lib/components/CupView.svelte";
   import Sidebar from "$lib/components/Sidebar.svelte";
 
   import { useQuery, useMutation, useAction } from "$lib/convex.svelte";
@@ -63,6 +64,7 @@
   const seedDataMutation = useMutation(api.fpl.seedDefaultData);
   const registerMutation = useMutation(api.auth.registerWithInvite);
   const loginOrRegisterMutation = useMutation(api.auth.loginOrRegister);
+  const validateStep1Mutation = useMutation(api.auth.validateRegistrationStep1);
   const setUserRoleMutation = useMutation(api.auth.setUserRole);
   const batchAssignMutation = useMutation(api.rooms.batchSaveRoomAssignments);
   const clearAllAssignmentsMutation = useMutation(api.rooms.clearAllRoomAssignments);
@@ -267,6 +269,7 @@
       {users}
       onComplete={handleOnboardingComplete}
       onLoginOrRegister={(data) => loginOrRegisterMutation.mutate(data)}
+      onValidateStep1={(data) => validateStep1Mutation.mutate(data)}
     />
   {/if}
 
@@ -297,8 +300,18 @@
         activeView = view;
         selectedRoomId = null;
       }}
-      onOpenAdmin={() => (isAdminModalOpen = true)}
+      onOpenAdmin={() => {
+        if (currentUser?.role === "admin") {
+          isAdminModalOpen = true;
+        }
+      }}
       onRefreshFpl={handleRefreshFpl}
+      onOpenProfile={(entryId) => {
+        const id = entryId ?? currentUser?.fplEntryId;
+        if (id) {
+          handleOpenProfile(id);
+        }
+      }}
     />
 
     <!-- Hovedinnholdsområde for valgt modul/side -->
@@ -320,18 +333,16 @@
           />
         {/if}
 
-        <div class="flex-1 flex flex-col min-h-0 bg-[#2A303C] rounded-2xl border border-[#384252] p-3.5 sm:p-4 shadow-sm overflow-hidden">
-          <Leaderboard
-            {leaderboard}
-            {selectedRoomId}
-            currentGw={settings?.currentGameweek ?? 1}
-            deductHits={settings?.deductTransferHits ?? true}
-            sortBy={activeSort}
-            onSelectSort={(s: string) => (activeSort = s)}
-            onOpenRoomModal={handleOpenRoomModal}
-            onOpenProfile={handleOpenProfile}
-          />
-        </div>
+        <Leaderboard
+          {leaderboard}
+          {selectedRoomId}
+          currentGw={settings?.currentGameweek ?? 1}
+          deductHits={settings?.deductTransferHits ?? true}
+          sortBy={activeSort}
+          onSelectSort={(s: string) => (activeSort = s)}
+          onOpenRoomModal={handleOpenRoomModal}
+          onOpenProfile={handleOpenProfile}
+        />
 
       <!-- 2. Individuell Tabell (Alle FPL-spillere) -->
       {:else if activeView === "individual"}
@@ -344,7 +355,15 @@
           onOpenProfile={handleOpenProfile}
         />
 
-      <!-- 3. Ligainnsikt & Høydepunkter (Fullskjerm / Dedikert Side) -->
+      <!-- 3. Cup & Sluttspill (Double Elimination) -->
+      {:else if activeView === "cup"}
+        <CupView
+          {currentUser}
+          onOpenAdmin={() => (isAdminModalOpen = true)}
+          onOpenProfile={handleOpenProfile}
+        />
+
+      <!-- 4. Ligainnsikt & Høydepunkter (Fullskjerm / Dedikert Side) -->
       {:else if activeView === "insights"}
         <LeagueStatsPanel
           isFullPage={true}
@@ -374,15 +393,21 @@
           {currentUser}
           onBack={() => (activeView = "leaderboard")}
           onCreateArticle={(data) => {
-            createArticleMutation.mutate(data);
+            createArticleMutation.mutate({
+              ...data,
+              authorId: currentUser?._id,
+            });
           }}
           onUpdateArticle={(data) => {
-            updateArticleMutation.mutate(data);
+            updateArticleMutation.mutate({
+              ...data,
+              userId: currentUser?._id,
+            });
           }}
-          onLikeArticle={(id) => likeArticleMutation.mutate({ articleId: id as any })}
-          onDeleteArticle={(id) => deleteArticleMutation.mutate({ articleId: id as any })}
-          onToggleArchive={(id) => toggleArchiveArticleMutation.mutate({ articleId: id as any })}
-          onTogglePin={(id) => togglePinArticleMutation.mutate({ articleId: id as any })}
+          onLikeArticle={(id) => likeArticleMutation.mutate({ articleId: id as any, userId: currentUser?._id || currentUser?.username })}
+          onDeleteArticle={(id) => deleteArticleMutation.mutate({ articleId: id as any, userId: currentUser?._id })}
+          onToggleArchive={(id) => toggleArchiveArticleMutation.mutate({ articleId: id as any, userId: currentUser?._id })}
+          onTogglePin={(id) => togglePinArticleMutation.mutate({ articleId: id as any, userId: currentUser?._id })}
         />
 
       <!-- 6. Skrytevegg & Hedersvegg (Full Side) -->
@@ -566,34 +591,36 @@
   <TeamProfileModal
     entryId={selectedProfileEntryId}
     isOpen={selectedProfileEntryId !== null}
+    {currentUser}
     onClose={() => (selectedProfileEntryId = null)}
   />
 
   <AdminModal
-    isOpen={isAdminModalOpen}
+    isOpen={isAdminModalOpen && currentUser?.role === "admin"}
+    {currentUser}
     {settings}
     {rooms}
     {inviteCodes}
     {users}
     monthWinnersData={monthWinners}
     onClose={() => (isAdminModalOpen = false)}
-    onUpdateSettings={(s) => updateSettingsMutation.mutate(s)}
-    onCreateInviteCode={(c) => createInviteMutation.mutate(c)}
-    onDeclareWinner={(w) => declareWinnerMutation.mutate(w)}
-    onUnpinWinner={(id) => unpinAnnouncementMutation.mutate({ announcementId: id as any })}
-    onBatchSaveAssignments={(assignments, clearUnassigned) => batchAssignMutation.mutate({ assignments, clearUnassigned })}
-    onClearAllAssignments={() => clearAllAssignmentsMutation.mutate({})}
-    onCreateRoom={(params) => createRoomMutation.mutate(params)}
-    onDeleteRoom={(roomId) => deleteRoomMutation.mutate({ roomId: roomId as any })}
-    onUpdateRoomName={(roomId, newName) => updateRoomMutation.mutate({ roomId: roomId as any, name: newName })}
-    onUpdateTeamName={(entryId, newTeamName) => updateTeamNameMutation.mutate({ entryId, newTeamName })}
-    onStartNewSeason={(params) => startNewSeasonMutation.mutate(params)}
-    onSetUserRole={(uId, role) => setUserRoleMutation.mutate({ userId: uId as any, role })}
+    onUpdateSettings={(s) => updateSettingsMutation.mutate({ ...s, adminUserId: currentUser?._id })}
+    onCreateInviteCode={(c) => createInviteMutation.mutate({ ...c, adminUserId: currentUser?._id })}
+    onDeclareWinner={(w) => declareWinnerMutation.mutate({ ...w, adminUserId: currentUser?._id })}
+    onUnpinWinner={(id) => unpinAnnouncementMutation.mutate({ announcementId: id as any, adminUserId: currentUser?._id })}
+    onBatchSaveAssignments={(assignments, clearUnassigned) => batchAssignMutation.mutate({ assignments, clearUnassigned, adminUserId: currentUser?._id })}
+    onClearAllAssignments={() => clearAllAssignmentsMutation.mutate({ adminUserId: currentUser?._id })}
+    onCreateRoom={(params) => createRoomMutation.mutate({ ...params, adminUserId: currentUser?._id })}
+    onDeleteRoom={(roomId) => deleteRoomMutation.mutate({ roomId: roomId as any, adminUserId: currentUser?._id })}
+    onUpdateRoomName={(roomId, newName) => updateRoomMutation.mutate({ roomId: roomId as any, name: newName, adminUserId: currentUser?._id })}
+    onUpdateTeamName={(entryId, newTeamName) => updateTeamNameMutation.mutate({ entryId, newTeamName, userId: currentUser?._id })}
+    onStartNewSeason={(params) => startNewSeasonMutation.mutate({ ...params, adminUserId: currentUser?._id })}
+    onSetUserRole={(uId, role) => setUserRoleMutation.mutate({ userId: uId as any, role, adminUserId: currentUser?._id })}
     onFetchFplLeague={(lId) => fetchFplLeagueAction.execute({ leagueId: lId })}
-    onWipeAllPreseededData={() => wipePreseededMutation.mutate({})}
-    onDeleteAllUsers={() => deleteAllUsersMutation.mutate({})}
-    onDeleteUser={(uId) => deleteUserMutation.mutate({ userId: uId as any })}
-    onDeleteInviteCode={(cId) => deleteInviteMutation.mutate({ codeId: cId as any })}
+    onWipeAllPreseededData={() => wipePreseededMutation.mutate({ adminUserId: currentUser?._id })}
+    onDeleteAllUsers={() => deleteAllUsersMutation.mutate({ adminUserId: currentUser?._id })}
+    onDeleteUser={(uId) => deleteUserMutation.mutate({ userId: uId as any, adminUserId: currentUser?._id })}
+    onDeleteInviteCode={(cId) => deleteInviteMutation.mutate({ codeId: cId as any, adminUserId: currentUser?._id })}
   />
 
   <RegisterModal

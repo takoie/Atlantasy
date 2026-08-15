@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { requireAdmin, requireUser } from "./security";
 
 /**
  * Henter alle 12 rom med lag og aggregerte poengsummer
@@ -186,20 +187,24 @@ export const getRoomDetails = query({
 /**
  * Oppdaterer rominformasjon (navn, farge, beskrivelse)
  */
+/**
+ * Oppdaterer rominformasjon (navn, farge, beskrivelse)
+ */
 export const updateRoom = mutation({
   args: {
+    adminUserId: v.optional(v.id("users")),
+    userId: v.optional(v.id("users")),
     roomId: v.id("rooms"),
     name: v.string(),
     description: v.optional(v.string()),
     accentColor: v.optional(v.string()),
-    userId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
-    if (args.userId) {
-      const user = await ctx.db.get(args.userId);
-      if (user && user.role !== "admin" && user.roomId !== args.roomId) {
-        throw new Error("Kun rom-leder eller administrator kan endre navnet på dette rommet.");
-      }
+    const callerId = args.adminUserId || args.userId;
+    const user = await requireUser(ctx, callerId);
+
+    if (user.role !== "admin" && user.roomId !== args.roomId) {
+      throw new Error("Kun rom-medlem eller administrator kan endre dette rommet.");
     }
 
     await ctx.db.patch(args.roomId, {
@@ -211,15 +216,18 @@ export const updateRoom = mutation({
 });
 
 /**
- * Oppretter et nytt rom
+ * Oppretter et nytt rom (Kun for Administrator)
  */
 export const createRoom = mutation({
   args: {
+    adminUserId: v.optional(v.id("users")),
     name: v.string(),
     description: v.optional(v.string()),
     accentColor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
+
     const existingRooms = await ctx.db.query("rooms").collect();
     const maxNumber = existingRooms.reduce(
       (max, r) => Math.max(max, r.roomNumber || 0),
@@ -246,13 +254,16 @@ export const createRoom = mutation({
 });
 
 /**
- * Sletter et rom og frigjør/sletter tilhørende lag og historikk
+ * Sletter et rom og frigjør/sletter tilhørende lag og historikk (Kun for Administrator)
  */
 export const deleteRoom = mutation({
   args: {
+    adminUserId: v.optional(v.id("users")),
     roomId: v.id("rooms"),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
+
     await ctx.db.delete(args.roomId);
 
     const teamsInRoom = await ctx.db
@@ -272,6 +283,8 @@ export const deleteRoom = mutation({
     for (const rs of roomScores) {
       await ctx.db.delete(rs._id);
     }
+
+    return { success: true };
   },
 });
 
@@ -280,10 +293,15 @@ export const deleteRoom = mutation({
  */
 export const updateTeamName = mutation({
   args: {
+    userId: v.optional(v.id("users")),
     entryId: v.number(),
     newTeamName: v.string(),
   },
   handler: async (ctx, args) => {
+    if (args.userId) {
+      await requireUser(ctx, args.userId);
+    }
+
     const team = await ctx.db
       .query("fpl_teams")
       .withIndex("by_entryId", (q) => q.eq("entryId", args.entryId))
@@ -299,14 +317,17 @@ export const updateTeamName = mutation({
 });
 
 /**
- * Tildeler et FPL-lag til et bestemt rom
+ * Tildeler et FPL-lag til et bestemt rom (Kun for Administrator)
  */
 export const assignTeamToRoom = mutation({
   args: {
+    adminUserId: v.optional(v.id("users")),
     teamId: v.id("fpl_teams"),
     targetRoomId: v.id("rooms"),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
+
     await ctx.db.patch(args.teamId, {
       roomId: args.targetRoomId,
       lastUpdated: Date.now(),
@@ -325,11 +346,15 @@ export const getAllFplTeams = query({
 });
 
 /**
- * Tømmer alle lag fra rommene og sletter mock/lag-data slik at rommene er helt rene for ekte data
+ * Tømmer alle lag fra rommene (Kun for Administrator)
  */
 export const clearAllRoomAssignments = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    adminUserId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
+
     const allTeams = await ctx.db.query("fpl_teams").collect();
     for (const t of allTeams) {
       await ctx.db.delete(t._id);
@@ -342,14 +367,16 @@ export const clearAllRoomAssignments = mutation({
     for (const rs of allRoomScores) {
       await ctx.db.delete(rs._id);
     }
+    return { success: true };
   },
 });
 
 /**
- * Batch-lagrer romtilhørighet for FPL-lag (brukes fra Admin drag & drop)
+ * Batch-lagrer romtilhørighet for FPL-lag (Kun for Administrator)
  */
 export const batchSaveRoomAssignments = mutation({
   args: {
+    adminUserId: v.optional(v.id("users")),
     assignments: v.array(
       v.object({
         entryId: v.number(),
@@ -364,6 +391,7 @@ export const batchSaveRoomAssignments = mutation({
     clearUnassigned: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
     const assignedEntryIds = new Set(args.assignments.map((a) => a.entryId));
 
     if (args.clearUnassigned) {
@@ -420,6 +448,7 @@ export const getIndividualLeaderboard = query({
     const sortBy = args.sortBy || "live";
     const allTeams = await ctx.db.query("fpl_teams").collect();
     const allRooms = await ctx.db.query("rooms").collect();
+    const allUsers = await ctx.db.query("users").collect();
     const settings = await ctx.db.query("league_settings").first();
     const deductHits = settings?.deductTransferHits ?? true;
 
@@ -428,8 +457,14 @@ export const getIndividualLeaderboard = query({
       roomMap.set(r._id, r);
     }
 
+    const userMap = new Map<number, any>();
+    for (const u of allUsers) {
+      if (u.fplEntryId) userMap.set(u.fplEntryId, u);
+    }
+
     const players = allTeams.map((team, idx) => {
       const room = roomMap.get(team.roomId);
+      const user = userMap.get(team.entryId);
       const effectiveLive = deductHits
         ? team.currentGwPoints - team.currentGwTransfersCost
         : team.currentGwPoints;
@@ -437,7 +472,8 @@ export const getIndividualLeaderboard = query({
       return {
         entryId: team.entryId,
         teamName: team.teamName,
-        managerName: team.managerName,
+        managerName: team.managerName || user?.username || "Manager",
+        avatar: user?.avatar,
         roomId: team.roomId,
         roomNumber: room?.roomNumber ?? (idx + 1),
         roomName: room?.name ?? `Rom ${idx + 1}`,
@@ -648,7 +684,7 @@ export const getLeagueFunStats = query({
 });
 
 /**
- * Henter FPL-profil for et lag / manager med reelle lag- og lagoppstillingsdata
+ * Henter FPL-profil for et lag / manager med reelle lag- og lagoppstillingsdata, troféer og brukerdetaljer
  */
 export const getTeamProfile = query({
   args: {
@@ -669,10 +705,120 @@ export const getTeamProfile = query({
       room = await ctx.db.get(team.roomId);
     }
 
+    // Finn tilknyttet bruker
+    let user = null;
+    if (team?.userId) {
+      user = await ctx.db.get(team.userId);
+    } else {
+      user = await ctx.db
+        .query("users")
+        .withIndex("by_fplEntryId", (q) => q.eq("fplEntryId", args.entryId))
+        .first();
+    }
+
     const settings = await ctx.db.query("league_settings").first();
     const currentGw = settings?.currentGameweek ?? 1;
-    const managerName = team?.managerName || "Ukjent Manager";
+    const managerName = team?.managerName || user?.username || "Ukjent Manager";
     const teamName = team?.teamName || "FPL Lag";
+
+    // 1. Cup-trofeer (Topp 3 plasseringer i Cup / Sluttspill)
+    const cupTrophies: Array<{
+      place: 1 | 2 | 3;
+      title: string;
+      cupName: string;
+      date?: number;
+      type: "cup";
+    }> = [];
+
+    const allCups = await ctx.db.query("cups").collect();
+    for (const cup of allCups) {
+      if (cup.winnerRoomId && team?.roomId && cup.winnerRoomId === team.roomId) {
+        cupTrophies.push({
+          place: 1,
+          title: "Cupmester (1. Plass Gull)",
+          cupName: cup.name,
+          date: cup.createdAt,
+          type: "cup",
+        });
+      }
+
+      // Sjekk kamper for 2. og 3. plass
+      const matches = await ctx.db
+        .query("cup_matches")
+        .withIndex("by_cupId", (q) => q.eq("cupId", cup._id))
+        .collect();
+
+      const finalMatch = matches.find(
+        (m) =>
+          m.bracketType === "grand_final" ||
+          m.roundTitle?.toLowerCase().includes("storfinale") ||
+          m.roundTitle?.toLowerCase().includes("finale")
+      );
+
+      if (finalMatch && finalMatch.status === "completed" && team?.roomId) {
+        if (
+          finalMatch.winnerRoomId &&
+          (finalMatch.room1Id === team.roomId || finalMatch.room2Id === team.roomId) &&
+          finalMatch.winnerRoomId !== team.roomId
+        ) {
+          cupTrophies.push({
+            place: 2,
+            title: "Sølvfinale (2. Plass Sølv)",
+            cupName: cup.name,
+            date: cup.createdAt,
+            type: "cup",
+          });
+        }
+      }
+    }
+
+    // 2. Månedens Manager & Enere (Topp 3 Pokaler)
+    const monthlyTrophies: Array<{
+      place: 1 | 2 | 3;
+      title: string;
+      category: "individual" | "room";
+      monthName: string;
+      score: number;
+      date?: number;
+    }> = [];
+
+    const allAnnouncements = await ctx.db.query("announcements").collect();
+    const monthWinners = allAnnouncements.filter(
+      (a) => a.type === "winner_celebration" || a.type === "individual_winner" || a.winnerType
+    );
+
+    for (const mw of monthWinners) {
+      const isInd = mw.winnerType === "individual" || mw.type === "individual_winner";
+      const isRoomWin = mw.winnerType === "room" || mw.type === "winner_celebration";
+
+      if (
+        isInd &&
+        mw.winnerName &&
+        (mw.winnerName.toLowerCase() === managerName.toLowerCase() ||
+          (mw.winnerTeamName && mw.winnerTeamName.toLowerCase() === teamName.toLowerCase()) ||
+          (user && mw.winnerName.toLowerCase() === user.username.toLowerCase()))
+      ) {
+        monthlyTrophies.push({
+          place: 1,
+          title: `Månedens Ener (${mw.monthName || "Måned"})`,
+          category: "individual",
+          monthName: mw.monthName || "Måned",
+          score: mw.winningScore || 0,
+          date: mw.createdAt,
+        });
+      }
+
+      if (isRoomWin && team?.roomId && mw.winningRoomId === team.roomId) {
+        monthlyTrophies.push({
+          place: 1,
+          title: `Månedens Romvinner (${mw.monthName || "Måned"})`,
+          category: "room",
+          monthName: mw.monthName || "Måned",
+          score: mw.winningScore || 0,
+          date: mw.createdAt,
+        });
+      }
+    }
 
     // Standard tilgjengelige chips for enhver FPL manager
     const chips = [
@@ -703,6 +849,16 @@ export const getTeamProfile = query({
       bench: [],
       history: [],
       chips,
+      cupTrophies,
+      monthlyTrophies,
+      user: user
+        ? {
+            _id: user._id,
+            username: user.username,
+            avatar: user.avatar,
+            role: user.role,
+          }
+        : null,
       fplUrl: `https://fantasy.premierleague.com/entry/${args.entryId}/event/${currentGw}`,
     };
   },
