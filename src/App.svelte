@@ -15,6 +15,7 @@
   import Sidebar from "$lib/components/Sidebar.svelte";
   import UpdateModal from "$lib/components/UpdateModal.svelte";
   import LicensesModal from "$lib/components/LicensesModal.svelte";
+  import ClaimFplTeamModal from "$lib/components/ClaimFplTeamModal.svelte";
 
   import { useQuery, useMutation, useAction } from "$lib/convex.svelte";
   import { api } from "../convex/_generated/api";
@@ -59,6 +60,7 @@
   let isUpdateModalOpen = $state(false);
   let updateModalRef = $state<any>(null);
   let isLicensesModalOpen = $state(false);
+  let isClaimTeamModalOpen = $state(false);
 
   // Convex Mutations
   const sendMessageMutation = useMutation(api.chat.sendMessage);
@@ -70,6 +72,8 @@
   const registerMutation = useMutation(api.auth.registerWithInvite);
   const loginOrRegisterMutation = useMutation(api.auth.loginOrRegister);
   const validateStep1Mutation = useMutation(api.auth.validateRegistrationStep1);
+  const claimMyFplTeamMutation = useMutation(api.auth.claimMyFplTeam);
+  const adminLinkUserTeamMutation = useMutation(api.admin.adminLinkUserTeam);
   const setUserRoleMutation = useMutation(api.auth.setUserRole);
   const batchAssignMutation = useMutation(api.rooms.batchSaveRoomAssignments);
   const clearAllAssignmentsMutation = useMutation(api.rooms.clearAllRoomAssignments);
@@ -315,8 +319,11 @@
         const id = entryId ?? currentUser?.fplEntryId;
         if (id) {
           handleOpenProfile(id);
+        } else if (currentUser && !currentUser.fplEntryId) {
+          isClaimTeamModalOpen = true;
         }
       }}
+      onOpenClaimTeam={() => (isClaimTeamModalOpen = true)}
       onCheckForUpdates={() => updateModalRef?.checkForUpdates(true)}
       onOpenLicenses={() => (isLicensesModalOpen = true)}
     />
@@ -610,6 +617,7 @@
     {rooms}
     {inviteCodes}
     {users}
+    {fplTeams}
     monthWinnersData={monthWinners}
     onClose={() => (isAdminModalOpen = false)}
     onUpdateSettings={(s) => updateSettingsMutation.mutate({ ...s, adminUserId: currentUser?._id })}
@@ -625,6 +633,7 @@
     onStartNewSeason={(params) => startNewSeasonMutation.mutate({ ...params, adminUserId: currentUser?._id })}
     onSetUserRole={(uId, role) => setUserRoleMutation.mutate({ userId: uId as any, role, adminUserId: currentUser?._id })}
     onFetchFplLeague={(lId) => fetchFplLeagueAction.execute({ leagueId: lId })}
+    onLinkUserTeam={(targetUserId, fplEntryId) => adminLinkUserTeamMutation.mutate({ targetUserId: targetUserId as any, fplEntryId, adminUserId: currentUser?._id })}
     onWipeAllPreseededData={() => wipePreseededMutation.mutate({ adminUserId: currentUser?._id })}
     onDeleteAllUsers={() => deleteAllUsersMutation.mutate({ adminUserId: currentUser?._id })}
     onDeleteUser={(uId) => deleteUserMutation.mutate({ userId: uId as any, adminUserId: currentUser?._id })}
@@ -660,5 +669,21 @@
   <!-- Lisenser Modal -->
   <LicensesModal
     bind:isOpen={isLicensesModalOpen}
+  />
+
+  <!-- Koble FPL-lag Modal for vanlig bruker -->
+  <ClaimFplTeamModal
+    isOpen={isClaimTeamModalOpen}
+    {currentUser}
+    {fplTeams}
+    {users}
+    onClose={() => (isClaimTeamModalOpen = false)}
+    onClaim={async (entryId) => {
+      await claimMyFplTeamMutation.mutate({
+        userId: currentUser?._id,
+        fplEntryId: entryId,
+      });
+      alert("FPL-lag tilkoblet og låst til profilen din!");
+    }}
   />
 </main>

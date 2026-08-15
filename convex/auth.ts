@@ -439,3 +439,65 @@ export const updateUserProfile = mutation({
     return sanitizeUser(updated);
   },
 });
+
+/**
+ * Lar en bruker velge og koble sitt FPL-lag én gang etter registrering.
+ * Låses etter første valg (krever administrator for endring deretter).
+ */
+export const claimMyFplTeam = mutation({
+  args: {
+    userId: v.id("users"),
+    fplEntryId: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx, args.userId);
+
+    // Hvis brukeren allerede har et lag tilknyttet, avvis
+    if (user.fplEntryId) {
+      throw new Error("Du har allerede låst et FPL-lag til denne kontoen. Kontakt en administrator for å endre lag.");
+    }
+
+    // Sjekk om laget allerede er tatt av en annen bruker
+    const teamTaken = await ctx.db
+      .query("users")
+      .withIndex("by_fplEntryId", (q) => q.eq("fplEntryId", args.fplEntryId))
+      .first();
+
+    if (teamTaken && teamTaken._id !== args.userId) {
+      throw new Error(`Dette FPL-laget er allerede tilknyttet brukeren "${teamTaken.username}".`);
+    }
+
+    // Hent laginfo fra fpl_teams
+    const team = await ctx.db
+      .query("fpl_teams")
+      .withIndex("by_entryId", (q) => q.eq("entryId", args.fplEntryId))
+      .first();
+
+    const fplTeamName = team?.teamName || "FPL-lag";
+    const fplManagerName = team?.managerName || user.username;
+
+    // Oppdater brukeren
+    await ctx.db.patch(args.userId, {
+      fplEntryId: args.fplEntryId,
+      fplTeamName,
+      fplManagerName,
+      lastActiveAt: Date.now(),
+    });
+
+    // Knytt fpl_teams posten til brukeren
+    if (team) {
+      await ctx.db.patch(team._id, {
+        userId: user._id,
+        roomId: user.roomId || team.roomId,
+        lastUpdated: Date.now(),
+      });
+    }
+
+    return {
+      success: true,
+      fplEntryId: args.fplEntryId,
+      fplTeamName,
+      fplManagerName,
+    };
+  },
+});

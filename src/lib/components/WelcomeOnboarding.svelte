@@ -364,7 +364,7 @@
                 bind:value={selectedFplEntryId}
                 class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
               >
-                <option value={null}>-- Velg ditt lag fra FPL-listen (valgfritt) --</option>
+                <option value={null}>-- Jeg velger lag senere / Ikke på listen ennå --</option>
                 {#each availableFplTeams as team (team.entryId)}
                   <option value={team.entryId}>
                     {team.teamName} ({team.managerName})
@@ -372,8 +372,8 @@
                 {/each}
               </select>
               {#if availableFplTeams.length === 0}
-                <p class="text-[11px] text-[#F4C152] mt-1">
-                  Alle FPL-lag er allerede registrert av eksisterende brukere.
+                <p class="text-[11px] text-[#70E1F8] mt-1.5 leading-relaxed">
+                  💡 Finner du ikke laget ditt? Ingen problem! Registrer deg nå, så kan du eller administrator koble til laget ditt etterpå.
                 </p>
               {/if}
             </div>

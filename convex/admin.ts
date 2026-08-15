@@ -504,3 +504,93 @@ export const deleteUser = mutation({
     return { success: true };
   },
 });
+
+/**
+ * Administrator-funksjon for å koble, endre eller fjerne FPL-lag for en vilkårlig bruker
+ */
+export const adminLinkUserTeam = mutation({
+  args: {
+    adminUserId: v.optional(v.id("users")),
+    targetUserId: v.id("users"),
+    fplEntryId: v.optional(v.number()), // null/undefined for å fjerne tilknytning
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
+
+    const targetUser = await ctx.db.get(args.targetUserId);
+    if (!targetUser) {
+      throw new Error("Brukeren ble ikke funnet.");
+    }
+
+    const previousEntryId = targetUser.fplEntryId;
+
+    // Hvis tilknytning skal fjernes
+    if (!args.fplEntryId) {
+      await ctx.db.patch(args.targetUserId, {
+        fplEntryId: undefined,
+        fplTeamName: undefined,
+        fplManagerName: undefined,
+      });
+
+      if (previousEntryId) {
+        const prevTeam = await ctx.db
+          .query("fpl_teams")
+          .withIndex("by_entryId", (q) => q.eq("entryId", previousEntryId))
+          .first();
+        if (prevTeam && prevTeam.userId === args.targetUserId) {
+          await ctx.db.patch(prevTeam._id, {
+            userId: undefined,
+          });
+        }
+      }
+
+      return { success: true, message: "Fjernet FPL-lagtilknytning for bruker." };
+    }
+
+    // Sjekk om det nye laget er i bruk av en annen bruker
+    const existingHolder = await ctx.db
+      .query("users")
+      .withIndex("by_fplEntryId", (q) => q.eq("fplEntryId", args.fplEntryId!))
+      .first();
+
+    if (existingHolder && existingHolder._id !== args.targetUserId) {
+      // Fjern tilknytning fra den gamle holderen
+      await ctx.db.patch(existingHolder._id, {
+        fplEntryId: undefined,
+        fplTeamName: undefined,
+        fplManagerName: undefined,
+      });
+    }
+
+    // Hent lagdetaljer
+    const team = await ctx.db
+      .query("fpl_teams")
+      .withIndex("by_entryId", (q) => q.eq("entryId", args.fplEntryId!))
+      .first();
+
+    const teamName = team?.teamName || "FPL-lag";
+    const managerName = team?.managerName || targetUser.username;
+
+    // Oppdater målbrukeren
+    await ctx.db.patch(args.targetUserId, {
+      fplEntryId: args.fplEntryId,
+      fplTeamName: teamName,
+      fplManagerName: managerName,
+    });
+
+    // Oppdater fpl_teams
+    if (team) {
+      await ctx.db.patch(team._id, {
+        userId: targetUser._id,
+        roomId: targetUser.roomId || team.roomId,
+        lastUpdated: Date.now(),
+      });
+    }
+
+    return {
+      success: true,
+      fplEntryId: args.fplEntryId,
+      teamName,
+    };
+  },
+});

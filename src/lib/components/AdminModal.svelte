@@ -38,6 +38,7 @@
     rooms = [],
     inviteCodes = [],
     users = [],
+    fplTeams = [],
     monthWinnersData = null,
     onClose = () => {},
     onUpdateSettings = (_newSettings: any) => {},
@@ -53,6 +54,7 @@
     onStartNewSeason = (_params: any) => {},
     onSetUserRole = (_userId: string, _role: string) => {},
     onFetchFplLeague = async (_leagueId: number): Promise<any> => null,
+    onLinkUserTeam = async (_targetUserId: string, _fplEntryId?: number): Promise<any> => null,
     onWipeAllPreseededData = () => {},
     onDeleteAllUsers = () => {},
     onDeleteUser = (_userId: string) => {},
@@ -64,6 +66,7 @@
     rooms?: any[];
     inviteCodes?: any[];
     users?: any[];
+    fplTeams?: any[];
     monthWinnersData?: any;
     onClose?: () => void;
     onUpdateSettings?: (newSettings: any) => void;
@@ -79,6 +82,7 @@
     onStartNewSeason?: (params: any) => void;
     onSetUserRole?: (userId: string, role: string) => void;
     onFetchFplLeague?: (leagueId: number) => Promise<any>;
+    onLinkUserTeam?: (targetUserId: string, fplEntryId?: number) => Promise<any>;
     onWipeAllPreseededData?: () => void;
     onDeleteAllUsers?: () => void;
     onDeleteUser?: (userId: string) => void;
@@ -88,6 +92,17 @@
   let adminPinInput = $state("");
   let isAuthenticated = $state(false);
   let authError = $state("");
+  let isSyncingLeague = $state(false);
+  let isSavingUserLink = $state(false);
+  let linkingUserModal = $state<{
+    show: boolean;
+    user: any;
+    selectedEntryId: number | null;
+  }>({
+    show: false,
+    user: null,
+    selectedEntryId: null,
+  });
   let activeTab = $state("matching"); // "matching" | "settings" | "winner" | "users" | "invites"
 
   // Innstillinger form-state
@@ -957,7 +972,7 @@
               maxlength="8"
               bind:value={adminPinInput}
               onkeydown={(e) => e.key === "Enter" && handleAuth()}
-              placeholder="PIN (Standard: 1234)"
+              placeholder="Skriv inn PIN"
               class="w-52 px-4 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-center font-mono text-base tracking-widest text-white focus:border-[#9FE88D] focus:outline-none"
             />
             <button
@@ -1506,6 +1521,38 @@
         <!-- Tab 2: Ligainnstillinger -->
         {#if activeTab === "settings"}
           <div class="p-6 space-y-5 overflow-y-auto flex-1 max-w-3xl custom-scrollbar">
+            <!-- Direkte FPL-synkronisering av lag og tabell -->
+            <div class="p-4 rounded-xl bg-[#242B35] border border-[#70E1F8]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+              <div>
+                <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+                  <RefreshCw class="w-4 h-4 text-[#70E1F8]" />
+                  <span>Hent inn & synkroniser alle lag fra FPL</span>
+                </h4>
+                <p class="text-[11px] text-[#94A3B8] mt-0.5">
+                  Henter alle registrerte lag i Classic League #{leagueId} fra det offisielle FPL API-et og oppdaterer laglisten.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={isSyncingLeague}
+                onclick={async () => {
+                  isSyncingLeague = true;
+                  try {
+                    const res = await onFetchFplLeague(leagueId);
+                    showSuccess(`Synkroniserte ${res?.teamCount ?? "alle"} lag fra FPL Classic League #${leagueId}!`);
+                  } catch (err: any) {
+                    showError(err.message || "Kunne ikke hente lag fra FPL API.");
+                  } finally {
+                    isSyncingLeague = false;
+                  }
+                }}
+                class="px-4 py-2.5 rounded-xl bg-[#70E1F8] hover:bg-[#5cd4ec] disabled:opacity-50 text-[#0f2933] font-bold text-xs transition-colors shadow-sm flex items-center justify-center gap-2 shrink-0"
+              >
+                <RefreshCw class={`w-4 h-4 ${isSyncingLeague ? "animate-spin" : ""}`} />
+                <span>{isSyncingLeague ? "Henter fra FPL..." : "Synk FPL-lag nå"}</span>
+              </button>
+            </div>
+
             <div class="space-y-4">
               <div>
                 <label for="admin-sett-league-id" class="block text-xs font-bold text-white mb-1">
@@ -1806,23 +1853,48 @@
 
             <div class="space-y-2">
               {#each users as u}
-                <div class="p-3 rounded-xl bg-[#242B35] border border-[#384252] flex items-center justify-between text-xs">
-                  <div class="flex items-center gap-3">
-                    <img src={u.avatar || "https://api.dicebear.com/7.x/bottts/svg?seed=" + u.username} alt="" class="w-8 h-8 rounded-full bg-[#191E24]" />
-                    <div>
-                      <span class="font-bold text-white block">{u.username}</span>
-                      <span class="text-[11px] text-[#94A3B8]">{u.fplManagerName ? `${u.fplManagerName} (${u.fplTeamName || "Uten lag"})` : (u.email || "Ingen e-post")}</span>
+                <div class="p-3 rounded-xl bg-[#242B35] border border-[#384252] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <img src={u.avatar || "https://api.dicebear.com/7.x/bottts/svg?seed=" + u.username} alt="" class="w-8 h-8 rounded-full bg-[#191E24] shrink-0" />
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="font-bold text-white block truncate">{u.username}</span>
+                        <span class={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                          u.role === "admin" ? "bg-[#9FE88D]/15 text-[#9FE88D] border border-[#9FE88D]/30" : "bg-[#191E24] text-[#94A3B8]"
+                        }`}>
+                          {u.role}
+                        </span>
+                      </div>
+                      <div class="text-[11px] text-[#94A3B8] flex items-center gap-1.5 mt-0.5 truncate">
+                        <Shirt class="w-3 h-3 text-[#70E1F8] shrink-0" />
+                        {#if u.fplTeamName}
+                          <span class="text-[#E2E8F0] font-semibold">{u.fplTeamName}</span>
+                          <span class="text-[#94A3B8]">({u.fplManagerName || "Manager"})</span>
+                        {:else}
+                          <span class="text-[#F4C152] font-semibold italic">Ikke tilknyttet FPL-lag</span>
+                        {/if}
+                      </div>
                     </div>
                   </div>
-                  <div class="flex items-center gap-2">
-                    <span class={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      u.role === "admin" ? "bg-[#9FE88D]/15 text-[#9FE88D] border border-[#9FE88D]/30" : "bg-[#191E24] text-[#94A3B8]"
-                    }`}>
-                      {u.role}
-                    </span>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onclick={() => {
+                        linkingUserModal = {
+                          show: true,
+                          user: u,
+                          selectedEntryId: u.fplEntryId ?? null,
+                        };
+                      }}
+                      class="px-2.5 py-1 rounded-lg bg-[#191E24] hover:bg-[#2A303C] text-[11px] text-[#70E1F8] hover:text-white border border-[#384252] flex items-center gap-1 font-semibold transition-colors"
+                      title="Koble eller endre FPL-lag for denne brukeren"
+                    >
+                      <Shirt class="w-3 h-3" />
+                      <span>{u.fplEntryId ? "Endre lag" : "Koble lag"}</span>
+                    </button>
                     <button
                       onclick={() => onSetUserRole(u._id, u.role === "admin" ? "user" : "admin")}
-                      class="px-2.5 py-1 rounded bg-[#242B35] hover:bg-[#384252] text-[11px] text-[#E2E8F0] border border-[#384252]"
+                      class="px-2.5 py-1 rounded-lg bg-[#242B35] hover:bg-[#384252] text-[11px] text-[#E2E8F0] border border-[#384252]"
                     >
                       {u.role === "admin" ? "Gjør til bruker" : "Gjør til admin"}
                     </button>
@@ -1840,7 +1912,7 @@
                         };
                       }}
                       title="Slett bruker"
-                      class="p-1 rounded text-[#94A3B8] hover:text-[#FB6F84] hover:bg-[#361c1c] transition-colors"
+                      class="p-1 rounded-lg text-[#94A3B8] hover:text-[#FB6F84] hover:bg-[#361c1c] transition-colors"
                     >
                       <Trash2 class="w-3.5 h-3.5" />
                     </button>
@@ -2418,5 +2490,86 @@
     <span class="w-2.5 h-2.5 rounded-full bg-[#9FE88D] animate-pulse"></span>
     <span class="truncate">{pointerDragTeam.managerName}</span>
     <span class="text-[11px] text-[#94A3B8] font-normal">({pointerDragTeam.teamName})</span>
+  </div>
+{/if}
+
+<!-- Koble Bruker til FPL-lag Modal (Admin) -->
+{#if linkingUserModal.show && linkingUserModal.user}
+  <div class="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 select-none">
+    <div class="relative w-full max-w-md bg-[#242B35] border border-[#384252] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between p-4 px-5 border-b border-[#384252] bg-[#191E24]">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-xl bg-[#70E1F8]/10 text-[#70E1F8] border border-[#70E1F8]/30">
+            <Shirt class="w-4 h-4" />
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Koble lag for {linkingUserModal.user.username}</h3>
+            <p class="text-[11px] text-[#94A3B8]">Administrator overstyring av FPL-lag</p>
+          </div>
+        </div>
+        <button
+          onclick={() => (linkingUserModal.show = false)}
+          class="p-1.5 rounded-lg text-[#94A3B8] hover:text-white hover:bg-[#2A303C] transition-colors"
+        >
+          <X class="w-4 h-4" />
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+        <div>
+          <label for="admin-select-user-team" class="block text-xs font-bold text-white mb-1.5">
+            Velg FPL-lag fra ligaen:
+          </label>
+          <select
+            id="admin-select-user-team"
+            bind:value={linkingUserModal.selectedEntryId}
+            class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none text-xs"
+          >
+            <option value={null}>-- Ingen lag tilknyttet (Fjern tilknytning) --</option>
+            {#each fplTeams as team (team.entryId)}
+              {@const isTakenByOther = users.some((u) => u.fplEntryId === team.entryId && u._id !== linkingUserModal.user?._id)}
+              <option value={team.entryId}>
+                {team.teamName} ({team.managerName}){isTakenByOther ? " [Tilknyttet annen bruker]" : ""}
+              </option>
+            {/each}
+          </select>
+        </div>
+
+        <p class="text-[11px] text-[#94A3B8] leading-relaxed">
+          Dersom du velger et lag som allerede er knyttet til en annen bruker, vil laget bli flyttet til <strong class="text-white">{linkingUserModal.user.username}</strong>.
+        </p>
+      </div>
+
+      <div class="p-4 border-t border-[#384252] bg-[#191E24] flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onclick={() => (linkingUserModal.show = false)}
+          class="px-4 py-2 rounded-xl bg-[#2A303C] hover:bg-[#384252] text-xs font-semibold text-[#94A3B8] hover:text-white transition-colors"
+        >
+          Avbryt
+        </button>
+
+        <button
+          type="button"
+          disabled={isSavingUserLink}
+          onclick={async () => {
+            isSavingUserLink = true;
+            try {
+              await onLinkUserTeam(linkingUserModal.user._id, linkingUserModal.selectedEntryId ?? undefined);
+              showSuccess(`Oppdaterte lagtilknytning for ${linkingUserModal.user.username}`);
+              linkingUserModal.show = false;
+            } catch (err: any) {
+              showError(err.message || "Kunne ikke oppdatere lagtilknytning.");
+            } finally {
+              isSavingUserLink = false;
+            }
+          }}
+          class="px-5 py-2.5 rounded-xl bg-[#9FE88D] hover:bg-[#8ce078] disabled:opacity-50 text-[#16380c] font-bold text-xs transition-colors shadow-md flex items-center gap-1.5"
+        >
+          <CheckCircle2 class="w-3.5 h-3.5" />
+          <span>{isSavingUserLink ? "Lagrer..." : "Lagre tilknytning"}</span>
+        </button>
+      </div>
+    </div>
   </div>
 {/if}

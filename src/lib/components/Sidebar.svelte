@@ -11,6 +11,7 @@
     RefreshCw,
     Timer,
     Info,
+    Shirt,
   } from "lucide-svelte";
   import { onMount, onDestroy } from "svelte";
 
@@ -27,6 +28,7 @@
     onOpenAdmin = () => {},
     onRefreshFpl = () => {},
     onOpenProfile = (_entryId?: number | null) => {},
+    onOpenClaimTeam = () => {},
     onCheckForUpdates = () => {},
     onOpenLicenses = () => {},
   }: {
@@ -42,6 +44,7 @@
     onOpenAdmin?: () => void;
     onRefreshFpl?: () => void;
     onOpenProfile?: (entryId?: number | null) => void;
+    onOpenClaimTeam?: () => void;
     onCheckForUpdates?: () => void;
     onOpenLicenses?: () => void;
   } = $props();
@@ -293,6 +296,19 @@
         </button>
       {/if}
     </div>
+
+    <!-- Varsel/Knapp om manglende FPL-lagtilknytning -->
+    {#if currentUser && !currentUser.fplEntryId}
+      <button
+        type="button"
+        onclick={onOpenClaimTeam}
+        class="w-full py-2 px-3 rounded-xl bg-[#70E1F8]/15 hover:bg-[#70E1F8]/25 border border-[#70E1F8]/40 text-[#70E1F8] text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm group"
+        title="Koble ditt Fantasy Premier League lag til profilen din"
+      >
+        <Shirt class="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+        <span>Koble FPL-lag nå</span>
+      </button>
+    {/if}
 
     <!-- Brukerprofil & Sanntidsstatus (Snarvei til Min Profil) -->
     <button
