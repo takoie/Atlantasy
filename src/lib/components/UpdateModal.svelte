@@ -62,26 +62,61 @@
     }
 
     try {
-      // Sjekk via Tauri v2 updater IPC
-      const update: any = await invoke("plugin:updater|check");
+      // 1. Sjekk via Tauri v2 updater IPC først
+      try {
+        const update: any = await invoke("plugin:updater|check");
+        if (update && (update.available || update.version)) {
+          updateObj = update;
+          status = "available";
+          isOpen = true;
+          return;
+        }
+      } catch (tauriErr) {
+        console.warn("Tauri updater feilet, prøver direkte GitHub API:", tauriErr);
+      }
 
-      if (update && (update.available || update.version)) {
-        updateObj = update;
-        status = "available";
-        isOpen = true;
-      } else {
-        if (manual) {
-          status = "up_to_date";
+      // 2. Fallback: Sjekk direkte mot GitHub Releases API
+      const res = await fetch("https://api.github.com/repos/takoie/Atlantasy/releases/latest", {
+        headers: { Accept: "application/vnd.github.v3+json" },
+      });
+
+      if (res.ok) {
+        const release = await res.json();
+        const latestTag = (release.tag_name || "").replace(/^v/, "").trim();
+        const currentClean = currentVersion.replace(/^v/, "").trim();
+
+        // Sammenlign versjonsnumre (f.eks. 0.5.1 > 0.5.0)
+        const isNewer = latestTag && latestTag !== currentClean;
+
+        if (isNewer) {
+          const exeAsset = (release.assets || []).find((a: any) =>
+            a.name.toLowerCase().endsWith(".exe")
+          );
+          updateObj = {
+            version: release.tag_name,
+            body: release.body,
+            date: release.published_at,
+            downloadUrl: exeAsset?.browser_download_url || release.html_url,
+            htmlUrl: release.html_url,
+          };
+          status = "available";
           isOpen = true;
         } else {
-          status = "idle";
+          if (manual) {
+            status = "up_to_date";
+            isOpen = true;
+          } else {
+            status = "idle";
+          }
         }
+      } else {
+        throw new Error(`GitHub returnerte HTTP status ${res.status}`);
       }
     } catch (err: any) {
       console.warn("Kunne ikke sjekke etter oppdateringer:", err);
       if (manual) {
         status = "error";
-        errorMessage = err?.message || String(err) || "Kunne ikke kontakte GitHub for å hente oppdateringer.";
+        errorMessage = "Kunne ikke kontakte GitHub for å hente oppdateringsinformasjon. Vennligst sjekk internettforbindelsen din.";
         isOpen = true;
       }
     } finally {
@@ -90,6 +125,13 @@
   }
 
   async function startDownloadAndInstall() {
+    if (updateObj?.downloadUrl) {
+      // Åpne direkte nedlastingslenke for oppdateringsfilen
+      window.open(updateObj.downloadUrl, "_blank");
+      status = "ready";
+      return;
+    }
+
     status = "downloading";
     downloadedBytes = 0;
     totalBytes = 0;
