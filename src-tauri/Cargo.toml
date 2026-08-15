@@ -1,6 +1,6 @@
 [package]
 name = "atlantasy"
-version = "0.5.0"
+version = "0.5.1"
 description = "Atlantasy Desktop App"
 authors = ["Stian Taknes"]
 edition = "2021"
