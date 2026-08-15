@@ -809,9 +809,9 @@
 
         <!-- 3. Premier League Klubbmerker Presets -->
         <div class="space-y-2">
-          <label class="block font-bold text-[#F4C152]">
+          <span class="block font-bold text-[#F4C152]">
             Eller velg ditt Premier League-klubbmerke:
-          </label>
+          </span>
           <div class="grid grid-cols-5 sm:grid-cols-10 gap-2 max-h-36 overflow-y-auto custom-scrollbar p-2 bg-[#191E24] rounded-xl border border-[#384252]">
             {#each plClubPresets as club}
               <button
@@ -832,9 +832,9 @@
 
         <!-- 4. Fotball-ikoner Presets -->
         <div class="space-y-2">
-          <label class="block font-bold text-[#9FE88D]">
+          <span class="block font-bold text-[#9FE88D]">
             Eller morsomme fotballfigurer:
-          </label>
+          </span>
           <div class="grid grid-cols-6 gap-2 p-2 bg-[#191E24] rounded-xl border border-[#384252]">
             {#each footballIconPresets as item}
               <button

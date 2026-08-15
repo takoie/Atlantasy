@@ -1147,7 +1147,7 @@
             <div class="grid grid-cols-12 gap-4 flex-1 min-h-0 overflow-hidden">
               <!-- Venstre: Spillerpool (Drop target for å fjerne fra rom) -->
               <div
-                role="region"
+                role="button"
                 aria-label="Ufordelte spillere"
                 data-drop-pool="true"
                 onclick={handlePoolClickToPlace}

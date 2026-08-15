@@ -765,14 +765,21 @@
         <!-- Toppbilde med fokuspunktjustering -->
         {#if selectedArticle.imageUrl}
           <div class={`rounded-2xl overflow-hidden bg-[#191E24] border border-[#384252] shadow-lg relative group ${getCoverHeightClass(selectedArticle.imageHeight)}`}>
-            <img
-              src={selectedArticle.imageUrl}
-              alt={selectedArticle.title}
-              style={`object-position: center ${selectedArticle.imagePosition ?? 50}%; object-fit: ${selectedArticle.imageFit || "cover"};`}
-              class="w-full h-full cursor-zoom-in"
-              onclick={() => (zoomedImageUrl = selectedArticle.imageUrl)}
-            />
             <button
+              type="button"
+              onclick={() => (zoomedImageUrl = selectedArticle.imageUrl)}
+              class="w-full h-full p-0 border-0 bg-transparent block cursor-zoom-in text-left"
+              aria-label="Forstørr toppbilde"
+            >
+              <img
+                src={selectedArticle.imageUrl}
+                alt={selectedArticle.title}
+                style={`object-position: center ${selectedArticle.imagePosition ?? 50}%; object-fit: ${selectedArticle.imageFit || "cover"};`}
+                class="w-full h-full"
+              />
+            </button>
+            <button
+              type="button"
               onclick={() => (zoomedImageUrl = selectedArticle.imageUrl)}
               class="absolute bottom-2.5 right-2.5 p-1.5 rounded-lg bg-black/70 hover:bg-black text-white text-xs backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1"
             >
@@ -858,15 +865,23 @@
                   : "w-full"
               }`}>
                 <div class="rounded-2xl overflow-hidden bg-[#191E24] border border-[#384252] shadow-md group relative">
-                  <img
-                    src={block.src}
-                    alt={block.caption || "Artikkelbilde"}
-                    class="w-full h-auto max-h-[480px] object-cover cursor-zoom-in group-hover:scale-102 transition-transform duration-200"
-                    onclick={() => (zoomedImageUrl = block.src || null)}
-                  />
                   <button
+                    type="button"
+                    onclick={() => (zoomedImageUrl = block.src || null)}
+                    class="w-full h-auto p-0 border-0 bg-transparent block cursor-zoom-in text-left"
+                    aria-label="Forstørr artikkelbilde"
+                  >
+                    <img
+                      src={block.src}
+                      alt={block.caption || "Artikkelbilde"}
+                      class="w-full h-auto max-h-[480px] object-cover group-hover:scale-102 transition-transform duration-200"
+                    />
+                  </button>
+                  <button
+                    type="button"
                     onclick={() => (zoomedImageUrl = block.src || null)}
                     class="absolute bottom-2 right-2 p-1 rounded bg-black/70 text-white text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label="Forstørr bilde"
                   >
                     <Maximize2 class="w-3 h-3" />
                   </button>
@@ -1415,7 +1430,7 @@
       <!-- Opplastingsvalg -->
       <div class="space-y-3 text-xs">
         <div>
-          <label class="block font-bold text-white mb-1.5">Last opp bildefil:</label>
+          <span class="block font-bold text-white mb-1.5">Last opp bildefil:</span>
           <input
             type="file"
             accept="image/*"
