@@ -653,7 +653,7 @@
   <UpdateModal
     bind:isOpen={isUpdateModalOpen}
     bind:this={updateModalRef}
-    currentVersion="0.1.0"
+    currentVersion="0.5.0"
     autoCheck={true}
   />
 

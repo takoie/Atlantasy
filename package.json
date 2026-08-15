@@ -1,7 +1,7 @@
 {
   "name": "atlantasy",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.5.0",
   "type": "module",
   "scripts": {
     "start": "npx --yes concurrently -n \"convex,tauri\" -c \"magenta.bold,cyan.bold\" \"npx convex dev\" \"npm run tauri dev\"",
@@ -9,6 +9,8 @@
     "dev:web": "npx --yes concurrently -n \"convex,vite\" -c \"magenta.bold,green.bold\" \"npx convex dev\" \"npm run dev\"",
     "dev": "vite",
     "build": "vite build",
+    "build:exe": "npm run build && npm run tauri build",
+    "package:exe": "npm run build && npm run tauri build -- --bundles nsis",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "tauri": "tauri",
