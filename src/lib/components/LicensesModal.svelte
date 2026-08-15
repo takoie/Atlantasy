@@ -203,7 +203,7 @@ Copyright (c) Microsoft Corporation.`,
 
           <div>
             <h3 class="text-lg font-black text-white leading-tight flex items-center gap-2">
-              <span>Programvarelisenser & Kreditter</span>
+              <span>Lisenser</span>
               <span class="text-xs px-2.5 py-0.5 rounded-full bg-[#2A303C] text-[#70E1F8] font-bold border border-[#384252]">
                 {licenses.length} biblioteker
               </span>

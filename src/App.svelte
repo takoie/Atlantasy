@@ -656,7 +656,7 @@
     autoCheck={true}
   />
 
-  <!-- Lisenser & Tredjeparts Open Source Kreditter -->
+  <!-- Lisenser Modal -->
   <LicensesModal
     bind:isOpen={isLicensesModalOpen}
   />
