@@ -34,28 +34,6 @@ Du kan laste ned den nyeste versjonen av installasjonsprogrammet direkte fra Git
 
 ---
 
-## 💻 For utviklere
-
-Dersom du ønsker å kjøre prosjektet lokalt fra kildekode:
-
-```bash
-# 1. Klon prosjektet og installer pakker
-git clone https://github.com/takoie/Atlantasy.git
-cd Atlantasy
-npm install
-
-# 2. Start appen og databasen i utviklermodus
-npm start
-```
-
-### Bygge ny installasjonsfil:
-```bash
-npm run build:exe
-```
-Den ferdige installasjonsfilen (`.exe`) genereres under `src-tauri/target/release/bundle/nsis/`.
-
----
-
 ## 📜 Lisenser
 
 Atlantasy er bygget på åpen kildekode og benytter moderne teknologier som Tauri, Svelte, Convex og Tailwind CSS. Full lisensoversikt er tilgjengelig direkte i appen via informasjonsikonet nederst i sidemenyen.
