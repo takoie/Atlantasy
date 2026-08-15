@@ -1,83 +1,61 @@
-# Atlantasy - FPL Bedriftsliga Desktop App (Tauri v2 + Svelte 5 + Convex)
+# ⚽ Atlantasy Desktop
 
-En moderne, høytytende desktop-applikasjon for Windows bygget for en intern bedriftsliga i Fantasy Premier League (FPL).
+> Den ultimate skrivebordsappen for vår interne **Fantasy Premier League (FPL)**-liga! Følg rom-oppgjørene live, diskuter runden i sanntid, følg cup-sluttspillet og les ukens runderapporter.
 
-- **Desktop runtime / Container:** [Tauri v2](https://v2.tauri.app/) (Rust + Frameless Windows Setup)
-- **Frontend-rammeverk:** [Svelte 5](https://svelte.dev/) (med Runes: `$state`, `$derived`, `$effect`, `$props`)
-- **Byggeverktøy:** [Vite](https://vitejs.dev/) + [TypeScript](https://www.typescriptlang.org/)
-- **Styling:** [Tailwind CSS](https://tailwindcss.com/) + [Lucide-Svelte](https://lucide.dev/) (FPL Dark Neon Palette)
-- **Backend / Sanntidsdatabase:** [Convex](https://www.convex.dev/) (Reaktiv sky-backend)
+[![Release](https://img.shields.io/github/v/release/takoie/Atlantasy?style=flat-square&color=70E1F8&label=Versjon)](https://github.com/takoie/Atlantasy/releases/latest)
+[![Plattform](https://img.shields.io/badge/Plattform-Windows%2010%2F11-blue?style=flat-square)](https://github.com/takoie/Atlantasy/releases/latest)
+[![Lisens](https://img.shields.io/badge/Lisens-MIT-green?style=flat-square)](#lisenser)
 
 ---
 
-## 🚀 Én-kommando oppstart (Både Convex + Tauri)
+## 📥 Last ned og installer
 
-For å starte både Convex sanntidsdatabasen og Tauri v2 desktop-appen parallelt med én enkel kommando:
+Du kan laste ned den nyeste versjonen av installasjonsprogrammet direkte fra GitHub:
+
+👉 **[Last ned Atlantasy Desktop for Windows (.exe)](https://github.com/takoie/Atlantasy/releases/latest)**
+
+1. Last ned **`Atlantasy_..._x64-setup.exe`**.
+2. Start installasjonsprogrammet og velg standard eller tilpasset installasjonsmappe.
+3. Appen sjekker automatisk etter nye oppdateringer ved oppstart.
+
+---
+
+## ✨ Hovedfunksjoner
+
+| Funksjon | Beskrivelse |
+| :--- | :--- |
+| 🏆 **Rom-oppgjør** | Følg poengsnittet og konkurransen mellom rommene live under hver serierunde. |
+| 📊 **Individuell tabell** | Full oversikt over alle managere, poeng, lagverdi og klatregrafer. |
+| ⚔️ **Cup & Sluttspill** | Eget cupsystem med seeding, innledende runder og nervepirrende sluttspill. |
+| 💬 **Liga-chat & Banter** | Diskuter runden, transfers og chips i sanntidschatten. |
+| 📰 **Nyheter & Avis** | Les og publiser ukens runderapporter, taktiske analyser og høydepunkter. |
+| 🥇 **Hedersvegg & Trofeer** | Feiring av månedens managere, romvinnere og cupmestere med pokaloversikt. |
+| 👤 **Managerprofiler** | Tilpass din avatar med ditt favorittlag fra Premier League eller egne bilder. |
+
+---
+
+## 💻 For utviklere
+
+Dersom du ønsker å kjøre prosjektet lokalt fra kildekode:
 
 ```bash
+# 1. Klon prosjektet og installer pakker
+git clone https://github.com/takoie/Atlantasy.git
+cd Atlantasy
+npm install
+
+# 2. Start appen og databasen i utviklermodus
 npm start
 ```
-*eller*
-```powershell
-.\dev.ps1
-```
 
-### Andre nyttige oppstartskommandoer:
-- **Kjør kun webgrensesnitt + Convex (rask nettleserutvikling):**
-  ```bash
-  npm run dev:web
-  ```
-- **Kjør kun desktop med eksisterende Convex-instans:**
-  ```bash
-  npm run tauri dev
-  ```
-- **Kjør kun Convex dev:**
-  ```bash
-  npm run convex:dev
-  ```
-
----
-
-## 📁 Prosjektstruktur
-
-```text
-Atlantasy/
-├── convex/                          # Convex sanntidsbackend
-│   ├── schema.ts                    # Datamodell (users, rooms, fpl_teams, messages, etc.)
-│   ├── rooms.ts                     # Romsnitt-algoritme (Topp 2 snitt) & ledertavle
-│   ├── chat.ts                      # Sanntidschat (Banter & rom-kanaler)
-│   ├── admin.ts                     # Admin-innstillinger, invitasjonskoder & månedskåringer
-│   ├── auth.ts                      # Registrering & autentisering med invitasjonskoder
-│   └── fpl.ts                       # FPL API-synkronisering & database seeding
-├── src/                             # Svelte 5 Frontend (Runes)
-│   ├── lib/
-│   │   ├── components/
-│   │   │   ├── TitleBar.svelte          # Frameless Windows tittelbar (min/max/lukk)
-│   │   │   ├── NavigationSidebar.svelte # Venstre kolonne (Nav, Rom 1–12, Profil)
-│   │   │   ├── WallOfFameBanner.svelte  # Pinned vinnerbanner ("Skrytevegg")
-│   │   │   ├── Leaderboard.svelte       # Hovedvisning med live romsnitt & akkordeon
-│   │   │   ├── ChatPanel.svelte         # Høyre kolonne (Sanntidschat)
-│   │   │   ├── RoomDetailModal.svelte   # Detaljvisning for rom og spillere
-│   │   │   ├── AdminModal.svelte        # PIN-beskyttet adminpanel (PIN: 1234)
-│   │   │   └── RegisterModal.svelte     # Bli med med invitasjonskode
-│   │   └── convex.svelte.ts             # Svelte 5 Runes hook (useQuery, useMutation)
-│   ├── app.css                      # Globale stiler, drag region & scrollbar
-│   ├── App.svelte                   # Hovedlayout (3-kolonners 1080p desktop)
-│   └── main.ts                      # Mount point
-├── src-tauri/                       # Tauri v2 Rust Container
-│   ├── tauri.conf.json              # Frameless konfigurasjon (decorations: false)
-│   └── Cargo.toml
-├── dev.ps1                          # Enkel PowerShell oppstart
-├── package.json
-└── tailwind.config.js
-```
-
----
-
-## 🏗️ Bygg for produksjon (Windows `.exe` / `.msi`)
-
-For å kompilere og pakke appen til en optimalisert Windows desktop-installasjonsfil:
+### Bygge ny installasjonsfil:
 ```bash
-npm run tauri build
+npm run build:exe
 ```
-Den ferdige installasjonsfilen vil ligge i: `src-tauri/target/release/bundle/`
+Den ferdige installasjonsfilen (`.exe`) genereres under `src-tauri/target/release/bundle/nsis/`.
+
+---
+
+## 📜 Lisenser
+
+Atlantasy er bygget på åpen kildekode og benytter moderne teknologier som Tauri, Svelte, Convex og Tailwind CSS. Full lisensoversikt er tilgjengelig direkte i appen via informasjonsikonet nederst i sidemenyen.
