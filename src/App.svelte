@@ -13,6 +13,7 @@
   import TeamProfileModal from "$lib/components/TeamProfileModal.svelte";
   import CupView from "$lib/components/CupView.svelte";
   import Sidebar from "$lib/components/Sidebar.svelte";
+  import UpdateModal from "$lib/components/UpdateModal.svelte";
 
   import { useQuery, useMutation, useAction } from "$lib/convex.svelte";
   import { api } from "../convex/_generated/api";
@@ -54,6 +55,8 @@
   let isAdminModalOpen = $state(false);
   let isRegisterModalOpen = $state(false);
   let selectedProfileEntryId = $state<number | null>(null);
+  let isUpdateModalOpen = $state(false);
+  let updateModalRef = $state<any>(null);
 
   // Convex Mutations
   const sendMessageMutation = useMutation(api.chat.sendMessage);
@@ -312,6 +315,7 @@
           handleOpenProfile(id);
         }
       }}
+      onCheckForUpdates={() => updateModalRef?.checkForUpdates(true)}
     />
 
     <!-- Hovedinnholdsområde for valgt modul/side -->
@@ -639,5 +643,13 @@
         alert(err.message || "Kunne ikke fullføre registreringen.");
       }
     }}
+  />
+
+  <!-- Automatisk & Manuell Oppdateringsmodal (Tauri v2 + GitHub Releases) -->
+  <UpdateModal
+    bind:isOpen={isUpdateModalOpen}
+    bind:this={updateModalRef}
+    currentVersion="0.1.0"
+    autoCheck={true}
   />
 </main>

@@ -26,6 +26,7 @@
     onOpenAdmin = () => {},
     onRefreshFpl = () => {},
     onOpenProfile = (_entryId?: number | null) => {},
+    onCheckForUpdates = () => {},
   }: {
     activeView?: string;
     currentGw?: number;
@@ -39,6 +40,7 @@
     onOpenAdmin?: () => void;
     onRefreshFpl?: () => void;
     onOpenProfile?: (entryId?: number | null) => void;
+    onCheckForUpdates?: () => void;
   } = $props();
 
   // Norsk formatering av fristtidspunkt (f.eks. "Fredag 19:30")
@@ -327,5 +329,19 @@
         ></span>
       </div>
     </button>
+
+    <!-- Versjon & Oppdateringssjekk -->
+    <div class="flex items-center justify-between px-1 text-[11px] text-[#94A3B8]">
+      <span class="font-mono">v0.1.0</span>
+      <button
+        type="button"
+        onclick={onCheckForUpdates}
+        class="text-[#94A3B8] hover:text-[#9FE88D] transition-colors flex items-center gap-1 hover:underline"
+        title="Søk etter nye oppdateringer på GitHub"
+      >
+        <Sparkles class="w-3 h-3 text-[#F4C152]" />
+        <span>Søk etter oppdatering</span>
+      </button>
+    </div>
   </div>
 </aside>

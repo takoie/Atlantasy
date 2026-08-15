@@ -19,6 +19,12 @@ src-tauri/gen/schemas/
 .env.local
 .env.*.local
 *.env
+*.key
+*.pub
+src-tauri/*.key
+src-tauri/*.pub
+src-tauri/gen-key.*
+src-tauri/gen-keys.*
 
 # Local AI / Tool Agent Folders & Caches
 .claude/

@@ -26,7 +26,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' https://*.convex.cloud wss://*.convex.cloud http://127.0.0.1:* ws://127.0.0.1:* http://localhost:* ws://localhost:* https://fantasy.premierleague.com; img-src 'self' data: blob: https://*.convex.cloud https://api.dicebear.com https://resources.premierleague.com https://images.unsplash.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; media-src 'self' https://*.convex.cloud;"
+      "csp": "default-src 'self'; connect-src 'self' https://*.convex.cloud wss://*.convex.cloud http://127.0.0.1:* ws://127.0.0.1:* http://localhost:* ws://localhost:* https://fantasy.premierleague.com https://github.com https://objects.githubusercontent.com https://*.githubusercontent.com; img-src 'self' data: blob: https://*.convex.cloud https://api.dicebear.com https://resources.premierleague.com https://images.unsplash.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; media-src 'self' https://*.convex.cloud;"
     }
   },
   "bundle": {
@@ -39,5 +39,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "RWS/3N7RItVCM0E+vDld/ApXdQAgFggfD9/SuvtZtqmhKL/uL0W6xNHb",
+      "endpoints": [
+        "https://github.com/takoie/Atlantasy/releases/latest/download/latest.json"
+      ]
+    }
   }
 }
