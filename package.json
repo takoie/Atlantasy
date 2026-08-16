@@ -9,7 +9,7 @@
     "dev:web": "npx --yes concurrently -n \"convex,vite\" -c \"magenta.bold,green.bold\" \"npx convex dev\" \"npm run dev\"",
     "dev": "vite",
     "build": "vite build",
-    "build:exe": "npm run build && npm run tauri build",
+    "build:exe": "node scripts/build-release.cjs",
     "package:exe": "npm run build && npm run tauri build -- --bundles nsis",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",

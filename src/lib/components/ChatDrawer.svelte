@@ -877,7 +877,7 @@
           {:else if activeToolTab === "gif"}
             <span class="flex items-center gap-1.5 text-[#70E1F8]">
               <Film class="w-3.5 h-3.5" />
-              <span>GIFs & Reaksjoner (Giphy)</span>
+              <span>GIFs & Reaksjoner (Tenor)</span>
             </span>
           {:else if activeToolTab === "image"}
             <span class="flex items-center gap-1.5 text-[#9FE88D]">
@@ -1034,7 +1034,7 @@
               type="text"
               bind:value={gifSearch}
               oninput={handleGifSearchInput}
-              placeholder="Søk etter GIFs (f.eks. haaland, celebration, facepalm, ronaldo)..."
+              placeholder="Søk i Tenor etter GIFs (f.eks. haaland, celebration, facepalm, ronaldo)..."
               class="w-full pl-8 pr-8 py-1.5 text-xs rounded-xl bg-[#242B35] border border-[#384252] text-white placeholder-[#94A3B8] focus:border-[#70E1F8] focus:outline-none"
             />
             {#if gifSearch}

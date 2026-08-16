@@ -26,11 +26,12 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' ipc: tauri: http://ipc.localhost http://tauri.localhost; connect-src 'self' ipc: tauri: http://ipc.localhost http://tauri.localhost http://*.localhost ws://*.localhost https://*.convex.cloud wss://*.convex.cloud https://*.convex.site wss://*.convex.site http://127.0.0.1:* ws://127.0.0.1:* http://localhost:* ws://localhost:* https://fantasy.premierleague.com https://github.com https://api.github.com https://*.github.com https://objects.githubusercontent.com https://*.githubusercontent.com; img-src 'self' https: http: data: blob: https://*.convex.cloud https://*.convex.site https://api.dicebear.com https://resources.premierleague.com https://images.unsplash.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; media-src 'self' https://*.convex.cloud https://*.convex.site;"
+      "csp": "default-src 'self' ipc: tauri: http://ipc.localhost http://tauri.localhost; connect-src 'self' ipc: tauri: http://ipc.localhost http://tauri.localhost http://*.localhost ws://*.localhost https://*.convex.cloud wss://*.convex.cloud https://*.convex.site wss://*.convex.site http://127.0.0.1:* ws://127.0.0.1:* http://localhost:* ws://localhost:* https://fantasy.premierleague.com https://github.com https://api.github.com https://*.github.com https://objects.githubusercontent.com https://*.githubusercontent.com https://tenor.googleapis.com https://*.tenor.com https://media.tenor.com https://api.giphy.com https://*.giphy.com https://media.giphy.com; img-src 'self' https: http: data: blob: https://*.convex.cloud https://*.convex.site https://api.dicebear.com https://resources.premierleague.com https://images.unsplash.com https://*.tenor.com https://media.tenor.com https://*.giphy.com https://media.giphy.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; media-src 'self' https://*.convex.cloud https://*.convex.site https://*.tenor.com https://media.tenor.com https://*.giphy.com https://media.giphy.com;"
     }
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": ["nsis", "msi"],
     "icon": [
       "icons/32x32.png",
@@ -50,7 +51,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "RWRaAzM7GXfJoxJMDLmVBpF+BQ7fk+9gyb1M+k6kMIUFq1aVYqLUyGgS",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM2MDRGRjRFNkI2RjY0QzQKUldURVpHOXJUdjhFTnROcFlzNXJrQjlzNllYVHRYRTBrVTY0NkZhNzBOaVJ3anYzWjF6T3p5aFkK",
       "endpoints": [
         "https://github.com/takoie/Atlantasy/releases/latest/download/latest.json"
       ]

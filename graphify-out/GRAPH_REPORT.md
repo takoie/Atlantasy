@@ -1,16 +1,16 @@
 # Graph Report - Atlantasy  (2026-08-16)
 
 ## Corpus Check
-- 263 files · ~392,676 words
+- 263 files · ~392,780 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3365 nodes · 4039 edges · 291 communities (250 shown, 41 thin omitted)
+- 3365 nodes · 4039 edges · 290 communities (249 shown, 41 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 54 edges (avg confidence: 0.53)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5e106e8b`
+- Built from commit: `e563676f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -188,7 +188,7 @@
 - Convex
 - shadow
 - Slides
-- _suggest_identities
+- _row_identities
 - using-superpowers/SKILL.md
 - render-graphs.js
 - Skill Discovery Optimization (SDO)
@@ -239,7 +239,7 @@
 - Proactively suggest the right Convex component
 - Generate Convex tests
 - Prove a feature works — seed, drive, assert
-- padding-y
+- primary
 - Example: TDD Skill Bulletproofing
 - TestGeneratedCatalogContract
 - none
@@ -254,7 +254,7 @@
 - start-server.sh
 - test_sync_brand_to_tokens.py
 - main
-- destructive
+- postcss
 - destructive-foreground
 - muted
 - primary-foreground
@@ -263,7 +263,6 @@
 - .__init__
 - svelte
 - Antigravity CLI (`agy`) Tool Mapping
-- autoprefixer
 - AGENTS.md
 - spec-document-reviewer-prompt.md
 - slides-create.md
@@ -324,7 +323,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (291 total, 41 thin omitted)
+## Communities (290 total, 41 thin omitted)
 
 ### Community 0 - "compilerOptions"
 Cohesion: 0.07
@@ -332,7 +331,7 @@ Nodes (28): DOM, DOM.Iterable, ES2022, src/**/*.d.ts, src/**/*.js, ./src/lib, sr
 
 ### Community 1 - "devDependencies"
 Cohesion: 0.12
-Nodes (17): concurrently, devDependencies, concurrently, postcss, svelte-check, @sveltejs/vite-plugin-svelte, tailwindcss, @tauri-apps/api (+9 more)
+Nodes (17): autoprefixer, concurrently, devDependencies, autoprefixer, concurrently, svelte-check, @sveltejs/vite-plugin-svelte, tailwindcss (+9 more)
 
 ### Community 2 - "dependencies"
 Cohesion: 0.13
@@ -463,8 +462,8 @@ Cohesion: 0.14
 Nodes (24): get_context(), is_allowed_exception(), is_allowed_rgba(), is_inside_block(), load_css_variables(), main(), print_result(), print_summary() (+16 more)
 
 ### Community 41 - "scripts/core.py"
-Cohesion: 0.11
-Nodes (27): _contains_phrase(), _domain_keywords(), _file_signature(), _get_bm25(), _load_csv(), _load_csv_snapshot(), _load_product_keywords(), _load_rows_or_empty() (+19 more)
+Cohesion: 0.12
+Nodes (25): _contains_phrase(), _domain_keywords(), _file_signature(), _get_bm25(), _load_csv(), _load_csv_snapshot(), _load_product_keywords(), _load_rows_or_empty() (+17 more)
 
 ### Community 42 - "search"
 Cohesion: 0.12
@@ -560,7 +559,7 @@ Nodes (18): 1. Wordmark (Logotype), 2. Lettermark (Monogram), 3. Pictorial Mark 
 
 ### Community 65 - "color"
 Cohesion: 0.11
-Nodes (19): $type, $value, background, foreground, muted-foreground, primary, primary-hover, secondary (+11 more)
+Nodes (19): $type, $value, background, destructive, foreground, muted-foreground, primary-hover, secondary (+11 more)
 
 ### Community 66 - "main"
 Cohesion: 0.11
@@ -671,8 +670,8 @@ Cohesion: 0.13
 Nodes (14): AIDA (Attention-Interest-Desire-Action), Before-After-Bridge, Contrast Patterns, Copywriting Formulas, Core Formulas, Cost of Inaction, FAB (Features-Advantages-Benefits), Formula-to-Slide Mapping (+6 more)
 
 ### Community 94 - "BM25"
-Cohesion: 0.33
-Nodes (3): BM25, BM25 ranking algorithm for text search, TestTokenizer
+Cohesion: 0.19
+Nodes (7): BM25, BM25 ranking algorithm for text search, Lowercase, normalize synonyms, split, remove punctuation, filter stopwords, Build BM25 index from documents, Suggest complete public identities so a retry can bypass score thresholds., _suggest_identities(), TestTokenizer
 
 ### Community 95 - "detect_domain"
 Cohesion: 0.23
@@ -939,8 +938,8 @@ Cohesion: 0.25
 Nodes (7): Build Flow, Checklist, Default Approach, Package Exports, Packaged Convex Components, Testing, When to Choose This
 
 ### Community 161 - "input"
-Cohesion: 0.29
-Nodes (8): padding-x, input, $type, $value, focus-ring, padding-x, $type, $value
+Cohesion: 0.20
+Nodes (12): padding-x, padding-y, input, $type, $value, focus-ring, padding-x, padding-y (+4 more)
 
 ### Community 162 - "md"
 Cohesion: 0.67
@@ -1014,9 +1013,9 @@ Nodes (6): sm, shadow, sm, sm, $type, $value
 Cohesion: 0.33
 Nodes (5): References (Knowledge Base), Routing, Slides, Subcommands, When to Use
 
-### Community 180 - "_suggest_identities"
-Cohesion: 0.25
-Nodes (8): _exact_row_identity(), Suggest complete public identities so a retry can bypass score thresholds., Return non-empty public identities from ordinary and alias fields., Resolve an explicit style identity without opening generic variant ranking., Return one row whose stable public identity exactly matches the query., _row_identities(), _style_identity(), _suggest_identities()
+### Community 180 - "_row_identities"
+Cohesion: 0.33
+Nodes (6): _exact_row_identity(), Return non-empty public identities from ordinary and alias fields., Resolve an explicit style identity without opening generic variant ranking., Return one row whose stable public identity exactly matches the query., _row_identities(), _style_identity()
 
 ### Community 181 - "using-superpowers/SKILL.md"
 Cohesion: 0.33
@@ -1218,9 +1217,9 @@ Nodes (3): Generate Convex tests, Rules, Workflow
 Cohesion: 0.50
 Nodes (3): Prove a feature works — seed, drive, assert, Rules, Workflow
 
-### Community 231 - "padding-y"
+### Community 231 - "primary"
 Cohesion: 0.67
-Nodes (4): padding-y, padding-y, $type, $value
+Nodes (3): primary, $type, $value
 
 ### Community 232 - "Example: TDD Skill Bulletproofing"
 Cohesion: 0.50
@@ -1258,10 +1257,6 @@ Nodes (4): Pattern, Reference, Skill Types, Technique
 Cohesion: 0.67
 Nodes (4): xl, xl, $type, $value
 
-### Community 247 - "destructive"
-Cohesion: 0.67
-Nodes (3): destructive, $type, $value
-
 ### Community 248 - "destructive-foreground"
 Cohesion: 0.67
 Nodes (3): destructive-foreground, $type, $value
@@ -1294,7 +1289,7 @@ Nodes (4): format_output(), generate_design_brief(), Format results for Claude c
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `search()` connect `search` to `.generate`, `validate_data.py`, `scripts/core.py`, `design_system.py`, `_suggest_identities`, `test_core.py`, `test_text_layout_resilience.py`, `search_stack`, `_normalize`, `detect_domain`?**
+- **Why does `search()` connect `search` to `.generate`, `validate_data.py`, `scripts/core.py`, `design_system.py`, `_row_identities`, `test_core.py`, `test_text_layout_resilience.py`, `search_stack`, `_normalize`, `BM25`, `detect_domain`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
 - **Why does `primitive` connect `primitive` to `radius`, `gray`, `fontSize`, `shadow`, `design-tokens-starter.json`, `spacing`?**
   _High betweenness centrality (0.007) - this node is a cross-community bridge._

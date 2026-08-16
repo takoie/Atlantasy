@@ -17,32 +17,34 @@ Når du skal lage en ny versjon (f.eks. `0.6.0`), oppdater versjonen i følgende
 
 ---
 
-### 2. Kompiler installasjonsfilene (.exe og .msi)
+### 2. Kompiler og signer installasjonsfilene
 Kjør i terminalen:
 
 ```powershell
 npm run build:exe
 ```
 
-Dette bygger frontend og lager de ferdige installasjonsfilene i:
+Dette bygger frontend, kompilerer, signerer med kryptografisk nøkkel og genererer:
 - `src-tauri/target/release/bundle/nsis/Atlantasy_<VERSJON>_x64-setup.exe` (NSIS-installer)
 - `src-tauri/target/release/bundle/msi/Atlantasy_<VERSJON>_x64_en-US.msi` (MSI-pakke)
+- `src-tauri/target/release/bundle/nsis/Atlantasy_<VERSJON>_x64-setup.exe.sig` (Kryptografisk signatur)
+- `latest.json` (Automatisk generert manifest for sømløs in-app oppdatering)
 
 ---
 
 ### 3. Publiser til GitHub
-Kjør følgende tre kommandoer for å pushe og opprette releasen på GitHub:
+Kjør følgende kommandoer for å pushe og opprette releasen på GitHub:
 
 ```powershell
 # 1. Commit og tagg
-git commit -am "release: v0.6.0"
-git tag -a v0.6.0 -m "Atlantasy Desktop v0.6.0"
+git commit -am "release: v0.7.1"
+git tag -a v0.7.1 -m "Atlantasy Desktop v0.7.1"
 
 # 2. Push til GitHub
 git push origin main --tags
 
-# 3. Last opp installasjonsfilene til GitHub Releases
-gh release create v0.6.0 "src-tauri/target/release/bundle/nsis/Atlantasy_0.6.0_x64-setup.exe" "src-tauri/target/release/bundle/msi/Atlantasy_0.6.0_x64_en-US.msi" --title "Atlantasy Desktop v0.6.0" --notes "### 🚀 Endringslogg for v0.6.0"
+# 3. Last opp installasjonsfilene og latest.json til GitHub Releases
+gh release create v0.7.1 "src-tauri/target/release/bundle/nsis/Atlantasy_0.7.1_x64-setup.exe" "src-tauri/target/release/bundle/msi/Atlantasy_0.7.1_x64_en-US.msi" "latest.json" --title "Atlantasy Desktop v0.7.1" --notes "### 🚀 Endringslogg for v0.7.1"
 ```
 
 ---
