@@ -4274,8 +4274,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_fontsize_xl",
-      "community": 110,
-      "community_name": "radius",
+      "community": 243,
+      "community_name": "xl",
       "norm_label": "xl"
     },
     {
@@ -4285,8 +4285,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_xl_value",
-      "community": 110,
-      "community_name": "radius",
+      "community": 243,
+      "community_name": "xl",
       "norm_label": "$value"
     },
     {
@@ -4296,8 +4296,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_xl_type",
-      "community": 110,
-      "community_name": "radius",
+      "community": 243,
+      "community_name": "xl",
       "norm_label": "$type"
     },
     {
@@ -4461,8 +4461,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_radius_default",
-      "community": 243,
-      "community_name": "default",
+      "community": 110,
+      "community_name": "radius",
       "norm_label": "default"
     },
     {
@@ -4472,8 +4472,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_default_value",
-      "community": 243,
-      "community_name": "default",
+      "community": 110,
+      "community_name": "radius",
       "norm_label": "$value"
     },
     {
@@ -4483,8 +4483,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_default_type",
-      "community": 243,
-      "community_name": "default",
+      "community": 110,
+      "community_name": "radius",
       "norm_label": "$type"
     },
     {
@@ -4538,8 +4538,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_radius_xl",
-      "community": 110,
-      "community_name": "radius",
+      "community": 243,
+      "community_name": "xl",
       "norm_label": "xl"
     },
     {
@@ -4615,8 +4615,8 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_shadow_default",
-      "community": 243,
-      "community_name": "default",
+      "community": 110,
+      "community_name": "radius",
       "norm_label": "default"
     },
     {
@@ -9168,8 +9168,8 @@
       "source_location": "L296",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_core_bm25_tokenize",
-      "community": 94,
-      "community_name": "BM25",
+      "community": 41,
+      "community_name": "scripts/core.py",
       "norm_label": ".tokenize()"
     },
     {
@@ -9179,8 +9179,8 @@
       "source_location": "L302",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_core_bm25_fit",
-      "community": 94,
-      "community_name": "BM25",
+      "community": 41,
+      "community_name": "scripts/core.py",
       "norm_label": ".fit()"
     },
     {
@@ -9311,8 +9311,8 @@
       "source_location": "L504",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_core_suggest_identities",
-      "community": 94,
-      "community_name": "BM25",
+      "community": 180,
+      "community_name": "_suggest_identities",
       "norm_label": "_suggest_identities()"
     },
     {
@@ -9323,7 +9323,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_core_row_identities",
       "community": 180,
-      "community_name": "_row_identities",
+      "community_name": "_suggest_identities",
       "norm_label": "_row_identities()"
     },
     {
@@ -9389,7 +9389,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_core_style_identity",
       "community": 180,
-      "community_name": "_row_identities",
+      "community_name": "_suggest_identities",
       "norm_label": "_style_identity()"
     },
     {
@@ -9400,7 +9400,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_core_exact_row_identity",
       "community": 180,
-      "community_name": "_row_identities",
+      "community_name": "_suggest_identities",
       "norm_label": "_exact_row_identity()"
     },
     {
@@ -9553,8 +9553,8 @@
       "source_location": "L297",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_core_rationale_297",
-      "community": 94,
-      "community_name": "BM25",
+      "community": 41,
+      "community_name": "scripts/core.py",
       "norm_label": "lowercase, normalize synonyms, split, remove punctuation, filter stopwords"
     },
     {
@@ -9564,8 +9564,8 @@
       "source_location": "L303",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_core_rationale_303",
-      "community": 94,
-      "community_name": "BM25",
+      "community": 41,
+      "community_name": "scripts/core.py",
       "norm_label": "build bm25 index from documents"
     },
     {
@@ -9663,8 +9663,8 @@
       "source_location": "L505",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_core_rationale_505",
-      "community": 94,
-      "community_name": "BM25",
+      "community": 180,
+      "community_name": "_suggest_identities",
       "norm_label": "suggest complete public identities so a retry can bypass score thresholds."
     },
     {
@@ -9675,7 +9675,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_core_rationale_526",
       "community": 180,
-      "community_name": "_row_identities",
+      "community_name": "_suggest_identities",
       "norm_label": "return non-empty public identities from ordinary and alias fields."
     },
     {
@@ -9719,7 +9719,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_core_rationale_665",
       "community": 180,
-      "community_name": "_row_identities",
+      "community_name": "_suggest_identities",
       "norm_label": "resolve an explicit style identity without opening generic variant ranking."
     },
     {
@@ -9730,7 +9730,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_core_rationale_696",
       "community": 180,
-      "community_name": "_row_identities",
+      "community_name": "_suggest_identities",
       "norm_label": "return one row whose stable public identity exactly matches the query."
     },
     {
@@ -15284,8 +15284,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "package_devdependencies_autoprefixer",
-      "community": 1,
-      "community_name": "devDependencies",
+      "community": 256,
+      "community_name": "autoprefixer",
       "norm_label": "autoprefixer"
     },
     {
@@ -15295,8 +15295,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "autoprefixer",
-      "community": 1,
-      "community_name": "devDependencies",
+      "community": 256,
+      "community_name": "autoprefixer",
       "norm_label": "autoprefixer"
     },
     {
@@ -15328,8 +15328,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "package_devdependencies_postcss",
-      "community": 283,
-      "community_name": "postcss",
+      "community": 1,
+      "community_name": "devDependencies",
       "norm_label": "postcss"
     },
     {
@@ -15339,8 +15339,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "postcss",
-      "community": 283,
-      "community_name": "postcss",
+      "community": 1,
+      "community_name": "devDependencies",
       "norm_label": "postcss"
     },
     {
@@ -15831,7 +15831,7 @@
       "label": "run()",
       "file_type": "code",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L59",
+      "source_location": "L83",
       "_origin": "ast",
       "id": "src_tauri_src_lib_run",
       "community": 10,
@@ -62576,7 +62576,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L59",
+      "source_location": "L83",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_tauri_src_lib",
@@ -82328,5 +82328,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "648915e74eea05c2d32b8e080ad06a801059e4cc"
+  "built_at_commit": "5e106e8b70c6824926b12902f3e5e2642518bfe4"
 }

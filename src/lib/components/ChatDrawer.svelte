@@ -120,11 +120,38 @@
     const q = query.trim();
     isSearchingGifs = true;
     try {
-      const endpoint = q
-        ? `https://api.giphy.com/v1/gifs/search?api_key=sXpGFDGZs0Dv1mmNFvYaGUvYwKX0PWIh&q=${encodeURIComponent(q)}&limit=24&rating=g`
-        : `https://api.giphy.com/v1/gifs/trending?api_key=sXpGFDGZs0Dv1mmNFvYaGUvYwKX0PWIh&limit=24&rating=g`;
+      // 1. Prøv Tenor API først (samme som Discord bruker)
+      const tenorEndpoint = q
+        ? `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(q)}&key=LIVDGRZILbtCasxDMoGXvacPhfhOTbvM&limit=40&contentfilter=medium`
+        : `https://tenor.googleapis.com/v2/featured?key=LIVDGRZILbtCasxDMoGXvacPhfhOTbvM&limit=40&contentfilter=medium`;
 
-      const res = await fetch(endpoint);
+      try {
+        const tenorRes = await fetch(tenorEndpoint);
+        if (tenorRes.ok) {
+          const tenorData = await tenorRes.json();
+          if (tenorData?.results && Array.isArray(tenorData.results) && tenorData.results.length > 0) {
+            gifResults = tenorData.results
+              .map((g: any) => ({
+                id: g.id,
+                title: g.content_description || "GIF",
+                url: g.media_formats?.gif?.url || g.media_formats?.mediumgif?.url,
+                preview: g.media_formats?.tinygif?.url || g.media_formats?.nanogif?.url || g.media_formats?.gif?.url,
+              }))
+              .filter((g: any) => !!g.url);
+            isSearchingGifs = false;
+            return;
+          }
+        }
+      } catch (tenorErr) {
+        console.warn("Tenor feilet, prøver Giphy:", tenorErr);
+      }
+
+      // 2. Fallback: Giphy med pg-13 (mindre sensur, mye bredere utvalg)
+      const giphyEndpoint = q
+        ? `https://api.giphy.com/v1/gifs/search?api_key=sXpGFDGZs0Dv1mmNFvYaGUvYwKX0PWIh&q=${encodeURIComponent(q)}&limit=48&rating=pg-13`
+        : `https://api.giphy.com/v1/gifs/trending?api_key=sXpGFDGZs0Dv1mmNFvYaGUvYwKX0PWIh&limit=48&rating=pg-13`;
+
+      const res = await fetch(giphyEndpoint);
       if (res.ok) {
         const data = await res.json();
         if (data?.data && Array.isArray(data.data) && data.data.length > 0) {
@@ -139,10 +166,10 @@
           return;
         }
       }
-      // Fallback
+      // 3. Lokal fallback dersom nettverket er helt nede
       gifResults = fallbackGifs.filter((g) => !q || g.title.toLowerCase().includes(q.toLowerCase()));
     } catch (e) {
-      console.warn("Giphy API forespørsel feilet, bruker fallback:", e);
+      console.warn("GIF API forespørsel feilet, bruker fallback:", e);
       gifResults = fallbackGifs.filter((g) => !q || g.title.toLowerCase().includes(q.toLowerCase()));
     } finally {
       isSearchingGifs = false;

@@ -1,7 +1,7 @@
 # Graph Report - Atlantasy  (2026-08-16)
 
 ## Corpus Check
-- 263 files · ~392,616 words
+- 263 files · ~392,676 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `648915e7`
+- Built from commit: `5e106e8b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -188,7 +188,7 @@
 - Convex
 - shadow
 - Slides
-- _row_identities
+- _suggest_identities
 - using-superpowers/SKILL.md
 - render-graphs.js
 - Skill Discovery Optimization (SDO)
@@ -250,7 +250,7 @@
 - File Organization
 - Skill Types
 - TestLandingAndStackContract
-- default
+- xl
 - start-server.sh
 - test_sync_brand_to_tokens.py
 - main
@@ -263,6 +263,7 @@
 - .__init__
 - svelte
 - Antigravity CLI (`agy`) Tool Mapping
+- autoprefixer
 - AGENTS.md
 - spec-document-reviewer-prompt.md
 - slides-create.md
@@ -288,7 +289,6 @@
 - .test_base_config_structure
 - .test_default_content_paths_react
 - plan-document-reviewer-prompt.md
-- postcss
 - @tauri-apps/api/core
 - internal
 - httpAction
@@ -332,7 +332,7 @@ Nodes (28): DOM, DOM.Iterable, ES2022, src/**/*.d.ts, src/**/*.js, ./src/lib, sr
 
 ### Community 1 - "devDependencies"
 Cohesion: 0.12
-Nodes (17): autoprefixer, concurrently, devDependencies, autoprefixer, concurrently, svelte-check, @sveltejs/vite-plugin-svelte, tailwindcss (+9 more)
+Nodes (17): concurrently, devDependencies, concurrently, postcss, svelte-check, @sveltejs/vite-plugin-svelte, tailwindcss, @tauri-apps/api (+9 more)
 
 ### Community 2 - "dependencies"
 Cohesion: 0.13
@@ -463,8 +463,8 @@ Cohesion: 0.14
 Nodes (24): get_context(), is_allowed_exception(), is_allowed_rgba(), is_inside_block(), load_css_variables(), main(), print_result(), print_summary() (+16 more)
 
 ### Community 41 - "scripts/core.py"
-Cohesion: 0.12
-Nodes (25): _contains_phrase(), _domain_keywords(), _file_signature(), _get_bm25(), _load_csv(), _load_csv_snapshot(), _load_product_keywords(), _load_rows_or_empty() (+17 more)
+Cohesion: 0.11
+Nodes (27): _contains_phrase(), _domain_keywords(), _file_signature(), _get_bm25(), _load_csv(), _load_csv_snapshot(), _load_product_keywords(), _load_rows_or_empty() (+19 more)
 
 ### Community 42 - "search"
 Cohesion: 0.12
@@ -671,8 +671,8 @@ Cohesion: 0.13
 Nodes (14): AIDA (Attention-Interest-Desire-Action), Before-After-Bridge, Contrast Patterns, Copywriting Formulas, Core Formulas, Cost of Inaction, FAB (Features-Advantages-Benefits), Formula-to-Slide Mapping (+6 more)
 
 ### Community 94 - "BM25"
-Cohesion: 0.19
-Nodes (7): BM25, BM25 ranking algorithm for text search, Lowercase, normalize synonyms, split, remove punctuation, filter stopwords, Build BM25 index from documents, Suggest complete public identities so a retry can bypass score thresholds., _suggest_identities(), TestTokenizer
+Cohesion: 0.33
+Nodes (3): BM25, BM25 ranking algorithm for text search, TestTokenizer
 
 ### Community 95 - "detect_domain"
 Cohesion: 0.23
@@ -736,7 +736,7 @@ Nodes (8): Handle shadcn/ui component installation., ShadcnInstaller, Test addin
 
 ### Community 110 - "radius"
 Cohesion: 0.29
-Nodes (8): xl, $type, $value, radius, full, xl, $type, $value
+Nodes (8): $type, $value, $type, $value, radius, default, full, default
 
 ### Community 111 - "test_data_contracts.py"
 Cohesion: 0.18
@@ -1014,9 +1014,9 @@ Nodes (6): sm, shadow, sm, sm, $type, $value
 Cohesion: 0.33
 Nodes (5): References (Knowledge Base), Routing, Slides, Subcommands, When to Use
 
-### Community 180 - "_row_identities"
-Cohesion: 0.33
-Nodes (6): _exact_row_identity(), Return non-empty public identities from ordinary and alias fields., Resolve an explicit style identity without opening generic variant ranking., Return one row whose stable public identity exactly matches the query., _row_identities(), _style_identity()
+### Community 180 - "_suggest_identities"
+Cohesion: 0.25
+Nodes (8): _exact_row_identity(), Suggest complete public identities so a retry can bypass score thresholds., Return non-empty public identities from ordinary and alias fields., Resolve an explicit style identity without opening generic variant ranking., Return one row whose stable public identity exactly matches the query., _row_identities(), _style_identity(), _suggest_identities()
 
 ### Community 181 - "using-superpowers/SKILL.md"
 Cohesion: 0.33
@@ -1254,9 +1254,9 @@ Nodes (4): File Organization, Self-Contained Skill, Skill with Heavy Reference, 
 Cohesion: 0.50
 Nodes (4): Pattern, Reference, Skill Types, Technique
 
-### Community 243 - "default"
+### Community 243 - "xl"
 Cohesion: 0.67
-Nodes (4): $type, $value, default, default
+Nodes (4): xl, xl, $type, $value
 
 ### Community 247 - "destructive"
 Cohesion: 0.67
@@ -1294,7 +1294,7 @@ Nodes (4): format_output(), generate_design_brief(), Format results for Claude c
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `search()` connect `search` to `.generate`, `validate_data.py`, `scripts/core.py`, `design_system.py`, `_row_identities`, `test_core.py`, `test_text_layout_resilience.py`, `search_stack`, `_normalize`, `BM25`, `detect_domain`?**
+- **Why does `search()` connect `search` to `.generate`, `validate_data.py`, `scripts/core.py`, `design_system.py`, `_suggest_identities`, `test_core.py`, `test_text_layout_resilience.py`, `search_stack`, `_normalize`, `detect_domain`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
 - **Why does `primitive` connect `primitive` to `radius`, `gray`, `fontSize`, `shadow`, `design-tokens-starter.json`, `spacing`?**
   _High betweenness centrality (0.007) - this node is a cross-community bridge._
