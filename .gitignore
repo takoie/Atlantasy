@@ -32,6 +32,8 @@ src-tauri/gen-keys.*
 .codex/
 graphify-out/cache/
 graphify-out/.graphify_*
+graphify-out/*
+CLAUDE.md
 
 # Python & Test Artifacts
 __pycache__/

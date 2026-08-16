@@ -135,6 +135,7 @@ export default defineSchema({
     content: v.string(),
     type: v.string(),              // "chat" | "announcement" | "fpl_bot" | "banter"
     isPinned: v.optional(v.boolean()),
+    editedAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_channel_and_createdAt", ["channel", "createdAt"])

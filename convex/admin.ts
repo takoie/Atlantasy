@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAdmin, sanitizeSettings } from "./security";
+import { requireAdmin, sanitizeSettings, hashPassword } from "./security";
 
 /**
  * Henter globale ligainnstillinger (uten sensitive hemmeligheter)
@@ -591,6 +591,101 @@ export const adminLinkUserTeam = mutation({
       success: true,
       fplEntryId: args.fplEntryId,
       teamName,
+    };
+  },
+});
+
+/**
+ * Administrator-funksjon for å opprette en manuell bruker direkte
+ */
+export const createManualUser = mutation({
+  args: {
+    adminUserId: v.optional(v.id("users")),
+    username: v.string(),
+    password: v.string(),
+    role: v.optional(v.string()), // "user" | "admin"
+    roomId: v.optional(v.id("rooms")),
+    fplEntryId: v.optional(v.number()),
+    fplTeamName: v.optional(v.string()),
+    fplManagerName: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
+
+    const cleanUsername = args.username.trim();
+    const cleanPassword = args.password.trim();
+
+    if (!cleanUsername || cleanUsername.length < 2) {
+      throw new Error("Brukernavn må være minst 2 tegn.");
+    }
+    if (!cleanPassword || cleanPassword.length < 4) {
+      throw new Error("Passord må være minst 4 tegn.");
+    }
+
+    // 1. Sjekk om brukernavnet allerede eksisterer
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", cleanUsername))
+      .first();
+
+    if (existing) {
+      throw new Error(`Brukernavnet "${cleanUsername}" er allerede registrert.`);
+    }
+
+    // 2. Sjekk og hent FPL-lagdetaljer
+    let teamName = args.fplTeamName?.trim();
+    let managerName = args.fplManagerName?.trim() || cleanUsername;
+
+    if (args.fplEntryId) {
+      const team = await ctx.db
+        .query("fpl_teams")
+        .withIndex("by_entryId", (q) => q.eq("entryId", args.fplEntryId!))
+        .first();
+
+      if (team) {
+        teamName = team.teamName;
+        managerName = team.managerName;
+      }
+    }
+
+    // 3. Hash passordet
+    const { hash, salt } = await hashPassword(cleanPassword);
+
+    // 4. Opprett brukeren
+    const userId = await ctx.db.insert("users", {
+      username: cleanUsername,
+      passwordHash: hash,
+      passwordSalt: salt,
+      role: args.role === "admin" ? "admin" : "user",
+      roomId: args.roomId,
+      fplEntryId: args.fplEntryId,
+      fplTeamName: teamName,
+      fplManagerName: managerName,
+      avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanUsername)}`,
+      createdAt: Date.now(),
+      lastActiveAt: Date.now(),
+    });
+
+    // 5. Knytt fpl_teams til brukeren og eventuelt rom
+    if (args.fplEntryId) {
+      const existingTeam = await ctx.db
+        .query("fpl_teams")
+        .withIndex("by_entryId", (q) => q.eq("entryId", args.fplEntryId!))
+        .first();
+
+      if (existingTeam) {
+        await ctx.db.patch(existingTeam._id, {
+          userId,
+          roomId: args.roomId || existingTeam.roomId,
+          lastUpdated: Date.now(),
+        });
+      }
+    }
+
+    return {
+      success: true,
+      userId,
+      username: cleanUsername,
     };
   },
 });

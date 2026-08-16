@@ -64,8 +64,11 @@
 
   // Convex Mutations
   const sendMessageMutation = useMutation(api.chat.sendMessage);
+  const deleteMessageMutation = useMutation(api.chat.deleteMessage);
+  const editMessageMutation = useMutation(api.chat.editMessage);
   const updateSettingsMutation = useMutation(api.admin.updateSettings);
   const createInviteMutation = useMutation(api.admin.createInviteCode);
+  const createManualUserMutation = useMutation(api.admin.createManualUser);
   const declareWinnerMutation = useMutation(api.admin.declareMonthlyWinner);
   const unpinAnnouncementMutation = useMutation(api.admin.unpinAnnouncement);
   const seedDataMutation = useMutation(api.fpl.seedDefaultData);
@@ -228,6 +231,33 @@
       });
     } catch (err) {
       console.error("Kunne ikke sende melding:", err);
+    }
+  }
+
+  async function handleDeleteMessage(messageId: string) {
+    if (!currentUser) return;
+    try {
+      await deleteMessageMutation.mutate({
+        messageId: messageId as any,
+        userId: currentUser._id,
+      });
+    } catch (err: any) {
+      console.error("Kunne ikke slette melding:", err);
+      alert(err.message || "Kunne ikke slette melding.");
+    }
+  }
+
+  async function handleEditMessage(messageId: string, newContent: string) {
+    if (!currentUser) return;
+    try {
+      await editMessageMutation.mutate({
+        messageId: messageId as any,
+        userId: currentUser._id,
+        content: newContent,
+      });
+    } catch (err: any) {
+      console.error("Kunne ikke redigere melding:", err);
+      alert(err.message || "Kunne ikke redigere melding.");
     }
   }
 
@@ -425,9 +455,16 @@
           {messages}
           {currentUser}
           {currentRoom}
+          {users}
+          {rooms}
+          {leaderboard}
+          {monthWinners}
+          {individualPlayers}
           activeChannel={activeChatChannel}
           onSelectChannel={(c) => (activeChatChannel = c)}
           onSendMessage={handleSendMessage}
+          onDeleteMessage={handleDeleteMessage}
+          onEditMessage={handleEditMessage}
         />
 
       <!-- 5. Nyheter & Runderapporter -->
@@ -615,10 +652,17 @@
     {messages}
     {currentUser}
     {currentRoom}
+    {users}
+    {rooms}
+    {leaderboard}
+    {monthWinners}
+    {individualPlayers}
     activeChannel={activeChatChannel}
     onClose={() => (isChatOpen = false)}
     onSelectChannel={(ch: string) => (activeChatChannel = ch)}
     onSendMessage={handleSendMessage}
+    onDeleteMessage={handleDeleteMessage}
+    onEditMessage={handleEditMessage}
   />
 
   <!-- Modaler -->
@@ -668,6 +712,7 @@
     onDeleteAllUsers={() => deleteAllUsersMutation.mutate({ adminUserId: currentUser?._id })}
     onDeleteUser={(uId) => deleteUserMutation.mutate({ userId: uId as any, adminUserId: currentUser?._id })}
     onDeleteInviteCode={(cId) => deleteInviteMutation.mutate({ codeId: cId as any, adminUserId: currentUser?._id })}
+    onCreateManualUser={(params) => createManualUserMutation.mutate({ ...params, adminUserId: currentUser?._id })}
   />
 
   <RegisterModal
@@ -692,7 +737,7 @@
   <UpdateModal
     bind:isOpen={isUpdateModalOpen}
     bind:this={updateModalRef}
-    currentVersion="0.5.1"
+    currentVersion="0.6.0"
     autoCheck={true}
   />
 

@@ -103,6 +103,44 @@ export const deleteMessage = mutation({
 });
 
 /**
+ * Redigerer en melding (kun admin eller avsender)
+ */
+export const editMessage = mutation({
+  args: {
+    messageId: v.id("messages"),
+    userId: v.id("users"),
+    content: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const cleanContent = args.content.trim();
+    if (!cleanContent) {
+      throw new Error("Meldingen kan ikke være tom.");
+    }
+
+    const message = await ctx.db.get(args.messageId);
+    if (!message) {
+      throw new Error("Meldingen ble ikke funnet.");
+    }
+
+    const user = await requireUser(ctx, args.userId);
+
+    const isAuthor = message.senderId === user._id;
+    const isAdmin = user.role === "admin";
+
+    if (!isAuthor && !isAdmin) {
+      throw new Error("Du har ikke tillatelse til å redigere denne meldingen.");
+    }
+
+    await ctx.db.patch(args.messageId, {
+      content: cleanContent,
+      editedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+/**
  * Henter antall uleste meldinger siden et gitt tidsstempel
  */
 export const getUnreadCount = query({
