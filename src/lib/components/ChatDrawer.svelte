@@ -25,6 +25,7 @@
     Search,
     ExternalLink,
     Maximize2,
+    Film,
   } from "lucide-svelte";
   import { tick } from "svelte";
 
@@ -75,11 +76,97 @@
   let deletingMessageId = $state<string | null>(null);
 
   // Utvidet Chat Funksjonalitet: Drawer & Verktøylinje
-  let activeToolTab = $state<"format" | "emoji" | "image" | null>(null);
+  let activeToolTab = $state<"format" | "emoji" | "gif" | "image" | null>(null);
   let attachedImage = $state<string | null>(null);
   let attachedImageName = $state<string>("");
   let lightboxImageUrl = $state<string | null>(null);
   let emojiSearch = $state("");
+
+  // GIF Søk & Velger State (Discord-style)
+  let gifSearch = $state("");
+  let isSearchingGifs = $state(false);
+  let gifResults = $state<any[]>([]);
+  let gifDebounceTimer: any = null;
+
+  const gifQuickTags = [
+    { label: "Trending 🔥", query: "" },
+    { label: "Haaland 🤖", query: "haaland" },
+    { label: "Goal ⚽", query: "football goal celebration" },
+    { label: "Jubel 🏆", query: "celebration victory" },
+    { label: "Facepalm 🤦‍♂️", query: "facepalm fail" },
+    { label: "Meme 😂", query: "football meme laugh" },
+    { label: "Blank 😭", query: "cry sad shock" },
+    { label: "Dans 🕺", query: "football dance" },
+    { label: "Pep 👨‍🦲", query: "pep guardiola" },
+  ];
+
+  // Innebygde fallback GIFs for umiddelbar respons og offline/rate-limit sikkerhet
+  const fallbackGifs = [
+    { id: "g1", title: "Haaland Meditation", url: "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif" },
+    { id: "g2", title: "Siuuu Ronaldo", url: "https://media.giphy.com/media/r1IMdmkhUcpUXEYOtY/giphy.gif" },
+    { id: "g3", title: "Mourinho Shock", url: "https://media.giphy.com/media/wWue0rCDOphOE/giphy.gif" },
+    { id: "g4", title: "Pep Clapping", url: "https://media.giphy.com/media/LOcPt9gfuNOSI/giphy.gif" },
+    { id: "g5", title: "Klopp Laugh", url: "https://media.giphy.com/media/3o7TKnO9hWddI50b3q/giphy.gif" },
+    { id: "g6", title: "Goal Celebration", url: "https://media.giphy.com/media/du3aIOqwTAQ4cHM3Gm/giphy.gif" },
+    { id: "g7", title: "Facepalm", url: "https://media.giphy.com/media/3oEjI67Egb8G9jqs3m/giphy.gif" },
+    { id: "g8", title: "Popcorn", url: "https://media.giphy.com/media/gl0mkIZOW6Nwc/giphy.gif" },
+    { id: "g9", title: "Mind Blown", url: "https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif" },
+    { id: "g10", title: "Dancing", url: "https://media.giphy.com/media/blSTtZehjAZ8I/giphy.gif" },
+    { id: "g11", title: "Crying Sad", url: "https://media.giphy.com/media/d2lcHJTG5Tscg/giphy.gif" },
+    { id: "g12", title: "Fire Fire", url: "https://media.giphy.com/media/yr7n0u3qzO9nG/giphy.gif" },
+  ];
+
+  async function searchGifs(query: string) {
+    const q = query.trim();
+    isSearchingGifs = true;
+    try {
+      const endpoint = q
+        ? `https://api.giphy.com/v1/gifs/search?api_key=sXpGFDGZs0Dv1mmNFvYaGUvYwKX0PWIh&q=${encodeURIComponent(q)}&limit=24&rating=g`
+        : `https://api.giphy.com/v1/gifs/trending?api_key=sXpGFDGZs0Dv1mmNFvYaGUvYwKX0PWIh&limit=24&rating=g`;
+
+      const res = await fetch(endpoint);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.data && Array.isArray(data.data) && data.data.length > 0) {
+          gifResults = data.data
+            .map((g: any) => ({
+              id: g.id,
+              title: g.title || "GIF",
+              url: g.images?.fixed_height?.url || g.images?.original?.url,
+              preview: g.images?.fixed_height_small?.url || g.images?.preview_gif?.url || g.images?.fixed_height?.url,
+            }))
+            .filter((g: any) => !!g.url);
+          return;
+        }
+      }
+      // Fallback
+      gifResults = fallbackGifs.filter((g) => !q || g.title.toLowerCase().includes(q.toLowerCase()));
+    } catch (e) {
+      console.warn("Giphy API forespørsel feilet, bruker fallback:", e);
+      gifResults = fallbackGifs.filter((g) => !q || g.title.toLowerCase().includes(q.toLowerCase()));
+    } finally {
+      isSearchingGifs = false;
+    }
+  }
+
+  function handleGifSearchInput() {
+    clearTimeout(gifDebounceTimer);
+    gifDebounceTimer = setTimeout(() => {
+      searchGifs(gifSearch);
+    }, 280);
+  }
+
+  function selectGif(gifUrl: string) {
+    const roomId = activeChannel === "room" ? currentRoom?._id : undefined;
+    const text = messageInput.trim();
+    messageInput = "";
+    removeAttachedImage();
+    activeToolTab = null;
+
+    // Send GIF til chat
+    onSendMessage(text, activeChannel, roomId, gifUrl);
+    // scrollToBottom(true); // Assuming this helper exists
+  };
 
   // Kategoriserte Emojis & Ikoner
   const emojiCategories = [
@@ -304,6 +391,27 @@
     });
   }
 
+  function scrollToBottom(smooth = false) {
+    tick().then(() => {
+      if (chatContainer) {
+        chatContainer.scrollTo({
+          top: chatContainer.scrollHeight,
+          behavior: smooth ? "smooth" : "auto",
+        });
+      }
+      setTimeout(() => {
+        if (chatContainer) {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+      }, 50);
+      setTimeout(() => {
+        if (chatContainer) {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+      }, 200);
+    });
+  }
+
   async function handleSend() {
     if (!messageInput.trim() && !attachedImage) return;
     const text = messageInput.trim();
@@ -315,11 +423,7 @@
 
     const roomId = activeChannel === "room" ? currentRoom?._id : undefined;
     onSendMessage(text, activeChannel, roomId, img);
-
-    await tick();
-    if (chatContainer) {
-      chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
+    scrollToBottom(true);
   }
 
   function insertEmoji(emoji: string) {
@@ -329,11 +433,14 @@
     }
   }
 
-  function toggleToolTab(tab: "format" | "emoji" | "image") {
+  function toggleToolTab(tab: "format" | "emoji" | "gif" | "image") {
     if (activeToolTab === tab) {
       activeToolTab = null;
     } else {
       activeToolTab = tab;
+      if (tab === "gif" && gifResults.length === 0) {
+        searchGifs("");
+      }
     }
   }
 
@@ -383,8 +490,14 @@
   }
 
   $effect(() => {
-    if (messages && chatContainer && !editingMessageId) {
-      chatContainer.scrollTop = chatContainer.scrollHeight;
+    // Sporer endringer i meldinger, aktiv kanal og om chatten åpnes
+    const _len = messages?.length || 0;
+    const _ch = activeChannel;
+    const _open = isOpen;
+    const _full = isFullPage;
+
+    if (chatContainer && !editingMessageId) {
+      scrollToBottom(false);
     }
   });
 </script>
@@ -734,6 +847,11 @@
               <Smile class="w-3.5 h-3.5" />
               <span>Ikoner & Emojis</span>
             </span>
+          {:else if activeToolTab === "gif"}
+            <span class="flex items-center gap-1.5 text-[#70E1F8]">
+              <Film class="w-3.5 h-3.5" />
+              <span>GIFs & Reaksjoner (Giphy)</span>
+            </span>
           {:else if activeToolTab === "image"}
             <span class="flex items-center gap-1.5 text-[#9FE88D]">
               <ImageIcon class="w-3.5 h-3.5" />
@@ -879,7 +997,93 @@
         </div>
       {/if}
 
-      <!-- Tab 3: Bilde & Utklippstavle -->
+      <!-- Tab 3: GIF Velger (Discord-stil med Giphy søk) -->
+      {#if activeToolTab === "gif"}
+        <div class="space-y-2.5">
+          <!-- Søkefelt for GIFs -->
+          <div class="relative flex items-center">
+            <Search class="w-3.5 h-3.5 absolute left-3 text-[#94A3B8]" />
+            <input
+              type="text"
+              bind:value={gifSearch}
+              oninput={handleGifSearchInput}
+              placeholder="Søk etter GIFs (f.eks. haaland, celebration, facepalm, ronaldo)..."
+              class="w-full pl-8 pr-8 py-1.5 text-xs rounded-xl bg-[#242B35] border border-[#384252] text-white placeholder-[#94A3B8] focus:border-[#70E1F8] focus:outline-none"
+            />
+            {#if gifSearch}
+              <button
+                type="button"
+                onclick={() => {
+                  gifSearch = "";
+                  searchGifs("");
+                }}
+                class="absolute right-2.5 p-0.5 rounded-md text-[#94A3B8] hover:text-white"
+              >
+                <X class="w-3.5 h-3.5" />
+              </button>
+            {/if}
+          </div>
+
+          <!-- Hurtig-kategorier / tags -->
+          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar text-[11px]">
+            {#each gifQuickTags as tag}
+              <button
+                type="button"
+                onclick={() => {
+                  gifSearch = tag.query;
+                  searchGifs(tag.query);
+                }}
+                class={`px-2.5 py-1 rounded-lg font-semibold shrink-0 transition-all border ${
+                  gifSearch === tag.query
+                    ? "bg-[#70E1F8]/20 text-[#70E1F8] border-[#70E1F8]/50"
+                    : "bg-[#242B35] text-[#94A3B8] border-[#384252] hover:text-white hover:border-[#4B5563]"
+                }`}
+              >
+                {tag.label}
+              </button>
+            {/each}
+          </div>
+
+          <!-- GIF Galleri Resultater -->
+          <div class="max-h-52 overflow-y-auto pr-1 custom-scrollbar">
+            {#if isSearchingGifs}
+              <div class="py-8 text-center text-xs text-[#94A3B8] flex items-center justify-center gap-2">
+                <Film class="w-4 h-4 text-[#70E1F8] animate-spin" />
+                <span>Henter GIFs...</span>
+              </div>
+            {:else if gifResults.length === 0}
+              <div class="py-8 text-center text-xs text-[#94A3B8]">
+                Ingen GIFs funnet for "{gifSearch}". Prøv et annet søkeord.
+              </div>
+            {:else}
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {#each gifResults as gif (gif.id || gif.url)}
+                  <button
+                    type="button"
+                    onclick={() => selectGif(gif.url)}
+                    class="group relative rounded-xl overflow-hidden bg-[#242B35] border border-[#384252] hover:border-[#70E1F8] transition-all aspect-video flex items-center justify-center shadow-sm hover:shadow-md"
+                    title={`Send: ${gif.title || "GIF"}`}
+                  >
+                    <img
+                      src={gif.preview || gif.url}
+                      alt={gif.title || "GIF"}
+                      loading="lazy"
+                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span class="px-2 py-1 rounded-md bg-[#70E1F8] text-[#16380c] font-black text-[10px] shadow-sm uppercase tracking-wide">
+                        Send GIF
+                      </span>
+                    </div>
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          </div>
+        </div>
+      {/if}
+
+      <!-- Tab 4: Bilde & Utklippstavle -->
       {#if activeToolTab === "image"}
         <div class="space-y-2.5">
           <div class="p-3 rounded-xl bg-[#242B35] border border-dashed border-[#384252] text-center space-y-2">
@@ -937,6 +1141,20 @@
       >
         <Smile class="w-3.5 h-3.5" />
         <span class="text-xs">Emojis</span>
+      </button>
+
+      <button
+        type="button"
+        onclick={() => toggleToolTab("gif")}
+        class={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${
+          activeToolTab === "gif"
+            ? "bg-[#70E1F8]/20 text-[#70E1F8] border-[#70E1F8]/50 shadow-sm"
+            : "bg-[#242B35] text-[#94A3B8] border-[#384252] hover:text-white hover:border-[#4B5563]"
+        }`}
+        title="Søk og send GIFs (Discord-stil)"
+      >
+        <Film class="w-3.5 h-3.5" />
+        <span class="text-xs">GIF</span>
       </button>
 
       <button
