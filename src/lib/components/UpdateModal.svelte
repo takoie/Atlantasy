@@ -11,9 +11,11 @@
     ExternalLink,
     LogOut,
   } from "lucide-svelte";
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { check, type Update } from "@tauri-apps/plugin-updater";
   import { relaunch, exit } from "@tauri-apps/plugin-process";
+  import { invoke } from "@tauri-apps/api/core";
+  import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
   let {
     isOpen = $bindable(false),
@@ -29,10 +31,11 @@
   let isChecking = $state(false);
   let updateObj = $state<any>(null);
   let rawUpdateInstance = $state<Update | null>(null);
-  let status = $state<"idle" | "available" | "downloading" | "installing" | "ready" | "manual_download" | "up_to_date" | "error">("idle");
+  let status = $state<"idle" | "available" | "downloading" | "installing" | "ready" | "up_to_date" | "error">("idle");
   let errorMessage = $state("");
   let downloadedBytes = $state(0);
   let totalBytes = $state(0);
+  let unlistenProgress: UnlistenFn | null = null;
 
   let formattedTargetVersion = $derived.by(() => {
     if (!updateObj?.version) return "";
@@ -103,7 +106,7 @@
         const latestTag = (release.tag_name || "").replace(/^v/, "").trim();
         const currentClean = currentVersion.replace(/^v/, "").trim();
 
-        // Sammenlign versjonsnumre (f.eks. 0.6.1 > 0.6.0)
+        // Sammenlign versjonsnumre (f.eks. 0.6.2 > 0.6.1)
         const isNewer = latestTag && latestTag !== currentClean;
 
         if (isNewer) {
@@ -145,15 +148,14 @@
   }
 
   async function startDownloadAndInstall() {
+    status = "downloading";
+    downloadedBytes = 0;
+    totalBytes = 0;
     errorMessage = "";
 
     try {
       if (rawUpdateInstance) {
         // Offisiell Tauri updater in-app silent download & install med progress
-        status = "downloading";
-        downloadedBytes = 0;
-        totalBytes = 0;
-
         await rawUpdateInstance.downloadAndInstall((event) => {
           if (event.event === "Started") {
             totalBytes = event.data.contentLength || 0;
@@ -166,16 +168,15 @@
         });
         status = "ready";
       } else if (updateObj?.downloadUrl) {
-        // Fallback: Last ned installasjonsprogram direkte via nettleser
-        window.open(updateObj.downloadUrl, "_blank");
-        status = "manual_download";
+        // In-app direkte nedlasting via Rust med progress bar og automatisk start av installasjonsprogrammet
+        await invoke("download_and_launch_installer", { url: updateObj.downloadUrl });
       } else {
         throw new Error("Ingen nedlastingskilde tilgjengelig.");
       }
     } catch (err: any) {
       console.error("Feil ved nedlasting/installering:", err);
       status = "error";
-      errorMessage = err?.message || String(err) || "Feil oppsto under nedlasting eller signaturverifisering.";
+      errorMessage = err?.message || String(err) || "Feil oppsto under nedlasting av oppdateringen.";
     }
   }
 
@@ -188,27 +189,43 @@
     }
   }
 
-  async function exitApp() {
-    try {
-      await exit(0);
-    } catch {
-      window.close();
-    }
-  }
-
   function closeModal() {
     isOpen = false;
-    if (status === "up_to_date" || status === "error" || status === "manual_download") {
+    if (status === "up_to_date" || status === "error") {
       status = "idle";
     }
   }
 
-  onMount(() => {
+  onMount(async () => {
     isTauriEnv = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-    if (autoCheck && isTauriEnv) {
-      setTimeout(() => {
-        checkForUpdates(false);
-      }, 4000);
+    
+    if (isTauriEnv) {
+      try {
+        unlistenProgress = await listen<{ downloaded: number; total: number }>(
+          "update-progress",
+          (event) => {
+            if (event.payload) {
+              downloadedBytes = event.payload.downloaded || 0;
+              totalBytes = event.payload.total || 0;
+            }
+          }
+        );
+      } catch (e) {
+        console.warn("Kunne ikke lytte på update-progress:", e);
+      }
+
+      if (autoCheck) {
+        setTimeout(() => {
+          checkForUpdates(false);
+        }, 4000);
+      }
+    }
+  });
+
+  onDestroy(() => {
+    if (unlistenProgress) {
+      unlistenProgress();
+      unlistenProgress = null;
     }
   });
 </script>
@@ -224,8 +241,6 @@
           <div class="w-12 h-12 rounded-2xl bg-[#9FE88D]/20 border border-[#9FE88D]/40 text-[#9FE88D] flex items-center justify-center shadow-inner shrink-0">
             {#if status === "ready"}
               <CheckCircle2 class="w-6 h-6 text-[#9FE88D]" />
-            {:else if status === "manual_download"}
-              <Download class="w-6 h-6 text-[#70E1F8]" />
             {:else if status === "error"}
               <AlertCircle class="w-6 h-6 text-[#FB6F84]" />
             {:else if status === "downloading" || status === "installing"}
@@ -241,8 +256,6 @@
             <h3 class="text-lg font-black text-white leading-tight">
               {#if status === "ready"}
                 Oppdatering er klar!
-              {:else if status === "manual_download"}
-                Installasjonsfil lastes ned
               {:else if status === "downloading"}
                 Laster ned oppdatering...
               {:else if status === "installing"}
@@ -258,10 +271,8 @@
             <p class="text-xs text-[#94A3B8] mt-0.5">
               {#if status === "available" && updateObj}
                 Versjon {formattedTargetVersion} er nå tilgjengelig på GitHub
-              {:else if status === "manual_download"}
-                Kjør installasjonsfilen for å fullføre oppgraderingen
               {:else if status === "downloading" || status === "installing"}
-                Vennligst vent mens filene klargjøres
+                Laster ned og starter installasjonsprogrammet automatisk
               {:else if status === "up_to_date"}
                 Atlantasy {formattedCurrentVersion} er fullt oppdatert
               {:else}
@@ -324,48 +335,28 @@
               {/if}
             </div>
           </div>
-        {:else if status === "manual_download"}
-          <!-- Instruksjoner for manuell installasjon -->
-          <div class="space-y-4">
-            <div class="p-4 rounded-2xl bg-[#70E1F8]/10 border border-[#70E1F8]/30 space-y-3">
-              <div class="flex items-center gap-2 text-[#70E1F8] font-bold text-sm">
-                <Download class="w-4 h-4" />
-                <span>Installasjonsfilen lastes ned nå</span>
-              </div>
-              <p class="text-xs text-[#E2E8F0] leading-relaxed">
-                Nettleseren din laster nå ned <strong class="text-white font-mono">{updateObj?.fileName || "Atlantasy-setup.exe"}</strong>.
-              </p>
-              <div class="p-3 rounded-xl bg-[#191E24] border border-[#384252] text-xs space-y-2">
-                <p class="font-bold text-white">Følg disse to stegene:</p>
-                <ol class="list-decimal list-inside space-y-1 text-[#94A3B8]">
-                  <li>Lukk Atlantasy (bruk knappen under).</li>
-                  <li>Kjør den nedlastede installasjonsfilen fra nedlastingsmappen din for å fullføre oppdateringen til <strong class="text-[#9FE88D]">{formattedTargetVersion}</strong>.</li>
-                </ol>
-              </div>
-            </div>
-          </div>
         {:else if status === "downloading" || status === "installing"}
           <!-- Nedlastingsfremdrift -->
           <div class="space-y-4 py-4 text-center">
             <div class="space-y-2">
               <div class="flex items-center justify-between text-xs font-mono font-bold">
                 <span class="text-[#70E1F8]">
-                  {status === "downloading" ? "Laster ned..." : "Verifiserer og installerer..."}
+                  {status === "downloading" ? "Laster ned installasjonsfil..." : "Verifiserer og installerer..."}
                 </span>
-                <span class="text-white">{formattedProgress}</span>
+                <span class="text-white font-mono">{formattedProgress}</span>
               </div>
 
               <!-- Fremdriftslinje -->
               <div class="w-full h-3.5 rounded-full bg-[#191E24] border border-[#384252] overflow-hidden p-0.5 shadow-inner">
                 <div
                   class="h-full rounded-full bg-gradient-to-r from-[#70E1F8] to-[#9FE88D] transition-all duration-200"
-                  style={`width: ${progressPercent || 100}%;`}
+                  style={`width: ${progressPercent || (totalBytes > 0 ? 0 : 100)}%;`}
                 ></div>
               </div>
             </div>
 
             <p class="text-xs text-[#94A3B8]">
-              Ikke lukk programmet under nedlastingen.
+              Installatøren vil starte automatisk når filen er ferdig nedlastet.
             </p>
           </div>
         {:else if status === "ready"}
@@ -390,7 +381,7 @@
               <span>Kunne ikke fullføre oppdateringen</span>
             </div>
             <p class="text-xs text-[#E2E8F0] leading-relaxed">
-              {errorMessage || "Ukjent feil oppsto under sjekk etter nye versjoner."}
+              {errorMessage || "Ukjent feil oppsto under nedlasting av oppdateringen."}
             </p>
           </div>
         {/if}
@@ -414,23 +405,6 @@
           >
             <Download class="w-4 h-4" />
             <span>Last ned og oppdater</span>
-          </button>
-        {:else if status === "manual_download"}
-          <button
-            type="button"
-            onclick={closeModal}
-            class="px-4 py-2.5 rounded-xl bg-[#2A303C] hover:bg-[#384252] text-xs font-semibold text-[#94A3B8] hover:text-white transition-colors"
-          >
-            Lukk dette vinduet
-          </button>
-
-          <button
-            type="button"
-            onclick={exitApp}
-            class="px-5 py-2.5 rounded-xl bg-[#FB6F84] hover:bg-[#e65b71] text-white font-bold text-xs transition-all shadow-md flex items-center gap-2"
-          >
-            <LogOut class="w-4 h-4" />
-            <span>Lukk Atlantasy nå</span>
           </button>
         {:else if status === "ready"}
           <button
