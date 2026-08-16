@@ -3163,8 +3163,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_primitive",
-      "community": 134,
-      "community_name": "primitive",
+      "community": 162,
+      "community_name": "radius",
       "norm_label": "primitive"
     },
     {
@@ -3801,8 +3801,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_spacing_1",
-      "community": 22,
-      "community_name": "spacing",
+      "community": 254,
+      "community_name": "1",
       "norm_label": "1"
     },
     {
@@ -3812,8 +3812,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_1_value",
-      "community": 22,
-      "community_name": "spacing",
+      "community": 254,
+      "community_name": "1",
       "norm_label": "$value"
     },
     {
@@ -3823,8 +3823,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_1_type",
-      "community": 22,
-      "community_name": "spacing",
+      "community": 254,
+      "community_name": "1",
       "norm_label": "$type"
     },
     {
@@ -3867,8 +3867,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_spacing_3",
-      "community": 22,
-      "community_name": "spacing",
+      "community": 256,
+      "community_name": "3",
       "norm_label": "3"
     },
     {
@@ -3878,8 +3878,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_3_value",
-      "community": 22,
-      "community_name": "spacing",
+      "community": 256,
+      "community_name": "3",
       "norm_label": "$value"
     },
     {
@@ -3889,8 +3889,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_3_type",
-      "community": 22,
-      "community_name": "spacing",
+      "community": 256,
+      "community_name": "3",
       "norm_label": "$type"
     },
     {
@@ -3999,8 +3999,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_spacing_8",
-      "community": 22,
-      "community_name": "spacing",
+      "community": 257,
+      "community_name": "8",
       "norm_label": "8"
     },
     {
@@ -4010,8 +4010,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_8_value",
-      "community": 22,
-      "community_name": "spacing",
+      "community": 257,
+      "community_name": "8",
       "norm_label": "$value"
     },
     {
@@ -4021,8 +4021,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_8_type",
-      "community": 22,
-      "community_name": "spacing",
+      "community": 257,
+      "community_name": "8",
       "norm_label": "$type"
     },
     {
@@ -4098,8 +4098,8 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_spacing_16",
-      "community": 22,
-      "community_name": "spacing",
+      "community": 243,
+      "community_name": "16",
       "norm_label": "16"
     },
     {
@@ -4109,8 +4109,8 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_16_value",
-      "community": 22,
-      "community_name": "spacing",
+      "community": 243,
+      "community_name": "16",
       "norm_label": "$value"
     },
     {
@@ -4120,8 +4120,8 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_16_type",
-      "community": 22,
-      "community_name": "spacing",
+      "community": 243,
+      "community_name": "16",
       "norm_label": "$type"
     },
     {
@@ -4176,7 +4176,7 @@
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_fontsize_sm",
       "community": 178,
-      "community_name": "shadow",
+      "community_name": "sm",
       "norm_label": "sm"
     },
     {
@@ -4187,7 +4187,7 @@
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_sm_value",
       "community": 178,
-      "community_name": "shadow",
+      "community_name": "sm",
       "norm_label": "$value"
     },
     {
@@ -4198,7 +4198,7 @@
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_sm_type",
       "community": 178,
-      "community_name": "shadow",
+      "community_name": "sm",
       "norm_label": "$type"
     },
     {
@@ -4451,7 +4451,7 @@
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_radius_sm",
       "community": 178,
-      "community_name": "shadow",
+      "community_name": "sm",
       "norm_label": "sm"
     },
     {
@@ -4494,8 +4494,8 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_radius_md",
-      "community": 233,
-      "community_name": "md",
+      "community": 162,
+      "community_name": "radius",
       "norm_label": "md"
     },
     {
@@ -4505,8 +4505,8 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_md_value",
-      "community": 233,
-      "community_name": "md",
+      "community": 162,
+      "community_name": "radius",
       "norm_label": "$value"
     },
     {
@@ -4516,8 +4516,8 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_md_type",
-      "community": 233,
-      "community_name": "md",
+      "community": 162,
+      "community_name": "radius",
       "norm_label": "$type"
     },
     {
@@ -4582,8 +4582,8 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_primitive_shadow",
-      "community": 178,
-      "community_name": "shadow",
+      "community": 162,
+      "community_name": "radius",
       "norm_label": "shadow"
     },
     {
@@ -4605,7 +4605,7 @@
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_shadow_sm",
       "community": 178,
-      "community_name": "shadow",
+      "community_name": "sm",
       "norm_label": "sm"
     },
     {
@@ -4626,8 +4626,8 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_shadow_md",
-      "community": 233,
-      "community_name": "md",
+      "community": 162,
+      "community_name": "radius",
       "norm_label": "md"
     },
     {
@@ -4649,7 +4649,7 @@
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_primitive_duration",
       "community": 134,
-      "community_name": "primitive",
+      "community_name": "duration",
       "norm_label": "duration"
     },
     {
@@ -4660,7 +4660,7 @@
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_duration_fast",
       "community": 134,
-      "community_name": "primitive",
+      "community_name": "duration",
       "norm_label": "fast"
     },
     {
@@ -4671,7 +4671,7 @@
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_fast_value",
       "community": 134,
-      "community_name": "primitive",
+      "community_name": "duration",
       "norm_label": "$value"
     },
     {
@@ -4682,7 +4682,7 @@
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_fast_type",
       "community": 134,
-      "community_name": "primitive",
+      "community_name": "duration",
       "norm_label": "$type"
     },
     {
@@ -4693,7 +4693,7 @@
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_duration_normal",
       "community": 134,
-      "community_name": "primitive",
+      "community_name": "duration",
       "norm_label": "normal"
     },
     {
@@ -4704,7 +4704,7 @@
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_normal_value",
       "community": 134,
-      "community_name": "primitive",
+      "community_name": "duration",
       "norm_label": "$value"
     },
     {
@@ -4715,7 +4715,7 @@
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_normal_type",
       "community": 134,
-      "community_name": "primitive",
+      "community_name": "duration",
       "norm_label": "$type"
     },
     {
@@ -4726,7 +4726,7 @@
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_duration_slow",
       "community": 134,
-      "community_name": "primitive",
+      "community_name": "duration",
       "norm_label": "slow"
     },
     {
@@ -4737,7 +4737,7 @@
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_slow_value",
       "community": 134,
-      "community_name": "primitive",
+      "community_name": "duration",
       "norm_label": "$value"
     },
     {
@@ -4748,7 +4748,7 @@
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_slow_type",
       "community": 134,
-      "community_name": "primitive",
+      "community_name": "duration",
       "norm_label": "$type"
     },
     {
@@ -9851,7 +9851,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_relative_luminance",
       "community": 39,
-      "community_name": "_palette_is_dark",
+      "community_name": "test_design_system_mode.py",
       "norm_label": "_relative_luminance()"
     },
     {
@@ -9862,7 +9862,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_palette_is_dark",
       "community": 39,
-      "community_name": "_palette_is_dark",
+      "community_name": "test_design_system_mode.py",
       "norm_label": "_palette_is_dark()"
     },
     {
@@ -9872,8 +9872,8 @@
       "source_location": "L153",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_contrast_ratio",
-      "community": 4,
-      "community_name": "_select_palette_for_mode",
+      "community": 39,
+      "community_name": "test_design_system_mode.py",
       "norm_label": "_contrast_ratio()"
     },
     {
@@ -9884,7 +9884,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_style_is_dark_primary",
       "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community_name": "_style_is_dark_primary",
       "norm_label": "_style_is_dark_primary()"
     },
     {
@@ -9895,7 +9895,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_query_wants_dark",
       "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community_name": "_style_is_dark_primary",
       "norm_label": "_query_wants_dark()"
     },
     {
@@ -9906,7 +9906,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_resolve_color_mode",
       "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community_name": "_style_is_dark_primary",
       "norm_label": "_resolve_color_mode()"
     },
     {
@@ -9916,8 +9916,8 @@
       "source_location": "L193",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_derive_dark_palette",
-      "community": 4,
-      "community_name": "_select_palette_for_mode",
+      "community": 39,
+      "community_name": "test_design_system_mode.py",
       "norm_label": "_derive_dark_palette()"
     },
     {
@@ -9927,8 +9927,8 @@
       "source_location": "L220",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_select_palette_for_mode",
-      "community": 4,
-      "community_name": "_select_palette_for_mode",
+      "community": 39,
+      "community_name": "test_design_system_mode.py",
       "norm_label": "_select_palette_for_mode()"
     },
     {
@@ -9938,8 +9938,8 @@
       "source_location": "L246",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_filter_anti_patterns_for_mode",
-      "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community": 96,
+      "community_name": ".generate",
       "norm_label": "_filter_anti_patterns_for_mode()"
     },
     {
@@ -9949,7 +9949,7 @@
       "source_location": "L258",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator",
-      "community": 34,
+      "community": 4,
       "community_name": "DesignSystemGenerator",
       "norm_label": "designsystemgenerator"
     },
@@ -9960,7 +9960,7 @@
       "source_location": "L261",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_init",
-      "community": 34,
+      "community": 4,
       "community_name": "DesignSystemGenerator",
       "norm_label": ".__init__()"
     },
@@ -9971,7 +9971,7 @@
       "source_location": "L267",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_load_reasoning",
-      "community": 34,
+      "community": 4,
       "community_name": "DesignSystemGenerator",
       "norm_label": "._load_reasoning()"
     },
@@ -9982,7 +9982,7 @@
       "source_location": "L275",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_load_styles",
-      "community": 34,
+      "community": 4,
       "community_name": "DesignSystemGenerator",
       "norm_label": "._load_styles()"
     },
@@ -9993,7 +9993,7 @@
       "source_location": "L282",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_load_landing_patterns",
-      "community": 34,
+      "community": 4,
       "community_name": "DesignSystemGenerator",
       "norm_label": "._load_landing_patterns()"
     },
@@ -10004,7 +10004,7 @@
       "source_location": "L297",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_build_style_lookup",
-      "community": 34,
+      "community": 4,
       "community_name": "DesignSystemGenerator",
       "norm_label": "._build_style_lookup()"
     },
@@ -10015,8 +10015,8 @@
       "source_location": "L307",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_resolve_style",
-      "community": 96,
-      "community_name": ".generate",
+      "community": 4,
+      "community_name": "DesignSystemGenerator",
       "norm_label": "._resolve_style()"
     },
     {
@@ -10037,8 +10037,8 @@
       "source_location": "L357",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_find_reasoning_rule",
-      "community": 96,
-      "community_name": ".generate",
+      "community": 111,
+      "community_name": "parse_decision_rules",
       "norm_label": "._find_reasoning_rule()"
     },
     {
@@ -10048,8 +10048,8 @@
       "source_location": "L365",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_apply_reasoning",
-      "community": 96,
-      "community_name": ".generate",
+      "community": 111,
+      "community_name": "parse_decision_rules",
       "norm_label": "._apply_reasoning()"
     },
     {
@@ -10059,8 +10059,8 @@
       "source_location": "L408",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_select_best_match",
-      "community": 96,
-      "community_name": ".generate",
+      "community": 4,
+      "community_name": "DesignSystemGenerator",
       "norm_label": "._select_best_match()"
     },
     {
@@ -10258,7 +10258,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_130",
       "community": 39,
-      "community_name": "_palette_is_dark",
+      "community_name": "test_design_system_mode.py",
       "norm_label": "wcag relative luminance of a #rrggbb string, or none if unparseable."
     },
     {
@@ -10269,7 +10269,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_148",
       "community": 39,
-      "community_name": "_palette_is_dark",
+      "community_name": "test_design_system_mode.py",
       "norm_label": "true when a colors.csv row's background is a dark surface."
     },
     {
@@ -10279,8 +10279,8 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_154",
-      "community": 4,
-      "community_name": "_select_palette_for_mode",
+      "community": 39,
+      "community_name": "test_design_system_mode.py",
       "norm_label": "wcag contrast ratio for two hex colors, or none if either is invalid."
     },
     {
@@ -10291,7 +10291,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_165",
       "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community_name": "_style_is_dark_primary",
       "norm_label": "true when a styles.csv row describes itself as dark-first."
     },
     {
@@ -10302,7 +10302,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_181",
       "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community_name": "_style_is_dark_primary",
       "norm_label": "true when the query explicitly asks for a dark theme."
     },
     {
@@ -10313,7 +10313,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_187",
       "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community_name": "_style_is_dark_primary",
       "norm_label": "resolve the mode the rest of the output has to agree with."
     },
     {
@@ -10323,8 +10323,8 @@
       "source_location": "L194",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_194",
-      "community": 4,
-      "community_name": "_select_palette_for_mode",
+      "community": 39,
+      "community_name": "test_design_system_mode.py",
       "norm_label": "keep product brand tokens while deriving accessible dark surfaces."
     },
     {
@@ -10334,8 +10334,8 @@
       "source_location": "L222",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_222",
-      "community": 4,
-      "community_name": "_select_palette_for_mode",
+      "community": 39,
+      "community_name": "test_design_system_mode.py",
       "norm_label": "pick the highest-ranked palette matching the resolved mode. only the dark case..."
     },
     {
@@ -10345,8 +10345,8 @@
       "source_location": "L247",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_247",
-      "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community": 96,
+      "community_name": ".generate",
       "norm_label": "drop \"avoid dark mode\" advice once dark mode is the resolved answer."
     },
     {
@@ -10356,7 +10356,7 @@
       "source_location": "L259",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_259",
-      "community": 34,
+      "community": 4,
       "community_name": "DesignSystemGenerator",
       "norm_label": "generates design system recommendations from aggregated searches."
     },
@@ -10367,7 +10367,7 @@
       "source_location": "L268",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_268",
-      "community": 34,
+      "community": 4,
       "community_name": "DesignSystemGenerator",
       "norm_label": "load reasoning rules from csv."
     },
@@ -10389,8 +10389,8 @@
       "source_location": "L358",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_358",
-      "community": 96,
-      "community_name": ".generate",
+      "community": 111,
+      "community_name": "parse_decision_rules",
       "norm_label": "find matching reasoning rule for a category."
     },
     {
@@ -10400,8 +10400,8 @@
       "source_location": "L366",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_366",
-      "community": 96,
-      "community_name": ".generate",
+      "community": 111,
+      "community_name": "parse_decision_rules",
       "norm_label": "apply reasoning rules to search results."
     },
     {
@@ -10411,8 +10411,8 @@
       "source_location": "L409",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_409",
-      "community": 96,
-      "community_name": ".generate",
+      "community": 4,
+      "community_name": "DesignSystemGenerator",
       "norm_label": "select best matching result based on priority keywords."
     },
     {
@@ -10588,7 +10588,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_reasoning_contract",
       "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community_name": "parse_decision_rules",
       "norm_label": "reasoning_contract.py"
     },
     {
@@ -10599,7 +10599,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_reasoning_contract_object_without_duplicates",
       "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community_name": "parse_decision_rules",
       "norm_label": "_object_without_duplicates()"
     },
     {
@@ -10610,7 +10610,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_reasoning_contract_parse_decision_rules",
       "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community_name": "parse_decision_rules",
       "norm_label": "parse_decision_rules()"
     },
     {
@@ -10621,7 +10621,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_reasoning_contract_validate_action",
       "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community_name": "parse_decision_rules",
       "norm_label": "_validate_action()"
     },
     {
@@ -10632,7 +10632,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_reasoning_contract_apply_decision_rules",
       "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community_name": "parse_decision_rules",
       "norm_label": "apply_decision_rules()"
     },
     {
@@ -10643,7 +10643,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_reasoning_contract_rationale_68",
       "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community_name": "parse_decision_rules",
       "norm_label": "parse the canonical condition -> action-array representation."
     },
     {
@@ -10654,7 +10654,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_reasoning_contract_rationale_102",
       "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community_name": "parse_decision_rules",
       "norm_label": "return deterministic mutations and an audit trail; never execute data."
     },
     {
@@ -10664,8 +10664,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_search",
-      "community": 84,
-      "community_name": "test_core.py",
+      "community": 284,
+      "community_name": "scripts/search.py",
       "norm_label": "scripts/search.py"
     },
     {
@@ -10675,8 +10675,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_search_format_output",
-      "community": 84,
-      "community_name": "test_core.py",
+      "community": 284,
+      "community_name": "scripts/search.py",
       "norm_label": "format_output()"
     },
     {
@@ -10686,8 +10686,8 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_search_rationale_45",
-      "community": 84,
-      "community_name": "test_core.py",
+      "community": 284,
+      "community_name": "scripts/search.py",
       "norm_label": "format results for claude consumption (token-optimized)"
     },
     {
@@ -11324,7 +11324,7 @@
       "source_location": "L313",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_core_testreasoningmatch",
-      "community": 34,
+      "community": 4,
       "community_name": "DesignSystemGenerator",
       "norm_label": "testreasoningmatch"
     },
@@ -11335,7 +11335,7 @@
       "source_location": "L314",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_core_testreasoningmatch_test_known_category_matches_exactly",
-      "community": 34,
+      "community": 4,
       "community_name": "DesignSystemGenerator",
       "norm_label": ".test_known_category_matches_exactly()"
     },
@@ -11346,7 +11346,7 @@
       "source_location": "L319",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_core_testreasoningmatch_test_unknown_category_falls_back_gracefully",
-      "community": 34,
+      "community": 4,
       "community_name": "DesignSystemGenerator",
       "norm_label": ".test_unknown_category_falls_back_gracefully()"
     },
@@ -11357,8 +11357,8 @@
       "source_location": "L326",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_core_testdiagnosticscontracts",
-      "community": 153,
-      "community_name": "TestDiagnosticsContracts",
+      "community": 84,
+      "community_name": "test_core.py",
       "norm_label": "testdiagnosticscontracts"
     },
     {
@@ -11368,8 +11368,8 @@
       "source_location": "L327",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_core_testdiagnosticscontracts_test_diagnostics_opt_in_is_additive_for_domain_search",
-      "community": 153,
-      "community_name": "TestDiagnosticsContracts",
+      "community": 84,
+      "community_name": "test_core.py",
       "norm_label": ".test_diagnostics_opt_in_is_additive_for_domain_search()"
     },
     {
@@ -11379,8 +11379,8 @@
       "source_location": "L335",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_core_testdiagnosticscontracts_test_diagnostics_opt_in_is_additive_for_stack_search",
-      "community": 153,
-      "community_name": "TestDiagnosticsContracts",
+      "community": 84,
+      "community_name": "test_core.py",
       "norm_label": ".test_diagnostics_opt_in_is_additive_for_stack_search()"
     },
     {
@@ -11577,8 +11577,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts",
-      "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community": 34,
+      "community_name": "read_rows",
       "norm_label": "test_data_contracts.py"
     },
     {
@@ -11589,7 +11589,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_read_rows",
       "community": 34,
-      "community_name": "DesignSystemGenerator",
+      "community_name": "read_rows",
       "norm_label": "read_rows()"
     },
     {
@@ -11599,8 +11599,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_split_values",
-      "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community": 34,
+      "community_name": "read_rows",
       "norm_label": "split_values()"
     },
     {
@@ -11610,8 +11610,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_style_identities",
-      "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community": 34,
+      "community_name": "read_rows",
       "norm_label": "style_identities()"
     },
     {
@@ -11621,8 +11621,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_teststyleidentitycontract",
-      "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community": 34,
+      "community_name": "read_rows",
       "norm_label": "teststyleidentitycontract"
     },
     {
@@ -11632,8 +11632,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_teststyleidentitycontract_setup",
-      "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community": 34,
+      "community_name": "read_rows",
       "norm_label": ".setup()"
     },
     {
@@ -11643,8 +11643,8 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_teststyleidentitycontract_test_ids_aliases_status_and_parents_are_unambiguous",
-      "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community": 34,
+      "community_name": "read_rows",
       "norm_label": ".test_ids_aliases_status_and_parents_are_unambiguous()"
     },
     {
@@ -11654,8 +11654,8 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_teststyleidentitycontract_test_every_product_and_reasoning_style_reference_resolves",
-      "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community": 34,
+      "community_name": "read_rows",
       "norm_label": ".test_every_product_and_reasoning_style_reference_resolves()"
     },
     {
@@ -11666,7 +11666,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract",
       "community": 34,
-      "community_name": "DesignSystemGenerator",
+      "community_name": "read_rows",
       "norm_label": "testreasoningcontract"
     },
     {
@@ -11677,7 +11677,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_known_product_sets_match_exactly",
       "community": 34,
-      "community_name": "DesignSystemGenerator",
+      "community_name": "read_rows",
       "norm_label": ".test_known_product_sets_match_exactly()"
     },
     {
@@ -11688,7 +11688,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_decision_rules_use_closed_array_grammar",
       "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community_name": "parse_decision_rules",
       "norm_label": ".test_decision_rules_use_closed_array_grammar()"
     },
     {
@@ -11699,7 +11699,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_duplicate_unknown_keys_and_unknown_actions_fail_closed",
       "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community_name": "parse_decision_rules",
       "norm_label": ".test_duplicate_unknown_keys_and_unknown_actions_fail_closed()"
     },
     {
@@ -11710,7 +11710,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_must_have_and_explicit_signals_are_applied_and_reported",
       "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community_name": "parse_decision_rules",
       "norm_label": ".test_must_have_and_explicit_signals_are_applied_and_reported()"
     },
     {
@@ -11721,7 +11721,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_generator_matches_reasoning_exactly_and_defaults_only_for_unknown",
       "community": 34,
-      "community_name": "DesignSystemGenerator",
+      "community_name": "read_rows",
       "norm_label": ".test_generator_matches_reasoning_exactly_and_defaults_only_for_unknown()"
     },
     {
@@ -11732,7 +11732,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_reasoning_patterns_reference_landing_identities",
       "community": 34,
-      "community_name": "DesignSystemGenerator",
+      "community_name": "read_rows",
       "norm_label": ".test_reasoning_patterns_reference_landing_identities()"
     },
     {
@@ -11743,7 +11743,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_every_known_product_generates_a_traceable_landing_pattern",
       "community": 34,
-      "community_name": "DesignSystemGenerator",
+      "community_name": "read_rows",
       "norm_label": ".test_every_known_product_generates_a_traceable_landing_pattern()"
     },
     {
@@ -11754,7 +11754,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_representative_new_products_generate_traceable_sources",
       "community": 34,
-      "community_name": "DesignSystemGenerator",
+      "community_name": "read_rows",
       "norm_label": ".test_representative_new_products_generate_traceable_sources()"
     },
     {
@@ -11765,7 +11765,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_constraints_reach_domain_queries",
       "community": 34,
-      "community_name": "DesignSystemGenerator",
+      "community_name": "read_rows",
       "norm_label": ".test_constraints_reach_domain_queries()"
     },
     {
@@ -11776,7 +11776,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_canonical_style_priority_is_not_limited_to_bm25_top_three",
       "community": 34,
-      "community_name": "DesignSystemGenerator",
+      "community_name": "read_rows",
       "norm_label": ".test_canonical_style_priority_is_not_limited_to_bm25_top_three()"
     },
     {
@@ -11786,8 +11786,8 @@
       "source_location": "L218",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_duplicate_semantic_reasoning_labels_fail_validation",
-      "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community": 34,
+      "community_name": "read_rows",
       "norm_label": ".test_duplicate_semantic_reasoning_labels_fail_validation()"
     },
     {
@@ -11798,7 +11798,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_every_exact_product_label_resolves_to_itself",
       "community": 34,
-      "community_name": "DesignSystemGenerator",
+      "community_name": "read_rows",
       "norm_label": ".test_every_exact_product_label_resolves_to_itself()"
     },
     {
@@ -11809,7 +11809,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_style_aliases_have_one_exact_owner",
       "community": 34,
-      "community_name": "DesignSystemGenerator",
+      "community_name": "read_rows",
       "norm_label": ".test_style_aliases_have_one_exact_owner()"
     },
     {
@@ -11819,8 +11819,8 @@
       "source_location": "L261",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testlandingandstackcontract",
-      "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community": 34,
+      "community_name": "read_rows",
       "norm_label": "testlandingandstackcontract"
     },
     {
@@ -11830,8 +11830,8 @@
       "source_location": "L262",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testlandingandstackcontract_test_landing_sections_use_one_delimiter",
-      "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community": 34,
+      "community_name": "read_rows",
       "norm_label": ".test_landing_sections_use_one_delimiter()"
     },
     {
@@ -11841,8 +11841,8 @@
       "source_location": "L270",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testlandingandstackcontract_test_stack_schema_is_additive_and_uniform",
-      "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community": 34,
+      "community_name": "read_rows",
       "norm_label": ".test_stack_schema_is_additive_and_uniform()"
     },
     {
@@ -11852,8 +11852,8 @@
       "source_location": "L279",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testlandingandstackcontract_test_provenance_sidecar_has_stable_shape",
-      "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community": 34,
+      "community_name": "read_rows",
       "norm_label": ".test_provenance_sidecar_has_stable_shape()"
     },
     {
@@ -11863,8 +11863,8 @@
       "source_location": "L290",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testlandingandstackcontract_test_provenance_rejects_bad_shapes_enums_and_hosts_without_crashing",
-      "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community": 34,
+      "community_name": "read_rows",
       "norm_label": ".test_provenance_rejects_bad_shapes_enums_and_hosts_without_crashing()"
     },
     {
@@ -11874,8 +11874,8 @@
       "source_location": "L328",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testlandingandstackcontract_test_dataset_provenance_scope_binds_real_rows_and_fields",
-      "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community": 34,
+      "community_name": "read_rows",
       "norm_label": ".test_dataset_provenance_scope_binds_real_rows_and_fields()"
     },
     {
@@ -11886,7 +11886,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testgeneratedcatalogcontract",
       "community": 34,
-      "community_name": "DesignSystemGenerator",
+      "community_name": "read_rows",
       "norm_label": "testgeneratedcatalogcontract"
     },
     {
@@ -11897,7 +11897,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testgeneratedcatalogcontract_load_json",
       "community": 34,
-      "community_name": "DesignSystemGenerator",
+      "community_name": "read_rows",
       "norm_label": ".load_json()"
     },
     {
@@ -11908,7 +11908,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testgeneratedcatalogcontract_test_canonical_catalogs_and_provenance_are_release_ready",
       "community": 34,
-      "community_name": "DesignSystemGenerator",
+      "community_name": "read_rows",
       "norm_label": ".test_canonical_catalogs_and_provenance_are_release_ready()"
     },
     {
@@ -11919,7 +11919,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testgeneratedcatalogcontract_test_font_license_and_typography_drift_fail_closed",
       "community": 34,
-      "community_name": "DesignSystemGenerator",
+      "community_name": "read_rows",
       "norm_label": ".test_font_license_and_typography_drift_fail_closed()"
     },
     {
@@ -11930,7 +11930,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testgeneratedcatalogcontract_test_font_source_revision_and_exclusion_policy_fail_closed",
       "community": 34,
-      "community_name": "DesignSystemGenerator",
+      "community_name": "read_rows",
       "norm_label": ".test_font_source_revision_and_exclusion_policy_fail_closed()"
     },
     {
@@ -11941,7 +11941,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testgeneratedcatalogcontract_test_curated_icon_and_summary_drift_fail_closed",
       "community": 34,
-      "community_name": "DesignSystemGenerator",
+      "community_name": "read_rows",
       "norm_label": ".test_curated_icon_and_summary_drift_fail_closed()"
     },
     {
@@ -11951,7 +11951,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode",
-      "community": 125,
+      "community": 39,
       "community_name": "test_design_system_mode.py",
       "norm_label": "test_design_system_mode.py"
     },
@@ -11963,7 +11963,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testluminance",
       "community": 39,
-      "community_name": "_palette_is_dark",
+      "community_name": "test_design_system_mode.py",
       "norm_label": "testluminance"
     },
     {
@@ -11974,7 +11974,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testluminance_test_parses_six_and_three_digit_hex",
       "community": 39,
-      "community_name": "_palette_is_dark",
+      "community_name": "test_design_system_mode.py",
       "norm_label": ".test_parses_six_and_three_digit_hex()"
     },
     {
@@ -11985,7 +11985,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testluminance_test_returns_none_for_unparseable",
       "community": 39,
-      "community_name": "_palette_is_dark",
+      "community_name": "test_design_system_mode.py",
       "norm_label": ".test_returns_none_for_unparseable()"
     },
     {
@@ -11996,7 +11996,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testluminance_test_classifies_backgrounds_from_the_shipped_data",
       "community": 39,
-      "community_name": "_palette_is_dark",
+      "community_name": "test_design_system_mode.py",
       "norm_label": ".test_classifies_backgrounds_from_the_shipped_data()"
     },
     {
@@ -12007,7 +12007,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testluminance_test_missing_background_is_not_dark",
       "community": 39,
-      "community_name": "_palette_is_dark",
+      "community_name": "test_design_system_mode.py",
       "norm_label": ".test_missing_background_is_not_dark()"
     },
     {
@@ -12018,7 +12018,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testmoderesolution",
       "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community_name": "_style_is_dark_primary",
       "norm_label": "testmoderesolution"
     },
     {
@@ -12029,7 +12029,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testmoderesolution_test_dark_primary_style_detected",
       "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community_name": "_style_is_dark_primary",
       "norm_label": ".test_dark_primary_style_detected()"
     },
     {
@@ -12040,7 +12040,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testmoderesolution_test_dual_mode_style_is_not_dark_primary",
       "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community_name": "_style_is_dark_primary",
       "norm_label": ".test_dual_mode_style_is_not_dark_primary()"
     },
     {
@@ -12051,7 +12051,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testmoderesolution_test_query_keywords",
       "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community_name": "_style_is_dark_primary",
       "norm_label": ".test_query_keywords()"
     },
     {
@@ -12062,7 +12062,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testmoderesolution_test_either_signal_resolves_dark",
       "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community_name": "_style_is_dark_primary",
       "norm_label": ".test_either_signal_resolves_dark()"
     },
     {
@@ -12072,8 +12072,8 @@
       "source_location": "L94",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testpaletteselection",
-      "community": 4,
-      "community_name": "_select_palette_for_mode",
+      "community": 39,
+      "community_name": "test_design_system_mode.py",
       "norm_label": "testpaletteselection"
     },
     {
@@ -12083,8 +12083,8 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testpaletteselection_test_dark_mode_skips_light_palettes",
-      "community": 4,
-      "community_name": "_select_palette_for_mode",
+      "community": 39,
+      "community_name": "test_design_system_mode.py",
       "norm_label": ".test_dark_mode_skips_light_palettes()"
     },
     {
@@ -12094,8 +12094,8 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testpaletteselection_test_dark_mode_falls_back_to_top_hit_when_no_dark_ramp_exists",
-      "community": 4,
-      "community_name": "_select_palette_for_mode",
+      "community": 39,
+      "community_name": "test_design_system_mode.py",
       "norm_label": ".test_dark_mode_falls_back_to_top_hit_when_no_dark_ramp_exists()"
     },
     {
@@ -12105,8 +12105,8 @@
       "source_location": "L103",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testpaletteselection_test_light_mode_keeps_the_existing_top_hit_behaviour",
-      "community": 4,
-      "community_name": "_select_palette_for_mode",
+      "community": 39,
+      "community_name": "test_design_system_mode.py",
       "norm_label": ".test_light_mode_keeps_the_existing_top_hit_behaviour()"
     },
     {
@@ -12116,8 +12116,8 @@
       "source_location": "L107",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testpaletteselection_test_empty_results",
-      "community": 4,
-      "community_name": "_select_palette_for_mode",
+      "community": 39,
+      "community_name": "test_design_system_mode.py",
       "norm_label": ".test_empty_results()"
     },
     {
@@ -12127,8 +12127,8 @@
       "source_location": "L110",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testpaletteselection_test_category_identity_wins_over_unrelated_dark_palette",
-      "community": 4,
-      "community_name": "_select_palette_for_mode",
+      "community": 39,
+      "community_name": "test_design_system_mode.py",
       "norm_label": ".test_category_identity_wins_over_unrelated_dark_palette()"
     },
     {
@@ -12138,8 +12138,8 @@
       "source_location": "L120",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testantipatterngating",
-      "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community": 96,
+      "community_name": ".generate",
       "norm_label": "testantipatterngating"
     },
     {
@@ -12149,8 +12149,8 @@
       "source_location": "L121",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testantipatterngating_test_dark_clause_dropped_others_kept",
-      "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community": 96,
+      "community_name": ".generate",
       "norm_label": ".test_dark_clause_dropped_others_kept()"
     },
     {
@@ -12160,8 +12160,8 @@
       "source_location": "L126",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testantipatterngating_test_light_mode_is_a_no_op",
-      "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community": 96,
+      "community_name": ".generate",
       "norm_label": ".test_light_mode_is_a_no_op()"
     },
     {
@@ -12171,8 +12171,8 @@
       "source_location": "L130",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testantipatterngating_test_unrelated_anti_patterns_survive_dark_mode",
-      "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community": 96,
+      "community_name": ".generate",
       "norm_label": ".test_unrelated_anti_patterns_survive_dark_mode()"
     },
     {
@@ -12182,8 +12182,8 @@
       "source_location": "L134",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testantipatterngating_test_empty_input",
-      "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community": 96,
+      "community_name": ".generate",
       "norm_label": ".test_empty_input()"
     },
     {
@@ -12194,7 +12194,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testendtoendcoherence",
       "community": 39,
-      "community_name": "_palette_is_dark",
+      "community_name": "test_design_system_mode.py",
       "norm_label": "testendtoendcoherence"
     },
     {
@@ -12205,7 +12205,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testendtoendcoherence_test_dark_query_gets_a_dark_background",
       "community": 39,
-      "community_name": "_palette_is_dark",
+      "community_name": "test_design_system_mode.py",
       "norm_label": ".test_dark_query_gets_a_dark_background()"
     },
     {
@@ -12215,8 +12215,8 @@
       "source_location": "L151",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testendtoendcoherence_test_generator_exports_every_semantic_foreground_pair",
-      "community": 4,
-      "community_name": "_select_palette_for_mode",
+      "community": 39,
+      "community_name": "test_design_system_mode.py",
       "norm_label": ".test_generator_exports_every_semantic_foreground_pair()"
     },
     {
@@ -12227,7 +12227,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testendtoendcoherence_test_dark_query_foreground_is_lighter_than_background",
       "community": 39,
-      "community_name": "_palette_is_dark",
+      "community_name": "test_design_system_mode.py",
       "norm_label": ".test_dark_query_foreground_is_lighter_than_background()"
     },
     {
@@ -12238,7 +12238,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testendtoendcoherence_test_dark_query_does_not_advise_against_dark_mode",
       "community": 39,
-      "community_name": "_palette_is_dark",
+      "community_name": "test_design_system_mode.py",
       "norm_label": ".test_dark_query_does_not_advise_against_dark_mode()"
     },
     {
@@ -12249,7 +12249,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_testendtoendcoherence_test_light_query_keeps_a_light_background",
       "community": 39,
-      "community_name": "_palette_is_dark",
+      "community_name": "test_design_system_mode.py",
       "norm_label": ".test_light_query_keeps_a_light_background()"
     },
     {
@@ -12260,7 +12260,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_design_system_mode_rationale_139",
       "community": 39,
-      "community_name": "_palette_is_dark",
+      "community_name": "test_design_system_mode.py",
       "norm_label": "the exact reproduction from issue #428."
     },
     {
@@ -12689,7 +12689,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_style_taxonomy_teststyletaxonomy_test_claim_fields_use_controlled_non_guarantee_language",
       "community": 125,
-      "community_name": "test_design_system_mode.py",
+      "community_name": "_style_is_dark_primary",
       "norm_label": ".test_claim_fields_use_controlled_non_guarantee_language()"
     },
     {
@@ -13095,8 +13095,8 @@
       "source_location": "L331",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_validate_data_check_reasoning_contract",
-      "community": 111,
-      "community_name": "test_data_contracts.py",
+      "community": 7,
+      "community_name": "validate_data.py",
       "norm_label": "_check_reasoning_contract()"
     },
     {
@@ -13535,8 +13535,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "convex_generated_api",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 153,
+      "community_name": "api.js",
       "norm_label": "api.js"
     },
     {
@@ -13546,8 +13546,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "convex_generated_api_components",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 153,
+      "community_name": "api.js",
       "norm_label": "components"
     },
     {
@@ -15284,8 +15284,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "package_devdependencies_autoprefixer",
-      "community": 158,
-      "community_name": "autoprefixer",
+      "community": 1,
+      "community_name": "devDependencies",
       "norm_label": "autoprefixer"
     },
     {
@@ -15295,8 +15295,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "autoprefixer",
-      "community": 158,
-      "community_name": "autoprefixer",
+      "community": 1,
+      "community_name": "devDependencies",
       "norm_label": "autoprefixer"
     },
     {
@@ -15350,8 +15350,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "package_devdependencies_svelte",
-      "community": 284,
-      "community_name": "svelte",
+      "community": 1,
+      "community_name": "devDependencies",
       "norm_label": "svelte"
     },
     {
@@ -15361,8 +15361,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "package_json_svelte",
-      "community": 284,
-      "community_name": "svelte",
+      "community": 1,
+      "community_name": "devDependencies",
       "norm_label": "svelte"
     },
     {
@@ -15416,8 +15416,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "package_devdependencies_typescript",
-      "community": 1,
-      "community_name": "devDependencies",
+      "community": 296,
+      "community_name": "typescript",
       "norm_label": "typescript"
     },
     {
@@ -15427,8 +15427,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "typescript",
-      "community": 1,
-      "community_name": "devDependencies",
+      "community": 296,
+      "community_name": "typescript",
       "norm_label": "typescript"
     },
     {
@@ -15438,8 +15438,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "package_devdependencies_vite",
-      "community": 1,
-      "community_name": "devDependencies",
+      "community": 297,
+      "community_name": "vite",
       "norm_label": "vite"
     },
     {
@@ -15449,8 +15449,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "vite",
-      "community": 1,
-      "community_name": "devDependencies",
+      "community": 297,
+      "community_name": "vite",
       "norm_label": "vite"
     },
     {
@@ -16285,31 +16285,42 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_components_adminmodal",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 233,
+      "community_name": "AdminModal.svelte",
       "norm_label": "adminmodal.svelte"
     },
     {
       "label": "if()",
       "file_type": "code",
       "source_file": "src/lib/components/AdminModal.svelte",
-      "source_location": "L392",
+      "source_location": "L393",
       "_origin": "ast",
       "id": "src_lib_components_adminmodal_if",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 233,
+      "community_name": "AdminModal.svelte",
       "norm_label": "if()"
     },
     {
       "label": "#each()",
       "file_type": "code",
       "source_file": "src/lib/components/AdminModal.svelte",
-      "source_location": "L1504",
+      "source_location": "L1505",
       "_origin": "ast",
       "id": "src_lib_components_adminmodal_each",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 233,
+      "community_name": "AdminModal.svelte",
       "norm_label": "#each()"
+    },
+    {
+      "label": "async()",
+      "file_type": "code",
+      "source_file": "src/lib/components/AdminModal.svelte",
+      "source_location": "L3345",
+      "_origin": "ast",
+      "id": "src_lib_components_adminmodal_async",
+      "community": 233,
+      "community_name": "AdminModal.svelte",
+      "norm_label": "async()"
     },
     {
       "label": "ChatDrawer.svelte",
@@ -16318,30 +16329,30 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_components_chatdrawer",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 293,
+      "community_name": "ChatDrawer.svelte",
       "norm_label": "chatdrawer.svelte"
     },
     {
       "label": "getSenderStatus()",
       "file_type": "code",
       "source_file": "src/lib/components/ChatDrawer.svelte",
-      "source_location": "L461",
+      "source_location": "L439",
       "_origin": "ast",
       "id": "src_lib_components_chatdrawer_getsenderstatus",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 293,
+      "community_name": "ChatDrawer.svelte",
       "norm_label": "getsenderstatus()"
     },
     {
       "label": "#each()",
       "file_type": "code",
       "source_file": "src/lib/components/ChatDrawer.svelte",
-      "source_location": "L1111",
+      "source_location": "L1037",
       "_origin": "ast",
       "id": "src_lib_components_chatdrawer_each",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 293,
+      "community_name": "ChatDrawer.svelte",
       "norm_label": "#each()"
     },
     {
@@ -16351,8 +16362,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_components_claimfplteammodal",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 153,
+      "community_name": "api.js",
       "norm_label": "claimfplteammodal.svelte"
     },
     {
@@ -16362,8 +16373,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_components_cupview",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 164,
+      "community_name": "CupView.svelte",
       "norm_label": "cupview.svelte"
     },
     {
@@ -16373,8 +16384,8 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "src_lib_components_cupview_if",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 164,
+      "community_name": "CupView.svelte",
       "norm_label": "if()"
     },
     {
@@ -16384,8 +16395,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "src_lib_components_cupview_undefeatedroomscount",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 164,
+      "community_name": "CupView.svelte",
       "norm_label": "undefeatedroomscount"
     },
     {
@@ -16395,8 +16406,8 @@
       "source_location": "L79",
       "_origin": "ast",
       "id": "src_lib_components_cupview_handleopenmatchdetails",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 164,
+      "community_name": "CupView.svelte",
       "norm_label": "handleopenmatchdetails()"
     },
     {
@@ -16406,8 +16417,8 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "src_lib_components_cupview_handlecalculatecurrentround",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 164,
+      "community_name": "CupView.svelte",
       "norm_label": "handlecalculatecurrentround()"
     },
     {
@@ -16417,8 +16428,8 @@
       "source_location": "L107",
       "_origin": "ast",
       "id": "src_lib_components_cupview_handleadvancematch",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 164,
+      "community_name": "CupView.svelte",
       "norm_label": "handleadvancematch()"
     },
     {
@@ -16483,8 +16494,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_components_newssection",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 153,
+      "community_name": "api.js",
       "norm_label": "newssection.svelte"
     },
     {
@@ -16494,8 +16505,8 @@
       "source_location": "L222",
       "_origin": "ast",
       "id": "src_lib_components_newssection_if",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 153,
+      "community_name": "api.js",
       "norm_label": "if()"
     },
     {
@@ -16538,8 +16549,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_components_teamprofilemodal",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 153,
+      "community_name": "api.js",
       "norm_label": "teamprofilemodal.svelte"
     },
     {
@@ -16571,8 +16582,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_components_updatemodal",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 285,
+      "community_name": "UpdateModal.svelte",
       "norm_label": "updatemodal.svelte"
     },
     {
@@ -16582,8 +16593,8 @@
       "confidence": "EXTRACTED",
       "_origin": "ast",
       "id": "plugin_updater",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 285,
+      "community_name": "UpdateModal.svelte",
       "norm_label": "@tauri-apps/plugin-updater"
     },
     {
@@ -16593,8 +16604,8 @@
       "confidence": "EXTRACTED",
       "_origin": "ast",
       "id": "plugin_process",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 285,
+      "community_name": "UpdateModal.svelte",
       "norm_label": "@tauri-apps/plugin-process"
     },
     {
@@ -16604,8 +16615,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_components_walloffamebanner",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 294,
+      "community_name": "WallOfFameBanner.svelte",
       "norm_label": "walloffamebanner.svelte"
     },
     {
@@ -16615,8 +16626,8 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "src_lib_components_walloffamebanner_resolvedsolowinner",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 294,
+      "community_name": "WallOfFameBanner.svelte",
       "norm_label": "resolvedsolowinner"
     },
     {
@@ -16626,8 +16637,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "src_lib_components_walloffamebanner_hasanywinner",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 294,
+      "community_name": "WallOfFameBanner.svelte",
       "norm_label": "hasanywinner"
     },
     {
@@ -16637,8 +16648,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_components_welcomeonboarding",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 153,
+      "community_name": "api.js",
       "norm_label": "welcomeonboarding.svelte"
     },
     {
@@ -16648,8 +16659,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_components_cup_cupbracket",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 164,
+      "community_name": "CupView.svelte",
       "norm_label": "cupbracket.svelte"
     },
     {
@@ -16659,8 +16670,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_components_cup_cupmatchmodal",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 242,
+      "community_name": "CupMatchModal.svelte",
       "norm_label": "cupmatchmodal.svelte"
     },
     {
@@ -16670,8 +16681,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "src_lib_components_cup_cupmatchmodal_room2teams",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 242,
+      "community_name": "CupMatchModal.svelte",
       "norm_label": "room2teams"
     },
     {
@@ -16681,8 +16692,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "src_lib_components_cup_cupmatchmodal_isroom1winner",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 242,
+      "community_name": "CupMatchModal.svelte",
       "norm_label": "isroom1winner"
     },
     {
@@ -16692,8 +16703,8 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "src_lib_components_cup_cupmatchmodal_isroom2winner",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 242,
+      "community_name": "CupMatchModal.svelte",
       "norm_label": "isroom2winner"
     },
     {
@@ -16703,8 +16714,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_convex_svelte",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 198,
+      "community_name": "convex.svelte.ts",
       "norm_label": "convex.svelte.ts"
     },
     {
@@ -16714,8 +16725,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_lib_convex_svelte_convexclient",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 198,
+      "community_name": "convex.svelte.ts",
       "norm_label": "convexclient"
     },
     {
@@ -16725,8 +16736,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_lib_convex_svelte_usequery",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 198,
+      "community_name": "convex.svelte.ts",
       "norm_label": "usequery()"
     },
     {
@@ -16736,8 +16747,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "src_lib_convex_svelte_usemutation",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 198,
+      "community_name": "convex.svelte.ts",
       "norm_label": "usemutation()"
     },
     {
@@ -16747,8 +16758,8 @@
       "source_location": "L104",
       "_origin": "ast",
       "id": "src_lib_convex_svelte_useaction",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 198,
+      "community_name": "convex.svelte.ts",
       "norm_label": "useaction()"
     },
     {
@@ -16758,8 +16769,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_utils_formaterror",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 153,
+      "community_name": "api.js",
       "norm_label": "formaterror.ts"
     },
     {
@@ -16769,8 +16780,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_lib_utils_formaterror_formatconvexerror",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 164,
+      "community_name": "CupView.svelte",
       "norm_label": "formatconvexerror()"
     },
     {
@@ -16780,8 +16791,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_utils_openurl",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 153,
+      "community_name": "api.js",
       "norm_label": "openurl.ts"
     },
     {
@@ -16791,8 +16802,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_lib_utils_openurl_openexternalurl",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 153,
+      "community_name": "api.js",
       "norm_label": "openexternalurl()"
     },
     {
@@ -16802,8 +16813,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_main",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 295,
+      "community_name": "main.ts",
       "norm_label": "main.ts"
     },
     {
@@ -16813,8 +16824,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_main_target",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 295,
+      "community_name": "main.ts",
       "norm_label": "target"
     },
     {
@@ -16824,8 +16835,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_main_app",
-      "community": 119,
-      "community_name": "App.svelte",
+      "community": 295,
+      "community_name": "main.ts",
       "norm_label": "app"
     },
     {
@@ -34072,8 +34083,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "agents_skills_using_superpowers_references_codex_tools",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 158,
+      "community_name": "codex-tools.md",
       "norm_label": "codex-tools.md"
     },
     {
@@ -34083,8 +34094,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "agents_skills_using_superpowers_references_codex_tools_subagent_dispatch_requires_multi_agent_support",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 158,
+      "community_name": "codex-tools.md",
       "norm_label": "subagent dispatch requires multi-agent support"
     },
     {
@@ -34094,8 +34105,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "agents_skills_using_superpowers_references_codex_tools_waiting_on_children",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 158,
+      "community_name": "codex-tools.md",
       "norm_label": "waiting on children"
     },
     {
@@ -34105,8 +34116,8 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "agents_skills_using_superpowers_references_codex_tools_model_routing_on_spawns",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 158,
+      "community_name": "codex-tools.md",
       "norm_label": "model routing on spawns"
     },
     {
@@ -34116,8 +34127,8 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "agents_skills_using_superpowers_references_codex_tools_environment_detection",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 158,
+      "community_name": "codex-tools.md",
       "norm_label": "environment detection"
     },
     {
@@ -34127,8 +34138,8 @@
       "source_location": "L98",
       "_origin": "ast",
       "id": "agents_skills_using_superpowers_references_codex_tools_codex_app_finishing",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 158,
+      "community_name": "codex-tools.md",
       "norm_label": "codex app finishing"
     },
     {
@@ -34138,8 +34149,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "agents_skills_using_superpowers_references_gemini_tools",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 158,
+      "community_name": "codex-tools.md",
       "norm_label": "gemini-tools.md"
     },
     {
@@ -34149,8 +34160,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "agents_skills_using_superpowers_references_gemini_tools_gemini_cli_tool_mapping",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 169,
+      "community_name": "Gemini CLI Tool Mapping",
       "norm_label": "gemini cli tool mapping"
     },
     {
@@ -34160,8 +34171,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "agents_skills_using_superpowers_references_gemini_tools_instructions_file",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 169,
+      "community_name": "Gemini CLI Tool Mapping",
       "norm_label": "instructions file"
     },
     {
@@ -34171,8 +34182,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "agents_skills_using_superpowers_references_gemini_tools_personal_skills_directory",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 169,
+      "community_name": "Gemini CLI Tool Mapping",
       "norm_label": "personal skills directory"
     },
     {
@@ -34182,8 +34193,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "agents_skills_using_superpowers_references_gemini_tools_subagent_support",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 169,
+      "community_name": "Gemini CLI Tool Mapping",
       "norm_label": "subagent support"
     },
     {
@@ -34193,8 +34204,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "agents_skills_using_superpowers_references_gemini_tools_prompt_filling",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 169,
+      "community_name": "Gemini CLI Tool Mapping",
       "norm_label": "prompt filling"
     },
     {
@@ -34204,8 +34215,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "agents_skills_using_superpowers_references_gemini_tools_parallel_dispatch",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 169,
+      "community_name": "Gemini CLI Tool Mapping",
       "norm_label": "parallel dispatch"
     },
     {
@@ -34215,8 +34226,8 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "agents_skills_using_superpowers_references_gemini_tools_additional_gemini_cli_tools",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 169,
+      "community_name": "Gemini CLI Tool Mapping",
       "norm_label": "additional gemini cli tools"
     },
     {
@@ -34611,8 +34622,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_skill",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 158,
+      "community_name": "codex-tools.md",
       "norm_label": "writing-skills/skill.md"
     },
     {
@@ -36184,8 +36195,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_testing_skills_with_subagents",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 158,
+      "community_name": "codex-tools.md",
       "norm_label": "testing-skills-with-subagents.md"
     },
     {
@@ -36261,8 +36272,8 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_testing_skills_with_subagents_verify_green_pressure_testing",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 196,
+      "community_name": "VERIFY GREEN: Pressure Testing",
       "norm_label": "verify green: pressure testing"
     },
     {
@@ -36272,8 +36283,8 @@
       "source_location": "L96",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_testing_skills_with_subagents_writing_pressure_scenarios",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 196,
+      "community_name": "VERIFY GREEN: Pressure Testing",
       "norm_label": "writing pressure scenarios"
     },
     {
@@ -36283,8 +36294,8 @@
       "source_location": "L128",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_testing_skills_with_subagents_pressure_types",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 196,
+      "community_name": "VERIFY GREEN: Pressure Testing",
       "norm_label": "pressure types"
     },
     {
@@ -36294,8 +36305,8 @@
       "source_location": "L144",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_testing_skills_with_subagents_key_elements_of_good_scenarios",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 196,
+      "community_name": "VERIFY GREEN: Pressure Testing",
       "norm_label": "key elements of good scenarios"
     },
     {
@@ -36305,8 +36316,8 @@
       "source_location": "L152",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_testing_skills_with_subagents_testing_setup",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 196,
+      "community_name": "VERIFY GREEN: Pressure Testing",
       "norm_label": "testing setup"
     },
     {
@@ -36316,8 +36327,8 @@
       "source_location": "L163",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_testing_skills_with_subagents_refactor_phase_close_loopholes_stay_green",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 171,
+      "community_name": "REFACTOR Phase: Close Loopholes (Stay Green)",
       "norm_label": "refactor phase: close loopholes (stay green)"
     },
     {
@@ -36327,8 +36338,8 @@
       "source_location": "L178",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_testing_skills_with_subagents_plugging_each_hole",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 171,
+      "community_name": "REFACTOR Phase: Close Loopholes (Stay Green)",
       "norm_label": "plugging each hole"
     },
     {
@@ -36338,8 +36349,8 @@
       "source_location": "L182",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_testing_skills_with_subagents_1_explicit_negation_in_rules",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 171,
+      "community_name": "REFACTOR Phase: Close Loopholes (Stay Green)",
       "norm_label": "1. explicit negation in rules"
     },
     {
@@ -36349,8 +36360,8 @@
       "source_location": "L202",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_testing_skills_with_subagents_2_entry_in_rationalization_table",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 171,
+      "community_name": "REFACTOR Phase: Close Loopholes (Stay Green)",
       "norm_label": "2. entry in rationalization table"
     },
     {
@@ -36360,8 +36371,8 @@
       "source_location": "L210",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_testing_skills_with_subagents_3_red_flag_entry",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 171,
+      "community_name": "REFACTOR Phase: Close Loopholes (Stay Green)",
       "norm_label": "3. red flag entry"
     },
     {
@@ -36371,8 +36382,8 @@
       "source_location": "L219",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_testing_skills_with_subagents_4_update_description",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 171,
+      "community_name": "REFACTOR Phase: Close Loopholes (Stay Green)",
       "norm_label": "4. update description"
     },
     {
@@ -36382,8 +36393,8 @@
       "source_location": "L227",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_testing_skills_with_subagents_re_verify_after_refactoring",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 171,
+      "community_name": "REFACTOR Phase: Close Loopholes (Stay Green)",
       "norm_label": "re-verify after refactoring"
     },
     {
@@ -36415,8 +36426,8 @@
       "source_location": "L282",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_testing_skills_with_subagents_example_tdd_skill_bulletproofing",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 232,
+      "community_name": "Example: TDD Skill Bulletproofing",
       "norm_label": "example: tdd skill bulletproofing"
     },
     {
@@ -36426,8 +36437,8 @@
       "source_location": "L284",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_testing_skills_with_subagents_initial_test_failed",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 232,
+      "community_name": "Example: TDD Skill Bulletproofing",
       "norm_label": "initial test (failed)"
     },
     {
@@ -36437,8 +36448,8 @@
       "source_location": "L291",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_testing_skills_with_subagents_iteration_1_add_counter",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 232,
+      "community_name": "Example: TDD Skill Bulletproofing",
       "norm_label": "iteration 1 - add counter"
     },
     {
@@ -36448,8 +36459,8 @@
       "source_location": "L298",
       "_origin": "ast",
       "id": "agents_skills_writing_skills_testing_skills_with_subagents_iteration_2_add_foundational_principle",
-      "community": 118,
-      "community_name": "Testing Skills With Subagents",
+      "community": 232,
+      "community_name": "Example: TDD Skill Bulletproofing",
       "norm_label": "iteration 2 - add foundational principle"
     },
     {
@@ -62945,7 +62956,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/lib/components/AdminModal.svelte",
-      "source_location": "L1622",
+      "source_location": "L3345",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_lib_components_adminmodal",
+      "target": "src_lib_components_adminmodal_async",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/lib/components/AdminModal.svelte",
+      "source_location": "L1623",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_lib_components_adminmodal",
@@ -62956,7 +62978,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/lib/components/AdminModal.svelte",
-      "source_location": "L545",
+      "source_location": "L546",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_lib_components_adminmodal",
@@ -62985,7 +63007,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/lib/components/ChatDrawer.svelte",
-      "source_location": "L1111",
+      "source_location": "L1037",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_lib_components_chatdrawer",
@@ -62996,7 +63018,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/lib/components/ChatDrawer.svelte",
-      "source_location": "L461",
+      "source_location": "L439",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_lib_components_chatdrawer",
@@ -81996,5 +82018,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "939f9fc91711304ba0328c7cd007cedcf62ded47"
+  "built_at_commit": "b9597a4590b6c8a2b59d802bf57d246adb02ca88"
 }
