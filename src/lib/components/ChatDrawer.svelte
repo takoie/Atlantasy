@@ -88,70 +88,15 @@
   let gifResults = $state<any[]>([]);
   let gifDebounceTimer: any = null;
 
-  const gifQuickTags = [
-    { label: "Trending 🔥", query: "" },
-    { label: "Haaland 🤖", query: "haaland" },
-    { label: "Goal ⚽", query: "football goal celebration" },
-    { label: "Jubel 🏆", query: "celebration victory" },
-    { label: "Facepalm 🤦‍♂️", query: "facepalm fail" },
-    { label: "Meme 😂", query: "football meme laugh" },
-    { label: "Blank 😭", query: "cry sad shock" },
-    { label: "Dans 🕺", query: "football dance" },
-    { label: "Pep 👨‍🦲", query: "pep guardiola" },
-  ];
-
-  // Innebygde fallback GIFs for umiddelbar respons og offline/rate-limit sikkerhet
-  const fallbackGifs = [
-    { id: "g1", title: "Haaland Meditation", url: "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif" },
-    { id: "g2", title: "Siuuu Ronaldo", url: "https://media.giphy.com/media/r1IMdmkhUcpUXEYOtY/giphy.gif" },
-    { id: "g3", title: "Mourinho Shock", url: "https://media.giphy.com/media/wWue0rCDOphOE/giphy.gif" },
-    { id: "g4", title: "Pep Clapping", url: "https://media.giphy.com/media/LOcPt9gfuNOSI/giphy.gif" },
-    { id: "g5", title: "Klopp Laugh", url: "https://media.giphy.com/media/3o7TKnO9hWddI50b3q/giphy.gif" },
-    { id: "g6", title: "Goal Celebration", url: "https://media.giphy.com/media/du3aIOqwTAQ4cHM3Gm/giphy.gif" },
-    { id: "g7", title: "Facepalm", url: "https://media.giphy.com/media/3oEjI67Egb8G9jqs3m/giphy.gif" },
-    { id: "g8", title: "Popcorn", url: "https://media.giphy.com/media/gl0mkIZOW6Nwc/giphy.gif" },
-    { id: "g9", title: "Mind Blown", url: "https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif" },
-    { id: "g10", title: "Dancing", url: "https://media.giphy.com/media/blSTtZehjAZ8I/giphy.gif" },
-    { id: "g11", title: "Crying Sad", url: "https://media.giphy.com/media/d2lcHJTG5Tscg/giphy.gif" },
-    { id: "g12", title: "Fire Fire", url: "https://media.giphy.com/media/yr7n0u3qzO9nG/giphy.gif" },
-  ];
-
   async function searchGifs(query: string) {
     const q = query.trim();
     isSearchingGifs = true;
     try {
-      // 1. Prøv Tenor API først (samme som Discord bruker)
-      const tenorEndpoint = q
-        ? `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(q)}&key=LIVDGRZILbtCasxDMoGXvacPhfhOTbvM&limit=40&contentfilter=medium`
-        : `https://tenor.googleapis.com/v2/featured?key=LIVDGRZILbtCasxDMoGXvacPhfhOTbvM&limit=40&contentfilter=medium`;
-
-      try {
-        const tenorRes = await fetch(tenorEndpoint);
-        if (tenorRes.ok) {
-          const tenorData = await tenorRes.json();
-          if (tenorData?.results && Array.isArray(tenorData.results) && tenorData.results.length > 0) {
-            gifResults = tenorData.results
-              .map((g: any) => ({
-                id: g.id,
-                title: g.content_description || "GIF",
-                url: g.media_formats?.gif?.url || g.media_formats?.mediumgif?.url,
-                preview: g.media_formats?.tinygif?.url || g.media_formats?.nanogif?.url || g.media_formats?.gif?.url,
-              }))
-              .filter((g: any) => !!g.url);
-            isSearchingGifs = false;
-            return;
-          }
-        }
-      } catch (tenorErr) {
-        console.warn("Tenor feilet, prøver Giphy:", tenorErr);
-      }
-
-      // 2. Fallback: Giphy med pg-13 (mindre sensur, mye bredere utvalg)
-      const giphyEndpoint = q
+      const endpoint = q
         ? `https://api.giphy.com/v1/gifs/search?api_key=sXpGFDGZs0Dv1mmNFvYaGUvYwKX0PWIh&q=${encodeURIComponent(q)}&limit=48&rating=pg-13`
         : `https://api.giphy.com/v1/gifs/trending?api_key=sXpGFDGZs0Dv1mmNFvYaGUvYwKX0PWIh&limit=48&rating=pg-13`;
 
-      const res = await fetch(giphyEndpoint);
+      const res = await fetch(endpoint);
       if (res.ok) {
         const data = await res.json();
         if (data?.data && Array.isArray(data.data) && data.data.length > 0) {
@@ -166,11 +111,10 @@
           return;
         }
       }
-      // 3. Lokal fallback dersom nettverket er helt nede
-      gifResults = fallbackGifs.filter((g) => !q || g.title.toLowerCase().includes(q.toLowerCase()));
+      gifResults = [];
     } catch (e) {
-      console.warn("GIF API forespørsel feilet, bruker fallback:", e);
-      gifResults = fallbackGifs.filter((g) => !q || g.title.toLowerCase().includes(q.toLowerCase()));
+      console.warn("Kunne ikke hente GIFs:", e);
+      gifResults = [];
     } finally {
       isSearchingGifs = false;
     }
@@ -877,7 +821,7 @@
           {:else if activeToolTab === "gif"}
             <span class="flex items-center gap-1.5 text-[#70E1F8]">
               <Film class="w-3.5 h-3.5" />
-              <span>GIFs & Reaksjoner (Tenor)</span>
+              <span>GIFs & Reaksjoner</span>
             </span>
           {:else if activeToolTab === "image"}
             <span class="flex items-center gap-1.5 text-[#9FE88D]">
@@ -1024,7 +968,7 @@
         </div>
       {/if}
 
-      <!-- Tab 3: GIF Velger (Discord-stil med Giphy søk) -->
+      <!-- Tab 3: GIF Velger (Discord-stil) -->
       {#if activeToolTab === "gif"}
         <div class="space-y-2.5">
           <!-- Søkefelt for GIFs -->
@@ -1034,7 +978,7 @@
               type="text"
               bind:value={gifSearch}
               oninput={handleGifSearchInput}
-              placeholder="Søk i Tenor etter GIFs (f.eks. haaland, celebration, facepalm, ronaldo)..."
+              placeholder="Søk etter GIFs (f.eks. haaland, scoring, feiring, meme, shock, ronaldo)..."
               class="w-full pl-8 pr-8 py-1.5 text-xs rounded-xl bg-[#242B35] border border-[#384252] text-white placeholder-[#94A3B8] focus:border-[#70E1F8] focus:outline-none"
             />
             {#if gifSearch}
@@ -1051,28 +995,8 @@
             {/if}
           </div>
 
-          <!-- Hurtig-kategorier / tags -->
-          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar text-[11px]">
-            {#each gifQuickTags as tag}
-              <button
-                type="button"
-                onclick={() => {
-                  gifSearch = tag.query;
-                  searchGifs(tag.query);
-                }}
-                class={`px-2.5 py-1 rounded-lg font-semibold shrink-0 transition-all border ${
-                  gifSearch === tag.query
-                    ? "bg-[#70E1F8]/20 text-[#70E1F8] border-[#70E1F8]/50"
-                    : "bg-[#242B35] text-[#94A3B8] border-[#384252] hover:text-white hover:border-[#4B5563]"
-                }`}
-              >
-                {tag.label}
-              </button>
-            {/each}
-          </div>
-
           <!-- GIF Galleri Resultater -->
-          <div class="max-h-52 overflow-y-auto pr-1 custom-scrollbar">
+          <div class="max-h-56 overflow-y-auto pr-1 custom-scrollbar">
             {#if isSearchingGifs}
               <div class="py-8 text-center text-xs text-[#94A3B8] flex items-center justify-center gap-2">
                 <Film class="w-4 h-4 text-[#70E1F8] animate-spin" />
