@@ -8,10 +8,12 @@
     X,
     Clock,
     ArrowUpRight,
+    ExternalLink,
+    LogOut,
   } from "lucide-svelte";
   import { onMount } from "svelte";
   import { check, type Update } from "@tauri-apps/plugin-updater";
-  import { relaunch } from "@tauri-apps/plugin-process";
+  import { relaunch, exit } from "@tauri-apps/plugin-process";
 
   let {
     isOpen = $bindable(false),
@@ -27,10 +29,19 @@
   let isChecking = $state(false);
   let updateObj = $state<any>(null);
   let rawUpdateInstance = $state<Update | null>(null);
-  let status = $state<"idle" | "available" | "downloading" | "installing" | "ready" | "up_to_date" | "error">("idle");
+  let status = $state<"idle" | "available" | "downloading" | "installing" | "ready" | "manual_download" | "up_to_date" | "error">("idle");
   let errorMessage = $state("");
   let downloadedBytes = $state(0);
   let totalBytes = $state(0);
+
+  let formattedTargetVersion = $derived.by(() => {
+    if (!updateObj?.version) return "";
+    return updateObj.version.startsWith("v") ? updateObj.version : `v${updateObj.version}`;
+  });
+
+  let formattedCurrentVersion = $derived.by(() => {
+    return currentVersion.startsWith("v") ? currentVersion : `v${currentVersion}`;
+  });
 
   let progressPercent = $derived.by(() => {
     if (totalBytes <= 0) return 0;
@@ -64,7 +75,7 @@
     }
 
     try {
-      // 1. Sjekk via Tauri v2 updater plugin
+      // 1. Sjekk via Tauri v2 updater plugin (hvis signert pakke finnes)
       try {
         const update = await check();
         if (update) {
@@ -92,7 +103,7 @@
         const latestTag = (release.tag_name || "").replace(/^v/, "").trim();
         const currentClean = currentVersion.replace(/^v/, "").trim();
 
-        // Sammenlign versjonsnumre (f.eks. 0.5.1 > 0.5.0)
+        // Sammenlign versjonsnumre (f.eks. 0.6.1 > 0.6.0)
         const isNewer = latestTag && latestTag !== currentClean;
 
         if (isNewer) {
@@ -105,6 +116,7 @@
             body: release.body,
             date: release.published_at,
             downloadUrl: exeAsset?.browser_download_url || release.html_url,
+            fileName: exeAsset?.name || "Atlantasy-setup.exe",
             htmlUrl: release.html_url,
           };
           status = "available";
@@ -133,14 +145,15 @@
   }
 
   async function startDownloadAndInstall() {
-    status = "downloading";
-    downloadedBytes = 0;
-    totalBytes = 0;
     errorMessage = "";
 
     try {
       if (rawUpdateInstance) {
-        // Offisiell Tauri updater download & install med progress
+        // Offisiell Tauri updater in-app silent download & install med progress
+        status = "downloading";
+        downloadedBytes = 0;
+        totalBytes = 0;
+
         await rawUpdateInstance.downloadAndInstall((event) => {
           if (event.event === "Started") {
             totalBytes = event.data.contentLength || 0;
@@ -153,9 +166,9 @@
         });
         status = "ready";
       } else if (updateObj?.downloadUrl) {
-        // Åpne direkte nedlasting i nettleser
+        // Fallback: Last ned installasjonsprogram direkte via nettleser
         window.open(updateObj.downloadUrl, "_blank");
-        status = "ready";
+        status = "manual_download";
       } else {
         throw new Error("Ingen nedlastingskilde tilgjengelig.");
       }
@@ -175,9 +188,17 @@
     }
   }
 
+  async function exitApp() {
+    try {
+      await exit(0);
+    } catch {
+      window.close();
+    }
+  }
+
   function closeModal() {
     isOpen = false;
-    if (status === "up_to_date" || status === "error") {
+    if (status === "up_to_date" || status === "error" || status === "manual_download") {
       status = "idle";
     }
   }
@@ -203,6 +224,8 @@
           <div class="w-12 h-12 rounded-2xl bg-[#9FE88D]/20 border border-[#9FE88D]/40 text-[#9FE88D] flex items-center justify-center shadow-inner shrink-0">
             {#if status === "ready"}
               <CheckCircle2 class="w-6 h-6 text-[#9FE88D]" />
+            {:else if status === "manual_download"}
+              <Download class="w-6 h-6 text-[#70E1F8]" />
             {:else if status === "error"}
               <AlertCircle class="w-6 h-6 text-[#FB6F84]" />
             {:else if status === "downloading" || status === "installing"}
@@ -218,6 +241,8 @@
             <h3 class="text-lg font-black text-white leading-tight">
               {#if status === "ready"}
                 Oppdatering er klar!
+              {:else if status === "manual_download"}
+                Installasjonsfil lastes ned
               {:else if status === "downloading"}
                 Laster ned oppdatering...
               {:else if status === "installing"}
@@ -232,11 +257,13 @@
             </h3>
             <p class="text-xs text-[#94A3B8] mt-0.5">
               {#if status === "available" && updateObj}
-                Versjon {updateObj.version} er nå tilgjengelig på GitHub
+                Versjon {formattedTargetVersion} er nå tilgjengelig på GitHub
+              {:else if status === "manual_download"}
+                Kjør installasjonsfilen for å fullføre oppgraderingen
               {:else if status === "downloading" || status === "installing"}
                 Vennligst vent mens filene klargjøres
               {:else if status === "up_to_date"}
-                Atlantasy v{currentVersion} er fullt oppdatert
+                Atlantasy {formattedCurrentVersion} er fullt oppdatert
               {:else}
                 Automatisk oppdateringssystem
               {/if}
@@ -262,7 +289,7 @@
           <div class="flex items-center justify-between p-3.5 rounded-2xl bg-[#191E24] border border-[#384252]">
             <div>
               <span class="text-[11px] text-[#94A3B8] font-bold uppercase block">Nåværende</span>
-              <span class="text-sm font-mono font-bold text-[#94A3B8]">v{currentVersion}</span>
+              <span class="text-sm font-mono font-bold text-[#94A3B8]">{formattedCurrentVersion}</span>
             </div>
 
             <div class="w-8 h-8 rounded-full bg-[#2A303C] flex items-center justify-center text-[#9FE88D]">
@@ -272,7 +299,7 @@
             <div class="text-right">
               <span class="text-[11px] text-[#9FE88D] font-bold uppercase block">Ny versjon</span>
               <span class="text-sm font-mono font-bold text-white bg-[#9FE88D]/20 px-2 py-0.5 rounded-lg border border-[#9FE88D]/40">
-                v{updateObj.version}
+                {formattedTargetVersion}
               </span>
             </div>
           </div>
@@ -295,6 +322,26 @@
               {:else}
                 <p class="text-[#94A3B8] italic">Mindre feilrettinger, sikkerhetsoptimaliseringer og ytelsesforbedringer.</p>
               {/if}
+            </div>
+          </div>
+        {:else if status === "manual_download"}
+          <!-- Instruksjoner for manuell installasjon -->
+          <div class="space-y-4">
+            <div class="p-4 rounded-2xl bg-[#70E1F8]/10 border border-[#70E1F8]/30 space-y-3">
+              <div class="flex items-center gap-2 text-[#70E1F8] font-bold text-sm">
+                <Download class="w-4 h-4" />
+                <span>Installasjonsfilen lastes ned nå</span>
+              </div>
+              <p class="text-xs text-[#E2E8F0] leading-relaxed">
+                Nettleseren din laster nå ned <strong class="text-white font-mono">{updateObj?.fileName || "Atlantasy-setup.exe"}</strong>.
+              </p>
+              <div class="p-3 rounded-xl bg-[#191E24] border border-[#384252] text-xs space-y-2">
+                <p class="font-bold text-white">Følg disse to stegene:</p>
+                <ol class="list-decimal list-inside space-y-1 text-[#94A3B8]">
+                  <li>Lukk Atlantasy (bruk knappen under).</li>
+                  <li>Kjør den nedlastede installasjonsfilen fra nedlastingsmappen din for å fullføre oppdateringen til <strong class="text-[#9FE88D]">{formattedTargetVersion}</strong>.</li>
+                </ol>
+              </div>
             </div>
           </div>
         {:else if status === "downloading" || status === "installing"}
@@ -333,7 +380,7 @@
             <CheckCircle2 class="w-8 h-8 text-[#9FE88D] mx-auto" />
             <p class="text-base font-bold text-white">Alt er oppdatert!</p>
             <p class="text-xs text-[#94A3B8]">
-              Du kjører allerede den nyeste tilgjengelige versjonen av Atlantasy (v{currentVersion}).
+              Du kjører allerede den nyeste tilgjengelige versjonen av Atlantasy ({formattedCurrentVersion}).
             </p>
           </div>
         {:else if status === "error"}
@@ -367,6 +414,23 @@
           >
             <Download class="w-4 h-4" />
             <span>Last ned og oppdater</span>
+          </button>
+        {:else if status === "manual_download"}
+          <button
+            type="button"
+            onclick={closeModal}
+            class="px-4 py-2.5 rounded-xl bg-[#2A303C] hover:bg-[#384252] text-xs font-semibold text-[#94A3B8] hover:text-white transition-colors"
+          >
+            Lukk dette vinduet
+          </button>
+
+          <button
+            type="button"
+            onclick={exitApp}
+            class="px-5 py-2.5 rounded-xl bg-[#FB6F84] hover:bg-[#e65b71] text-white font-bold text-xs transition-all shadow-md flex items-center gap-2"
+          >
+            <LogOut class="w-4 h-4" />
+            <span>Lukk Atlantasy nå</span>
           </button>
         {:else if status === "ready"}
           <button

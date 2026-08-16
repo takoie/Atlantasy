@@ -50,7 +50,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "RWS/3N7RItVCM0E+vDld/ApXdQAgFggfD9/SuvtZtqmhKL/uL0W6xNHb",
+      "pubkey": "RWRaAzM7GXfJoxJMDLmVBpF+BQ7fk+9gyb1M+k6kMIUFq1aVYqLUyGgS",
       "endpoints": [
         "https://github.com/takoie/Atlantasy/releases/latest/download/latest.json"
       ]

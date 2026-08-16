@@ -15,8 +15,8 @@
     "semantic_hash": ""
   },
   "convex/schema.ts": {
-    "mtime": 1786871370.3658185,
-    "ast_hash": "10f6f08ffc94868992fa116f2b9d53dd",
+    "mtime": 1786873060.5688996,
+    "ast_hash": "8f24909f1ec4fb87dbcaf4ce2fb389ce",
     "semantic_hash": ""
   },
   "convex/tsconfig.json": {
@@ -25,8 +25,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1786872193.043286,
-    "ast_hash": "eeb987fd36ea97a6fe3a2d5de156e05d",
+    "mtime": 1786873228.7613392,
+    "ast_hash": "d0a2254e514f6e185f964c423afda395",
     "semantic_hash": ""
   },
   "postcss.config.js": {
@@ -55,13 +55,13 @@
     "semantic_hash": "eac59311a63d5e54e3f8104409b2e250"
   },
   "src-tauri/tauri.conf.json": {
-    "mtime": 1786872196.8608112,
-    "ast_hash": "5ccc30e9b3d5b012463e6f93fa5a1dbd",
+    "mtime": 1786873232.8827853,
+    "ast_hash": "e350bb6d2e5ecbad03a5041efdc94c3d",
     "semantic_hash": ""
   },
   "src/App.svelte": {
-    "mtime": 1786872204.8793447,
-    "ast_hash": "5cbc293ca6edf76f587298f34809da1a",
+    "mtime": 1786873245.47787,
+    "ast_hash": "b67fdd07f6cc407a06a073e8dad7a5ae",
     "semantic_hash": ""
   },
   "src/lib/convex.svelte.ts": {
@@ -470,8 +470,8 @@
     "semantic_hash": ""
   },
   "convex/chat.ts": {
-    "mtime": 1786871376.0402002,
-    "ast_hash": "0ee091ec762ed2a0287cf9645e75c754",
+    "mtime": 1786873068.35481,
+    "ast_hash": "0c049fb1c7404447d861cc9e07c1d269",
     "semantic_hash": ""
   },
   "convex/cups.ts": {
@@ -510,8 +510,8 @@
     "semantic_hash": ""
   },
   "src/lib/components/ChatDrawer.svelte": {
-    "mtime": 1786871513.9310675,
-    "ast_hash": "3484264cc369c289c5aac276f56e99bf",
+    "mtime": 1786873175.7970154,
+    "ast_hash": "48a3082d7bdc7ffe405b50c6d7289a27",
     "semantic_hash": ""
   },
   "src/lib/components/ClaimFplTeamModal.svelte": {
@@ -560,8 +560,8 @@
     "semantic_hash": ""
   },
   "src/lib/components/Sidebar.svelte": {
-    "mtime": 1786872213.8091714,
-    "ast_hash": "6a0c21a88576330a8d4a43b94a513ac3",
+    "mtime": 1786873241.3942814,
+    "ast_hash": "1d03c1bb0242ffd7934572fd00e564c6",
     "semantic_hash": ""
   },
   "src/lib/components/TeamProfileModal.svelte": {
@@ -575,8 +575,8 @@
     "semantic_hash": ""
   },
   "src/lib/components/UpdateModal.svelte": {
-    "mtime": 1786872210.0676858,
-    "ast_hash": "442899c1ab6a4fe464a2896c9bf9fb32",
+    "mtime": 1786873249.2331202,
+    "ast_hash": "0d8f4c34a42e713a9e9ba13611c3380b",
     "semantic_hash": ""
   },
   "src/lib/components/WallOfFameBanner.svelte": {

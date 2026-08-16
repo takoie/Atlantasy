@@ -4274,8 +4274,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_fontsize_xl",
-      "community": 232,
-      "community_name": "xl",
+      "community": 162,
+      "community_name": "radius",
       "norm_label": "xl"
     },
     {
@@ -4285,8 +4285,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_xl_value",
-      "community": 232,
-      "community_name": "xl",
+      "community": 162,
+      "community_name": "radius",
       "norm_label": "$value"
     },
     {
@@ -4296,8 +4296,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_xl_type",
-      "community": 232,
-      "community_name": "xl",
+      "community": 162,
+      "community_name": "radius",
       "norm_label": "$type"
     },
     {
@@ -4461,8 +4461,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_radius_default",
-      "community": 162,
-      "community_name": "radius",
+      "community": 293,
+      "community_name": "default",
       "norm_label": "default"
     },
     {
@@ -4472,8 +4472,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_default_value",
-      "community": 162,
-      "community_name": "radius",
+      "community": 293,
+      "community_name": "default",
       "norm_label": "$value"
     },
     {
@@ -4483,8 +4483,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_default_type",
-      "community": 162,
-      "community_name": "radius",
+      "community": 293,
+      "community_name": "default",
       "norm_label": "$type"
     },
     {
@@ -4538,8 +4538,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_radius_xl",
-      "community": 232,
-      "community_name": "xl",
+      "community": 162,
+      "community_name": "radius",
       "norm_label": "xl"
     },
     {
@@ -4615,8 +4615,8 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "agents_skills_design_system_templates_design_tokens_starter_shadow_default",
-      "community": 162,
-      "community_name": "radius",
+      "community": 293,
+      "community_name": "default",
       "norm_label": "default"
     },
     {
@@ -7419,8 +7419,8 @@
       "source_location": "L191",
       "_origin": "ast",
       "id": "agents_skills_ui_styling_scripts_tailwind_config_gen_tailwindconfiggenerator_generate_config_string",
-      "community": 66,
-      "community_name": "main",
+      "community": 163,
+      "community_name": ".generate_config_string",
       "norm_label": ".generate_config_string()"
     },
     {
@@ -7431,7 +7431,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_styling_scripts_tailwind_config_gen_tailwindconfiggenerator_generate_typescript",
       "community": 163,
-      "community_name": "._generate_javascript",
+      "community_name": ".generate_config_string",
       "norm_label": "._generate_typescript()"
     },
     {
@@ -7442,7 +7442,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_styling_scripts_tailwind_config_gen_tailwindconfiggenerator_generate_javascript",
       "community": 163,
-      "community_name": "._generate_javascript",
+      "community_name": ".generate_config_string",
       "norm_label": "._generate_javascript()"
     },
     {
@@ -7453,7 +7453,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_styling_scripts_tailwind_config_gen_tailwindconfiggenerator_format_plugins",
       "community": 163,
-      "community_name": "._generate_javascript",
+      "community_name": ".generate_config_string",
       "norm_label": "._format_plugins()"
     },
     {
@@ -7464,7 +7464,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_styling_scripts_tailwind_config_gen_tailwindconfiggenerator_indent_json",
       "community": 163,
-      "community_name": "._generate_javascript",
+      "community_name": ".generate_config_string",
       "norm_label": "._indent_json()"
     },
     {
@@ -7474,8 +7474,8 @@
       "source_location": "L267",
       "_origin": "ast",
       "id": "agents_skills_ui_styling_scripts_tailwind_config_gen_tailwindconfiggenerator_write_config",
-      "community": 66,
-      "community_name": "main",
+      "community": 163,
+      "community_name": ".generate_config_string",
       "norm_label": ".write_config()"
     },
     {
@@ -7639,8 +7639,8 @@
       "source_location": "L192",
       "_origin": "ast",
       "id": "agents_skills_ui_styling_scripts_tailwind_config_gen_rationale_192",
-      "community": 66,
-      "community_name": "main",
+      "community": 163,
+      "community_name": ".generate_config_string",
       "norm_label": "generate configuration file content. returns: configuration file as string"
     },
     {
@@ -7651,7 +7651,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_styling_scripts_tailwind_config_gen_rationale_203",
       "community": 163,
-      "community_name": "._generate_javascript",
+      "community_name": ".generate_config_string",
       "norm_label": "generate typescript configuration."
     },
     {
@@ -7662,7 +7662,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_styling_scripts_tailwind_config_gen_rationale_224",
       "community": 163,
-      "community_name": "._generate_javascript",
+      "community_name": ".generate_config_string",
       "norm_label": "generate javascript configuration."
     },
     {
@@ -7673,7 +7673,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_styling_scripts_tailwind_config_gen_rationale_239",
       "community": 163,
-      "community_name": "._generate_javascript",
+      "community_name": ".generate_config_string",
       "norm_label": "format plugins array for config. validates each plugin name against a strict..."
     },
     {
@@ -7684,7 +7684,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_styling_scripts_tailwind_config_gen_rationale_260",
       "community": 163,
-      "community_name": "._generate_javascript",
+      "community_name": ".generate_config_string",
       "norm_label": "add indentation to json string."
     },
     {
@@ -7694,8 +7694,8 @@
       "source_location": "L268",
       "_origin": "ast",
       "id": "agents_skills_ui_styling_scripts_tailwind_config_gen_rationale_268",
-      "community": 66,
-      "community_name": "main",
+      "community": 163,
+      "community_name": ".generate_config_string",
       "norm_label": "write configuration to file. returns: tuple of (success, message)"
     },
     {
@@ -9949,7 +9949,7 @@
       "source_location": "L258",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator",
-      "community": 110,
+      "community": 34,
       "community_name": "DesignSystemGenerator",
       "norm_label": "designsystemgenerator"
     },
@@ -9960,7 +9960,7 @@
       "source_location": "L261",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_init",
-      "community": 110,
+      "community": 34,
       "community_name": "DesignSystemGenerator",
       "norm_label": ".__init__()"
     },
@@ -9971,7 +9971,7 @@
       "source_location": "L267",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_load_reasoning",
-      "community": 110,
+      "community": 34,
       "community_name": "DesignSystemGenerator",
       "norm_label": "._load_reasoning()"
     },
@@ -9982,7 +9982,7 @@
       "source_location": "L275",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_load_styles",
-      "community": 110,
+      "community": 34,
       "community_name": "DesignSystemGenerator",
       "norm_label": "._load_styles()"
     },
@@ -9993,7 +9993,7 @@
       "source_location": "L282",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_load_landing_patterns",
-      "community": 110,
+      "community": 34,
       "community_name": "DesignSystemGenerator",
       "norm_label": "._load_landing_patterns()"
     },
@@ -10004,7 +10004,7 @@
       "source_location": "L297",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_build_style_lookup",
-      "community": 110,
+      "community": 34,
       "community_name": "DesignSystemGenerator",
       "norm_label": "._build_style_lookup()"
     },
@@ -10015,8 +10015,8 @@
       "source_location": "L307",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_resolve_style",
-      "community": 110,
-      "community_name": "DesignSystemGenerator",
+      "community": 96,
+      "community_name": ".generate",
       "norm_label": "._resolve_style()"
     },
     {
@@ -10037,8 +10037,8 @@
       "source_location": "L357",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_find_reasoning_rule",
-      "community": 111,
-      "community_name": "parse_decision_rules",
+      "community": 96,
+      "community_name": ".generate",
       "norm_label": "._find_reasoning_rule()"
     },
     {
@@ -10048,8 +10048,8 @@
       "source_location": "L365",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_apply_reasoning",
-      "community": 111,
-      "community_name": "parse_decision_rules",
+      "community": 96,
+      "community_name": ".generate",
       "norm_label": "._apply_reasoning()"
     },
     {
@@ -10059,8 +10059,8 @@
       "source_location": "L408",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_designsystemgenerator_select_best_match",
-      "community": 110,
-      "community_name": "DesignSystemGenerator",
+      "community": 96,
+      "community_name": ".generate",
       "norm_label": "._select_best_match()"
     },
     {
@@ -10356,7 +10356,7 @@
       "source_location": "L259",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_259",
-      "community": 110,
+      "community": 34,
       "community_name": "DesignSystemGenerator",
       "norm_label": "generates design system recommendations from aggregated searches."
     },
@@ -10367,7 +10367,7 @@
       "source_location": "L268",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_268",
-      "community": 110,
+      "community": 34,
       "community_name": "DesignSystemGenerator",
       "norm_label": "load reasoning rules from csv."
     },
@@ -10389,8 +10389,8 @@
       "source_location": "L358",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_358",
-      "community": 111,
-      "community_name": "parse_decision_rules",
+      "community": 96,
+      "community_name": ".generate",
       "norm_label": "find matching reasoning rule for a category."
     },
     {
@@ -10400,8 +10400,8 @@
       "source_location": "L366",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_366",
-      "community": 111,
-      "community_name": "parse_decision_rules",
+      "community": 96,
+      "community_name": ".generate",
       "norm_label": "apply reasoning rules to search results."
     },
     {
@@ -10411,8 +10411,8 @@
       "source_location": "L409",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_design_system_rationale_409",
-      "community": 110,
-      "community_name": "DesignSystemGenerator",
+      "community": 96,
+      "community_name": ".generate",
       "norm_label": "select best matching result based on priority keywords."
     },
     {
@@ -10588,7 +10588,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_reasoning_contract",
       "community": 111,
-      "community_name": "parse_decision_rules",
+      "community_name": "test_data_contracts.py",
       "norm_label": "reasoning_contract.py"
     },
     {
@@ -10599,7 +10599,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_reasoning_contract_object_without_duplicates",
       "community": 111,
-      "community_name": "parse_decision_rules",
+      "community_name": "test_data_contracts.py",
       "norm_label": "_object_without_duplicates()"
     },
     {
@@ -10610,7 +10610,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_reasoning_contract_parse_decision_rules",
       "community": 111,
-      "community_name": "parse_decision_rules",
+      "community_name": "test_data_contracts.py",
       "norm_label": "parse_decision_rules()"
     },
     {
@@ -10621,7 +10621,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_reasoning_contract_validate_action",
       "community": 111,
-      "community_name": "parse_decision_rules",
+      "community_name": "test_data_contracts.py",
       "norm_label": "_validate_action()"
     },
     {
@@ -10632,7 +10632,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_reasoning_contract_apply_decision_rules",
       "community": 111,
-      "community_name": "parse_decision_rules",
+      "community_name": "test_data_contracts.py",
       "norm_label": "apply_decision_rules()"
     },
     {
@@ -10643,7 +10643,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_reasoning_contract_rationale_68",
       "community": 111,
-      "community_name": "parse_decision_rules",
+      "community_name": "test_data_contracts.py",
       "norm_label": "parse the canonical condition -> action-array representation."
     },
     {
@@ -10654,7 +10654,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_reasoning_contract_rationale_102",
       "community": 111,
-      "community_name": "parse_decision_rules",
+      "community_name": "test_data_contracts.py",
       "norm_label": "return deterministic mutations and an audit trail; never execute data."
     },
     {
@@ -11324,7 +11324,7 @@
       "source_location": "L313",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_core_testreasoningmatch",
-      "community": 110,
+      "community": 34,
       "community_name": "DesignSystemGenerator",
       "norm_label": "testreasoningmatch"
     },
@@ -11335,7 +11335,7 @@
       "source_location": "L314",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_core_testreasoningmatch_test_known_category_matches_exactly",
-      "community": 110,
+      "community": 34,
       "community_name": "DesignSystemGenerator",
       "norm_label": ".test_known_category_matches_exactly()"
     },
@@ -11346,7 +11346,7 @@
       "source_location": "L319",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_core_testreasoningmatch_test_unknown_category_falls_back_gracefully",
-      "community": 110,
+      "community": 34,
       "community_name": "DesignSystemGenerator",
       "norm_label": ".test_unknown_category_falls_back_gracefully()"
     },
@@ -11577,8 +11577,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 111,
+      "community_name": "test_data_contracts.py",
       "norm_label": "test_data_contracts.py"
     },
     {
@@ -11589,7 +11589,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_read_rows",
       "community": 34,
-      "community_name": "read_rows",
+      "community_name": "DesignSystemGenerator",
       "norm_label": "read_rows()"
     },
     {
@@ -11599,8 +11599,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_split_values",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 111,
+      "community_name": "test_data_contracts.py",
       "norm_label": "split_values()"
     },
     {
@@ -11610,8 +11610,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_style_identities",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 111,
+      "community_name": "test_data_contracts.py",
       "norm_label": "style_identities()"
     },
     {
@@ -11621,8 +11621,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_teststyleidentitycontract",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 111,
+      "community_name": "test_data_contracts.py",
       "norm_label": "teststyleidentitycontract"
     },
     {
@@ -11633,7 +11633,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_teststyleidentitycontract_setup",
       "community": 34,
-      "community_name": "read_rows",
+      "community_name": "DesignSystemGenerator",
       "norm_label": ".setup()"
     },
     {
@@ -11643,8 +11643,8 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_teststyleidentitycontract_test_ids_aliases_status_and_parents_are_unambiguous",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 111,
+      "community_name": "test_data_contracts.py",
       "norm_label": ".test_ids_aliases_status_and_parents_are_unambiguous()"
     },
     {
@@ -11654,8 +11654,8 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_teststyleidentitycontract_test_every_product_and_reasoning_style_reference_resolves",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 111,
+      "community_name": "test_data_contracts.py",
       "norm_label": ".test_every_product_and_reasoning_style_reference_resolves()"
     },
     {
@@ -11666,7 +11666,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract",
       "community": 34,
-      "community_name": "read_rows",
+      "community_name": "DesignSystemGenerator",
       "norm_label": "testreasoningcontract"
     },
     {
@@ -11677,7 +11677,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_known_product_sets_match_exactly",
       "community": 34,
-      "community_name": "read_rows",
+      "community_name": "DesignSystemGenerator",
       "norm_label": ".test_known_product_sets_match_exactly()"
     },
     {
@@ -11688,7 +11688,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_decision_rules_use_closed_array_grammar",
       "community": 111,
-      "community_name": "parse_decision_rules",
+      "community_name": "test_data_contracts.py",
       "norm_label": ".test_decision_rules_use_closed_array_grammar()"
     },
     {
@@ -11699,7 +11699,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_duplicate_unknown_keys_and_unknown_actions_fail_closed",
       "community": 111,
-      "community_name": "parse_decision_rules",
+      "community_name": "test_data_contracts.py",
       "norm_label": ".test_duplicate_unknown_keys_and_unknown_actions_fail_closed()"
     },
     {
@@ -11710,7 +11710,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_must_have_and_explicit_signals_are_applied_and_reported",
       "community": 111,
-      "community_name": "parse_decision_rules",
+      "community_name": "test_data_contracts.py",
       "norm_label": ".test_must_have_and_explicit_signals_are_applied_and_reported()"
     },
     {
@@ -11721,7 +11721,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_generator_matches_reasoning_exactly_and_defaults_only_for_unknown",
       "community": 34,
-      "community_name": "read_rows",
+      "community_name": "DesignSystemGenerator",
       "norm_label": ".test_generator_matches_reasoning_exactly_and_defaults_only_for_unknown()"
     },
     {
@@ -11732,7 +11732,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_reasoning_patterns_reference_landing_identities",
       "community": 34,
-      "community_name": "read_rows",
+      "community_name": "DesignSystemGenerator",
       "norm_label": ".test_reasoning_patterns_reference_landing_identities()"
     },
     {
@@ -11743,7 +11743,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_every_known_product_generates_a_traceable_landing_pattern",
       "community": 34,
-      "community_name": "read_rows",
+      "community_name": "DesignSystemGenerator",
       "norm_label": ".test_every_known_product_generates_a_traceable_landing_pattern()"
     },
     {
@@ -11754,7 +11754,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_representative_new_products_generate_traceable_sources",
       "community": 34,
-      "community_name": "read_rows",
+      "community_name": "DesignSystemGenerator",
       "norm_label": ".test_representative_new_products_generate_traceable_sources()"
     },
     {
@@ -11765,7 +11765,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_constraints_reach_domain_queries",
       "community": 34,
-      "community_name": "read_rows",
+      "community_name": "DesignSystemGenerator",
       "norm_label": ".test_constraints_reach_domain_queries()"
     },
     {
@@ -11776,7 +11776,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_canonical_style_priority_is_not_limited_to_bm25_top_three",
       "community": 34,
-      "community_name": "read_rows",
+      "community_name": "DesignSystemGenerator",
       "norm_label": ".test_canonical_style_priority_is_not_limited_to_bm25_top_three()"
     },
     {
@@ -11787,7 +11787,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_duplicate_semantic_reasoning_labels_fail_validation",
       "community": 34,
-      "community_name": "read_rows",
+      "community_name": "DesignSystemGenerator",
       "norm_label": ".test_duplicate_semantic_reasoning_labels_fail_validation()"
     },
     {
@@ -11798,7 +11798,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_every_exact_product_label_resolves_to_itself",
       "community": 34,
-      "community_name": "read_rows",
+      "community_name": "DesignSystemGenerator",
       "norm_label": ".test_every_exact_product_label_resolves_to_itself()"
     },
     {
@@ -11809,7 +11809,7 @@
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testreasoningcontract_test_style_aliases_have_one_exact_owner",
       "community": 34,
-      "community_name": "read_rows",
+      "community_name": "DesignSystemGenerator",
       "norm_label": ".test_style_aliases_have_one_exact_owner()"
     },
     {
@@ -11819,8 +11819,8 @@
       "source_location": "L261",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testlandingandstackcontract",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 232,
+      "community_name": "TestLandingAndStackContract",
       "norm_label": "testlandingandstackcontract"
     },
     {
@@ -11830,8 +11830,8 @@
       "source_location": "L262",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testlandingandstackcontract_test_landing_sections_use_one_delimiter",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 232,
+      "community_name": "TestLandingAndStackContract",
       "norm_label": ".test_landing_sections_use_one_delimiter()"
     },
     {
@@ -11841,8 +11841,8 @@
       "source_location": "L270",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testlandingandstackcontract_test_stack_schema_is_additive_and_uniform",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 232,
+      "community_name": "TestLandingAndStackContract",
       "norm_label": ".test_stack_schema_is_additive_and_uniform()"
     },
     {
@@ -11852,8 +11852,8 @@
       "source_location": "L279",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testlandingandstackcontract_test_provenance_sidecar_has_stable_shape",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 232,
+      "community_name": "TestLandingAndStackContract",
       "norm_label": ".test_provenance_sidecar_has_stable_shape()"
     },
     {
@@ -11863,8 +11863,8 @@
       "source_location": "L290",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testlandingandstackcontract_test_provenance_rejects_bad_shapes_enums_and_hosts_without_crashing",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 232,
+      "community_name": "TestLandingAndStackContract",
       "norm_label": ".test_provenance_rejects_bad_shapes_enums_and_hosts_without_crashing()"
     },
     {
@@ -11874,8 +11874,8 @@
       "source_location": "L328",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testlandingandstackcontract_test_dataset_provenance_scope_binds_real_rows_and_fields",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 232,
+      "community_name": "TestLandingAndStackContract",
       "norm_label": ".test_dataset_provenance_scope_binds_real_rows_and_fields()"
     },
     {
@@ -11885,8 +11885,8 @@
       "source_location": "L355",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testgeneratedcatalogcontract",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 110,
+      "community_name": "TestGeneratedCatalogContract",
       "norm_label": "testgeneratedcatalogcontract"
     },
     {
@@ -11896,8 +11896,8 @@
       "source_location": "L356",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testgeneratedcatalogcontract_load_json",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 110,
+      "community_name": "TestGeneratedCatalogContract",
       "norm_label": ".load_json()"
     },
     {
@@ -11907,8 +11907,8 @@
       "source_location": "L359",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testgeneratedcatalogcontract_test_canonical_catalogs_and_provenance_are_release_ready",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 110,
+      "community_name": "TestGeneratedCatalogContract",
       "norm_label": ".test_canonical_catalogs_and_provenance_are_release_ready()"
     },
     {
@@ -11918,8 +11918,8 @@
       "source_location": "L363",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testgeneratedcatalogcontract_test_font_license_and_typography_drift_fail_closed",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 110,
+      "community_name": "TestGeneratedCatalogContract",
       "norm_label": ".test_font_license_and_typography_drift_fail_closed()"
     },
     {
@@ -11929,8 +11929,8 @@
       "source_location": "L383",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testgeneratedcatalogcontract_test_font_source_revision_and_exclusion_policy_fail_closed",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 110,
+      "community_name": "TestGeneratedCatalogContract",
       "norm_label": ".test_font_source_revision_and_exclusion_policy_fail_closed()"
     },
     {
@@ -11940,8 +11940,8 @@
       "source_location": "L399",
       "_origin": "ast",
       "id": "agents_skills_ui_ux_pro_max_scripts_tests_test_data_contracts_testgeneratedcatalogcontract_test_curated_icon_and_summary_drift_fail_closed",
-      "community": 34,
-      "community_name": "read_rows",
+      "community": 110,
+      "community_name": "TestGeneratedCatalogContract",
       "norm_label": ".test_curated_icon_and_summary_drift_fail_closed()"
     },
     {
@@ -14137,7 +14137,7 @@
       "label": "deleteMessage",
       "file_type": "code",
       "source_file": "convex/chat.ts",
-      "source_location": "L82",
+      "source_location": "L84",
       "_origin": "ast",
       "id": "convex_chat_deletemessage",
       "community": 9,
@@ -14148,7 +14148,7 @@
       "label": "editMessage",
       "file_type": "code",
       "source_file": "convex/chat.ts",
-      "source_location": "L108",
+      "source_location": "L110",
       "_origin": "ast",
       "id": "convex_chat_editmessage",
       "community": 9,
@@ -14159,7 +14159,7 @@
       "label": "getUnreadCount",
       "file_type": "code",
       "source_file": "convex/chat.ts",
-      "source_location": "L146",
+      "source_location": "L148",
       "_origin": "ast",
       "id": "convex_chat_getunreadcount",
       "community": 9,
@@ -16326,7 +16326,7 @@
       "label": "#each()",
       "file_type": "code",
       "source_file": "src/lib/components/ChatDrawer.svelte",
-      "source_location": "L488",
+      "source_location": "L824",
       "_origin": "ast",
       "id": "src_lib_components_chatdrawer_each",
       "community": 119,
@@ -60513,7 +60513,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "convex/chat.ts",
-      "source_location": "L82",
+      "source_location": "L84",
       "weight": 1.0,
       "_origin": "ast",
       "source": "convex_chat",
@@ -60524,7 +60524,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "convex/chat.ts",
-      "source_location": "L108",
+      "source_location": "L110",
       "weight": 1.0,
       "_origin": "ast",
       "source": "convex_chat",
@@ -60546,7 +60546,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "convex/chat.ts",
-      "source_location": "L146",
+      "source_location": "L148",
       "weight": 1.0,
       "_origin": "ast",
       "source": "convex_chat",
@@ -62996,7 +62996,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/lib/components/ChatDrawer.svelte",
-      "source_location": "L488",
+      "source_location": "L824",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_lib_components_chatdrawer",
@@ -82019,5 +82019,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "592e3245a4504fb0cbcd2106455253bc0494007d"
+  "built_at_commit": "e8414d8e5e5c03c7cdf3d4c649d10d11acd50e57"
 }

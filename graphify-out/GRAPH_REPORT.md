@@ -1,16 +1,16 @@
 # Graph Report - Atlantasy  (2026-08-16)
 
 ## Corpus Check
-- 263 files · ~389,616 words
+- 263 files · ~390,848 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3359 nodes · 4018 edges · 293 communities (248 shown, 45 thin omitted)
+- 3359 nodes · 4018 edges · 294 communities (247 shown, 47 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 55 edges (avg confidence: 0.53)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `592e3245`
+- Built from commit: `e8414d8e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -42,7 +42,7 @@
 - Subagent-Driven Development
 - Typography Specifications
 - Test-Driven Development (TDD)
-- read_rows
+- DesignSystemGenerator
 - Logo Usage Rules
 - Component Specifications
 - shadcn/ui Accessibility Patterns
@@ -118,8 +118,8 @@
 - Dispatching Parallel Agents
 - Layout Patterns
 - ShadcnInstaller
-- DesignSystemGenerator
-- parse_decision_rules
+- TestGeneratedCatalogContract
+- test_data_contracts.py
 - update.md
 - Logo Design Reference
 - Token Architecture
@@ -170,7 +170,7 @@
 - Packaged Convex Components
 - input
 - radius
-- ._generate_javascript
+- .generate_config_string
 - CupView.svelte
 - stop-server.sh
 - Slides Reference
@@ -238,7 +238,7 @@
 - Generate Convex tests
 - Prove a feature works — seed, drive, assert
 - padding-y
-- xl
+- TestLandingAndStackContract
 - md
 - none
 - Pi Tool Mapping
@@ -296,6 +296,7 @@
 - internalAction
 - internalMutation
 - internalQuery
+- default
 
 ## God Nodes (most connected - your core abstractions)
 1. `TailwindConfigGenerator` - 58 edges
@@ -324,7 +325,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (293 total, 45 thin omitted)
+## Communities (294 total, 47 thin omitted)
 
 ### Community 0 - "compilerOptions"
 Cohesion: 0.07
@@ -426,9 +427,9 @@ Nodes (30): Accessibility, Base System, Best Practices, Clean & Modern, Common F
 Cohesion: 0.06
 Nodes (29): Common Rationalizations, Debugging Integration, Example: Bug Fix, Final Rule, Good Tests, GREEN - Minimal Code, Overview, Red Flags - STOP and Start Over (+21 more)
 
-### Community 34 - "read_rows"
-Cohesion: 0.11
-Nodes (7): read_rows(), split_values(), style_identities(), TestGeneratedCatalogContract, TestLandingAndStackContract, TestReasoningContract, TestStyleIdentityContract
+### Community 34 - "DesignSystemGenerator"
+Cohesion: 0.15
+Nodes (6): DesignSystemGenerator, Generates design system recommendations from aggregated searches., Load reasoning rules from CSV., TestReasoningMatch, read_rows(), TestReasoningContract
 
 ### Community 35 - "Logo Usage Rules"
 Cohesion: 0.07
@@ -555,8 +556,8 @@ Cohesion: 0.11
 Nodes (19): $type, $value, background, foreground, muted-foreground, primary, primary-hover, secondary (+11 more)
 
 ### Community 66 - "main"
-Cohesion: 0.11
-Nodes (10): main(), Add custom font families. Args: fonts: Dict of font_type: [font_names] e.g.,…, Add custom spacing values. Args: spacing: Dict of name: value e.g., {'18':…, Add custom breakpoints. Args: breakpoints: Dict of name: width e.g., {'3xl':…, Add plugin requirements. Args: plugins: List of plugin names e.g.,…, Get plugin recommendations based on configuration. Returns: List of recommended…, Generate configuration file content. Returns: Configuration file as string, Write configuration to file. Returns: Tuple of (success, message) (+2 more)
+Cohesion: 0.13
+Nodes (8): main(), Add custom font families. Args: fonts: Dict of font_type: [font_names] e.g.,…, Add custom spacing values. Args: spacing: Dict of name: value e.g., {'18':…, Add custom breakpoints. Args: breakpoints: Dict of name: width e.g., {'3xl':…, Add plugin requirements. Args: plugins: List of plugin names e.g.,…, Get plugin recommendations based on configuration. Returns: List of recommended…, Validate configuration. Returns: Tuple of (valid, message), Add custom colors to theme. Args: colors: Dict of color_name: color_value Value…
 
 ### Community 67 - "Brand Consistency Checklist"
 Cohesion: 0.11
@@ -671,8 +672,8 @@ Cohesion: 0.23
 Nodes (3): detect_domain(), Auto-detect the most relevant domain from query. Matches are weighted by…, TestDomainDetection
 
 ### Community 96 - ".generate"
-Cohesion: 0.16
-Nodes (8): _filter_anti_patterns_for_mode(), Drop "avoid dark mode" advice once dark mode is the resolved answer., Execute searches across multiple domains., Extract results list from search result dict., Generate complete design system recommendation. variance/motion/density are…, Bucket a 1-10 dial value into its tier config. Returns None if value is None., _resolve_dial(), TestAntiPatternGating
+Cohesion: 0.11
+Nodes (11): _filter_anti_patterns_for_mode(), Drop "avoid dark mode" advice once dark mode is the resolved answer., Execute searches across multiple domains., Find matching reasoning rule for a category., Apply reasoning rules to search results., Select best matching result based on priority keywords., Extract results list from search result dict., Generate complete design system recommendation. variance/motion/density are… (+3 more)
 
 ### Community 97 - "Using Git Worktrees"
 Cohesion: 0.13
@@ -726,13 +727,9 @@ Nodes (13): Card Styles, Component Variants, CSS Structures, Feature Grid (3 col
 Cohesion: 0.14
 Nodes (8): Handle shadcn/ui component installation., ShadcnInstaller, Test adding components that are already installed., Test initialization with default project root., Test initialization with custom project root., Test checking for non-existent shadcn config., Test getting installed components when none exist., Test getting installed components when files exist.
 
-### Community 110 - "DesignSystemGenerator"
-Cohesion: 0.22
-Nodes (5): DesignSystemGenerator, Generates design system recommendations from aggregated searches., Load reasoning rules from CSV., Select best matching result based on priority keywords., TestReasoningMatch
-
-### Community 111 - "parse_decision_rules"
-Cohesion: 0.19
-Nodes (8): Find matching reasoning rule for a category., Apply reasoning rules to search results., apply_decision_rules(), _object_without_duplicates(), parse_decision_rules(), Return deterministic mutations and an audit trail; never execute data., Parse the canonical condition -> action-array representation., _validate_action()
+### Community 111 - "test_data_contracts.py"
+Cohesion: 0.20
+Nodes (9): apply_decision_rules(), _object_without_duplicates(), parse_decision_rules(), Return deterministic mutations and an audit trail; never execute data., Parse the canonical condition -> action-array representation., _validate_action(), split_values(), style_identities() (+1 more)
 
 ### Community 112 - "update.md"
 Cohesion: 0.15
@@ -928,11 +925,11 @@ Nodes (8): padding-x, input, $type, $value, focus-ring, padding-x, $type, $value
 
 ### Community 162 - "radius"
 Cohesion: 0.29
-Nodes (8): $type, $value, $type, $value, radius, default, full, default
+Nodes (8): xl, $type, $value, radius, full, xl, $type, $value
 
-### Community 163 - "._generate_javascript"
-Cohesion: 0.29
-Nodes (4): Generate TypeScript configuration., Generate JavaScript configuration., Format plugins array for config. Validates each plugin name against a strict…, Add indentation to JSON string.
+### Community 163 - ".generate_config_string"
+Cohesion: 0.20
+Nodes (6): Generate configuration file content. Returns: Configuration file as string, Generate TypeScript configuration., Generate JavaScript configuration., Format plugins array for config. Validates each plugin name against a strict…, Add indentation to JSON string., Write configuration to file. Returns: Tuple of (success, message)
 
 ### Community 164 - "CupView.svelte"
 Cohesion: 0.29
@@ -1202,10 +1199,6 @@ Nodes (3): Prove a feature works — seed, drive, assert, Rules, Workflow
 Cohesion: 0.67
 Nodes (4): padding-y, padding-y, $type, $value
 
-### Community 232 - "xl"
-Cohesion: 0.67
-Nodes (4): xl, xl, $type, $value
-
 ### Community 233 - "md"
 Cohesion: 0.67
 Nodes (4): $type, $value, md, md
@@ -1270,10 +1263,14 @@ Nodes (3): ring, $type, $value
 Cohesion: 0.67
 Nodes (3): secondary-foreground, $type, $value
 
+### Community 293 - "default"
+Cohesion: 0.67
+Nodes (4): $type, $value, default, default
+
 ## Knowledge Gaps
 - **1652 isolated node(s):** `crypto`, `http`, `fs`, `path`, `OPCODES` (+1647 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **45 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **47 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -1282,7 +1279,7 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.010) - this node is a cross-community bridge._
 - **Why does `primitive` connect `primitive` to `radius`, `gray`, `fontSize`, `shadow`, `design-tokens-starter.json`, `spacing`?**
   _High betweenness centrality (0.007) - this node is a cross-community bridge._
-- **Why does `DesignSystemGenerator` connect `DesignSystemGenerator` to `.generate`, `read_rows`, `test_design_system_mode.py`, `search`, `parse_decision_rules`, `design_system.py`, `test_core.py`, `_style_is_dark_primary`, `BM25`, `detect_domain`?**
+- **Why does `DesignSystemGenerator` connect `DesignSystemGenerator` to `.generate`, `test_design_system_mode.py`, `TestLandingAndStackContract`, `search`, `TestGeneratedCatalogContract`, `test_data_contracts.py`, `design_system.py`, `test_core.py`, `_style_is_dark_primary`, `BM25`, `detect_domain`?**
   _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `TailwindConfigGenerator` (e.g. with `TestGeneratedConfigIsValidJs` and `TestTailwindConfigGenerator`) actually correct?**
   _`TailwindConfigGenerator` has 2 INFERRED edges - model-reasoned connections that need verification._

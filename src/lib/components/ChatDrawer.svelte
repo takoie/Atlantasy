@@ -420,6 +420,293 @@
   class="hidden"
 />
 
+<!-- Lightbox Modal for Fullskjerm Bildevisning -->
+{#if lightboxImageUrl}
+  <div
+    class="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 select-none animate-in fade-in duration-150"
+    role="dialog"
+    aria-modal="true"
+  >
+    <button
+      type="button"
+      onclick={() => (lightboxImageUrl = null)}
+      class="absolute top-4 right-4 p-2.5 rounded-full bg-[#191E24]/80 text-white hover:bg-[#384252] transition-colors z-10 border border-[#384252]"
+      title="Lukk bilde (Esc)"
+    >
+      <X class="w-5 h-5" />
+    </button>
+
+    <div class="relative max-w-4xl max-h-[85vh] flex flex-col items-center">
+      <img
+        src={lightboxImageUrl}
+        alt="Fullskjerm forhåndsvisning"
+        class="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl border border-[#384252]"
+      />
+      <div class="mt-3 flex items-center gap-3">
+        <a
+          href={lightboxImageUrl}
+          download="atlantasy-chat-image.png"
+          class="px-4 py-2 rounded-xl bg-[#242B35] hover:bg-[#384252] text-white text-xs font-bold transition-colors border border-[#384252] flex items-center gap-2"
+        >
+          <ExternalLink class="w-3.5 h-3.5" />
+          <span>Åpne / Last ned original</span>
+        </a>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Meldingsboble Snippet -->
+{#snippet messageBubble(msg: any, isDrawer: boolean = false)}
+  {@const status = getSenderStatus(msg)}
+  {@const isOwn = status.isOwn}
+  {@const isTopSolo = status.isTopSolo}
+  {@const isTopRoom = status.isTopRoom}
+  {@const isAdmin = status.isAdmin}
+  {@const canEdit = status.canEdit}
+  {@const canDelete = status.canDelete}
+  {@const isEditing = editingMessageId === msg._id}
+  {@const isDeleting = deletingMessageId === msg._id}
+
+  <div
+    class="relative flex items-start gap-2.5 sm:gap-3 w-full group flex-row"
+  >
+    <!-- Avatar med status-glow -->
+    <div class="relative shrink-0 mt-0.5">
+      <img
+        src={msg.senderAvatar ||
+          `https://api.dicebear.com/7.x/bottts/svg?seed=${msg.senderName}`}
+        alt="Avatar"
+        class={`rounded-xl bg-[#191E24] border object-cover transition-all duration-200 ${
+          isDrawer ? "w-7 h-7" : "w-8 h-8"
+        } ${
+          isTopSolo
+            ? "border-[#F4C152] ring-2 ring-[#F4C152]/50 shadow-[0_0_12px_rgba(244,193,82,0.45)]"
+            : isTopRoom
+              ? "border-[#1eb854] ring-2 ring-[#1eb854]/50 shadow-[0_0_12px_rgba(30,184,84,0.4)]"
+              : isOwn
+                ? "border-[#9FE88D]/60 ring-1 ring-[#9FE88D]/30"
+                : "border-[#384252]"
+        }`}
+      />
+      {#if isTopSolo}
+        <span
+          class="absolute -top-1.5 -right-1 text-xs filter drop-shadow select-none animate-bounce"
+          title="Sesongleder i Alle mot alle"
+        >
+          👑
+        </span>
+      {:else if isTopRoom}
+        <span
+          class="absolute -top-1.5 -right-1 text-xs filter drop-shadow select-none"
+          title="Medlem av #1 Rommet"
+        >
+          🏆
+        </span>
+      {/if}
+    </div>
+
+    <!-- Meldingsinnhold -->
+    <div
+      class="relative flex flex-col min-w-0 max-w-[84%] sm:max-w-[76%] items-start"
+    >
+      <!-- Avsender Header -->
+      <div
+        class="flex items-center gap-1.5 mb-1 px-1 flex-wrap flex-row"
+      >
+        <span class="text-xs font-bold text-white truncate">
+          {msg.senderName}
+        </span>
+
+        {#if isOwn}
+          <span
+            class="text-[9px] px-1.5 py-0.2 rounded bg-[#9FE88D]/20 text-[#9FE88D] border border-[#9FE88D]/40 font-bold uppercase tracking-wider"
+          >
+            Deg
+          </span>
+        {/if}
+
+        {#if isAdmin && !isOwn}
+          <span
+            class="text-[9px] px-1.5 py-0.2 rounded bg-[#9FE88D]/15 text-[#9FE88D] border border-[#9FE88D]/30 font-bold uppercase"
+          >
+            Admin
+          </span>
+        {/if}
+
+        {#if isTopSolo}
+          <span
+            class="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.2 rounded bg-[#F4C152]/20 text-[#F4C152] border border-[#F4C152]/50 font-bold shadow-[0_0_8px_rgba(244,193,82,0.3)]"
+            title="Leder av Alle mot alle"
+          >
+            👑 Sesongleder
+          </span>
+        {:else if isTopRoom}
+          <span
+            class="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.2 rounded bg-[#1eb854]/20 text-[#70E1F8] border border-[#1eb854]/50 font-bold shadow-[0_0_8px_rgba(30,184,84,0.3)]"
+            title="Medlem av regjerende #1 Rom"
+          >
+            🏆 #1 Rom
+          </span>
+        {/if}
+
+        <span class="text-[10px] text-[#94A3B8] shrink-0">
+          {formatTime(msg.createdAt)}
+        </span>
+
+        {#if msg.editedAt}
+          <span class="text-[9px] text-[#94A3B8]/80 italic">
+            (redigert)
+          </span>
+        {/if}
+      </div>
+
+      <!-- Tekstboble eller Redigeringsmodus -->
+      <div class="relative w-full">
+        {#if isEditing}
+          <!-- Redigeringsskjema -->
+          <div
+            class="p-3 rounded-2xl bg-[#191E24] border border-[#9FE88D]/60 shadow-xl space-y-2.5 w-full min-w-[240px] sm:min-w-[320px] animate-in fade-in zoom-in-95 duration-100"
+          >
+            <div class="flex items-center justify-between text-[11px] text-[#9FE88D] font-bold">
+              <span>Redigerer melding</span>
+              <span class="text-[10px] text-[#94A3B8]">Enter = lagre, Esc = avbryt</span>
+            </div>
+            <textarea
+              bind:value={editingContent}
+              onkeydown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  saveEdit(msg._id);
+                } else if (e.key === "Escape") {
+                  cancelEdit();
+                }
+              }}
+              rows="2"
+              class="w-full px-3 py-2 text-xs sm:text-sm rounded-xl bg-[#242B35] border border-[#384252] text-white focus:outline-none focus:border-[#9FE88D] resize-none custom-scrollbar"
+              placeholder="Skriv inn oppdatert tekst..."
+            ></textarea>
+            <div class="flex items-center justify-end gap-2">
+              <button
+                onclick={cancelEdit}
+                class="px-3 py-1 rounded-lg text-xs text-[#94A3B8] hover:text-white hover:bg-[#384252] transition-colors"
+              >
+                Avbryt
+              </button>
+              <button
+                onclick={() => saveEdit(msg._id)}
+                disabled={!editingContent.trim()}
+                class="px-3.5 py-1 rounded-lg text-xs bg-[#9FE88D] hover:bg-[#8ce078] text-[#16380c] font-bold transition-all shadow-sm disabled:opacity-40 flex items-center gap-1.5"
+              >
+                <Check class="w-3.5 h-3.5" />
+                <span>Lagre</span>
+              </button>
+            </div>
+          </div>
+        {:else if isDeleting}
+          <!-- Slettingsbekreftelse -->
+          <div
+            class="p-3 rounded-2xl bg-[#FB6F84]/15 border border-[#FB6F84]/40 shadow-xl space-y-2 w-full min-w-[200px] animate-in fade-in zoom-in-95 duration-100"
+          >
+            <p class="text-xs font-semibold text-[#FB6F84]">
+              Vil du slette denne meldingen?
+            </p>
+            <div class="flex items-center justify-end gap-2">
+              <button
+                onclick={() => (deletingMessageId = null)}
+                class="px-2.5 py-1 rounded-lg text-xs text-[#94A3B8] hover:text-white hover:bg-[#384252] transition-colors"
+              >
+                Avbryt
+              </button>
+              <button
+                onclick={() => confirmDelete(msg._id)}
+                class="px-3 py-1 rounded-lg text-xs bg-[#FB6F84] hover:bg-[#e65b71] text-white font-bold transition-all shadow-sm flex items-center gap-1"
+              >
+                <Trash2 class="w-3.5 h-3.5" />
+                <span>Slett</span>
+              </button>
+            </div>
+          </div>
+        {:else}
+          <!-- Normal Tekstboble -->
+          <div
+            class={`p-3 rounded-2xl rounded-tl-xs text-xs sm:text-sm leading-relaxed break-words transition-all duration-200 shadow-sm ${
+              msg.type === "announcement"
+                ? "bg-[#F4C152]/15 border border-[#F4C152]/40 text-[#F4C152] shadow-md"
+                : isTopSolo
+                  ? "border border-[#F4C152]/80 text-[#FFFBEB] shadow-[0_0_18px_rgba(244,193,82,0.35)] ring-1 ring-[#F4C152]/40 bg-gradient-to-r from-[#F4C152]/20 via-[#242B35] to-[#242B35]"
+                  : isTopRoom
+                    ? "border border-[#1eb854]/80 text-[#F0FDF4] shadow-[0_0_16px_rgba(30,184,84,0.35)] ring-1 ring-[#1eb854]/40 bg-gradient-to-r from-[#1eb854]/20 via-[#242B35] to-[#242B35]"
+                    : isOwn
+                      ? "bg-[#9FE88D]/15 border border-[#9FE88D]/35 text-[#F0FDF4]"
+                      : "bg-[#242B35] border border-[#384252] text-[#E2E8F0]"
+            }`}
+          >
+            <!-- Tekstinnhold med rik formatering -->
+            {#if msg.content}
+              <div class="space-y-1">
+                {@html renderFormattedContent(msg.content)}
+              </div>
+            {/if}
+
+            <!-- Vedlagt bilde -->
+            {#if msg.imageUrl}
+              <div class="mt-2 relative group/img overflow-hidden rounded-xl border border-[#384252] max-w-sm max-h-64 bg-black/40">
+                <button
+                  type="button"
+                  onclick={() => (lightboxImageUrl = msg.imageUrl)}
+                  class="block w-full text-left relative"
+                  title="Klikk for å se bildet i fullskjerm"
+                >
+                  <img
+                    src={msg.imageUrl}
+                    alt="Vedlagt bilde"
+                    class="w-full h-auto max-h-60 object-contain hover:scale-[1.02] transition-transform duration-200 cursor-zoom-in"
+                    loading="lazy"
+                  />
+                  <div class="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                    <span class="px-2.5 py-1 rounded-lg bg-black/75 text-white text-[11px] font-semibold flex items-center gap-1.5 shadow-md">
+                      <Maximize2 class="w-3 h-3" />
+                      <span>Fullskjerm</span>
+                    </span>
+                  </div>
+                </button>
+              </div>
+            {/if}
+          </div>
+
+          <!-- Hurtighandlinger (Hover Toolbar: Rediger & Slett) -->
+          {#if canEdit || canDelete}
+            <div
+              class="absolute top-1 -right-16 sm:-right-20 opacity-0 group-hover:opacity-100 transition-all duration-150 flex items-center gap-1 p-1 bg-[#191E24]/95 border border-[#384252] rounded-xl shadow-lg backdrop-blur-sm z-10"
+            >
+              {#if canEdit}
+                <button
+                  onclick={() => startEdit(msg)}
+                  class="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#9FE88D] hover:bg-[#242B35] transition-colors"
+                  title="Rediger melding"
+                >
+                  <Pencil class="w-3.5 h-3.5" />
+                </button>
+              {/if}
+
+              {#if canDelete}
+                <button
+                  onclick={() => (deletingMessageId = msg._id)}
+                  class="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#FB6F84] hover:bg-[#242B35] transition-colors"
+                  title="Slett melding"
+                >
+                  <Trash2 class="w-3.5 h-3.5" />
+                </button>
+              {/if}
+            </div>
+          {/if}
+        {/if}
+      </div>
+    </div>
+  </div>
+{/snippet}
+
 <!-- Verktøyskuff (Drawer over inputfeltet) Snippet -->
 {#snippet chatToolbarAndDrawer()}
   <!-- Bilde-forhåndsvisning dersom bilde er limt inn / valgt -->
