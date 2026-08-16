@@ -40,6 +40,33 @@
     )
   );
 
+  // Renser og forenkler rundetitler slik at unødvendige parenteser fjernes
+  function cleanRoundHeader(roundNum: number, roundMatches: any[], isLoser = false): string {
+    const cupRound = cup?.rounds?.find((r: any) => r.roundNumber === roundNum);
+    if (cupRound?.roundTitle) {
+      const parts = cupRound.roundTitle.split(":");
+      if (parts.length > 1) {
+        const afterColon = parts[1].replace(/\s*\([^)]*\)/g, "").trim();
+        if (afterColon) return afterColon;
+      }
+      const cleaned = cupRound.roundTitle.replace(/\s*\([^)]*\)/g, "").trim();
+      if (cleaned) return cleaned;
+    }
+    const raw = roundMatches[0]?.roundTitle || "";
+    const cleaned = raw.replace(/\s*\([^)]*\)/g, "").replace(/\s*-\s*Kamp\s*\d+/i, "").replace(/\s*Kamp\s*\d+/i, "").trim();
+    if (cleaned && !cleaned.toLowerCase().startsWith("kamp")) {
+      return cleaned;
+    }
+    return isLoser ? `Taperrunde ${roundNum}` : `Runde ${roundNum}`;
+  }
+
+  // Renser og forenkler kamptitler slik at (Seed 1 vs 12) eller (Vinner K1 vs Vinner K6) fjernes
+  function cleanMatchTitle(match: any): string {
+    if (!match?.roundTitle) return `Kamp ${match?.matchIndex || 1}`;
+    const clean = match.roundTitle.replace(/\s*\([^)]*\)/g, "").trim();
+    return clean || `Kamp ${match.matchIndex || 1}`;
+  }
+
   // Knockout / Single-elimination / Lucky Loser runder
   let knockoutRounds = $derived.by(() => {
     const roundsMap = new Map<number, any[]>();
@@ -53,7 +80,7 @@
       .sort(([a], [b]) => a - b)
       .map(([roundNum, roundMatches]) => ({
         roundNum,
-        title: roundMatches[0]?.roundTitle?.replace(/\s*-\s*Kamp\s*\d+/i, "") || `Runde ${roundNum}`,
+        title: cleanRoundHeader(roundNum, roundMatches, false),
         gameweek: roundMatches[0]?.gameweek || 1,
         matches: roundMatches.sort((a, b) => a.matchIndex - b.matchIndex),
       }));
@@ -71,7 +98,7 @@
       .sort(([a], [b]) => a - b)
       .map(([roundNum, roundMatches]) => ({
         roundNum,
-        title: roundMatches[0]?.roundTitle?.replace(/\s*-\s*Kamp\s*\d+/i, "") || `Runde ${roundNum}`,
+        title: cleanRoundHeader(roundNum, roundMatches, false),
         gameweek: roundMatches[0]?.gameweek || 1,
         matches: roundMatches.sort((a, b) => a.matchIndex - b.matchIndex),
       }));
@@ -89,7 +116,7 @@
       .sort(([a], [b]) => a - b)
       .map(([roundNum, roundMatches]) => ({
         roundNum,
-        title: roundMatches[0]?.roundTitle?.replace(/\s*-\s*Kamp\s*\d+/i, "") || `Taperrunde ${roundNum}`,
+        title: cleanRoundHeader(roundNum, roundMatches, true),
         gameweek: roundMatches[0]?.gameweek || 1,
         matches: roundMatches.sort((a, b) => a.matchIndex - b.matchIndex),
       }));
@@ -122,7 +149,7 @@
           </div>
           <div>
             <h3 class="text-sm font-bold text-white uppercase tracking-wider">
-              {format === "lucky_loser_12" ? "12 Lag: 6 Kamper + 2 Lucky Losers til Kvartfinale" : "Sluttspilltre"}
+              {format === "lucky_loser_12" ? "12 lag: 6 kamper + 2 lucky losers til kvartfinale" : "Sluttspilltre"}
             </h3>
             <p class="text-[11px] text-[#94A3B8]">
               {format === "lucky_loser_12" ? "Alle 12 lag spiller i R1. De 6 vinnerne + 2 beste tapere (Lucky Losers) går til kvartfinalene." : "Vinnerne avanserer til neste runde."}
@@ -162,7 +189,7 @@
                     <!-- Match Header -->
                     <div class="flex items-center justify-between text-[11px] text-[#94A3B8] pb-2 mb-2 border-b border-[#384252]/50">
                       <span class="font-semibold truncate max-w-[150px]">
-                        {match.roundTitle || `Kamp ${match.matchIndex}`}
+                        {cleanMatchTitle(match)}
                       </span>
                       <span
                         class={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
@@ -272,7 +299,7 @@
           }`}
         >
           <Layers class="w-3.5 h-3.5" />
-          <span>Full Brakettoversikt</span>
+          <span>Full brakettoversikt</span>
         </button>
 
         <button
@@ -331,7 +358,7 @@
                 Vinnerbrakett (Winners Bracket)
               </h3>
               <p class="text-[11px] text-[#94A3B8]">
-                Vinnere avanserer oppover i treet. Tapere faller ned til Taperbraketten.
+                Vinnere avanserer oppover i treet. Tapere faller ned til taperbraketten.
               </p>
             </div>
           </div>
@@ -356,7 +383,7 @@
                       class="w-full text-left p-3 rounded-xl bg-[#2A303C] hover:bg-[#323947] border border-[#384252] hover:border-[#9FE88D]/60 transition-all shadow-md group relative overflow-hidden focus:outline-none focus:ring-1 focus:ring-[#9FE88D]"
                     >
                       <div class="flex items-center justify-between text-[11px] text-[#94A3B8] pb-2 mb-2 border-b border-[#384252]/50">
-                        <span class="font-semibold truncate max-w-[150px]">{match.roundTitle || `Kamp ${match.matchIndex}`}</span>
+                        <span class="font-semibold truncate max-w-[150px]">{cleanMatchTitle(match)}</span>
                         <span class={`text-[10px] font-bold px-1.5 py-0.5 rounded ${match.status === "completed" ? "text-[#9FE88D] bg-[#9FE88D]/10" : "text-[#94A3B8] bg-[#191E24]"}`}>
                           {match.status === "completed" ? "Ferdig" : "Kommende"}
                         </span>
@@ -414,7 +441,7 @@
                 Taperbrakett (Losers Bracket)
               </h3>
               <p class="text-[11px] text-[#94A3B8]">
-                Tapere fra Vinnerbraketten får en siste sjanse. Nytt tap betyr eliminering.
+                Tapere fra vinnerbraketten får en siste sjanse. Nytt tap betyr eliminering.
               </p>
             </div>
           </div>
@@ -439,7 +466,7 @@
                       class="w-full text-left p-3 rounded-xl bg-[#2A303C] hover:bg-[#323947] border border-[#384252] hover:border-[#FB6F84]/60 transition-all shadow-md group relative overflow-hidden focus:outline-none"
                     >
                       <div class="flex items-center justify-between text-[11px] text-[#94A3B8] pb-2 mb-2 border-b border-[#384252]/50">
-                        <span class="font-semibold truncate max-w-[150px]">{match.roundTitle || `Kamp ${match.matchIndex}`}</span>
+                        <span class="font-semibold truncate max-w-[150px]">{cleanMatchTitle(match)}</span>
                         <span class={`text-[10px] font-bold px-1.5 py-0.5 rounded ${match.status === "completed" ? "text-[#9FE88D] bg-[#9FE88D]/10" : "text-[#94A3B8] bg-[#191E24]"}`}>
                           {match.status === "completed" ? "Ferdig" : "Kommende"}
                         </span>
@@ -495,9 +522,9 @@
               </div>
               <div>
                 <h3 class="text-base font-bold text-white flex items-center gap-2">
-                  🏆 Den Store Cupfinalen (Grand Final)
+                  🏆 Den store cupfinalen (Grand Final)
                 </h3>
-                <p class="text-xs text-[#94A3B8]">Vinneren av Vinnerbraketten møter vinneren av Taperbraketten</p>
+                <p class="text-xs text-[#94A3B8]">Vinneren av vinnerbraketten møter vinneren av taperbraketten</p>
               </div>
             </div>
           </div>
@@ -510,7 +537,7 @@
                 class="p-4 rounded-xl bg-[#2A303C] hover:bg-[#323947] border border-[#F4C152]/50 transition-all text-left shadow-lg"
               >
                 <div class="flex items-center justify-between pb-2 mb-2 border-b border-[#384252]">
-                  <span class="text-xs font-bold text-[#F4C152]">{match.roundTitle}</span>
+                  <span class="text-xs font-bold text-[#F4C152]">{cleanMatchTitle(match)}</span>
                   <span class="text-[11px] font-mono text-white bg-[#191E24] px-2 py-0.5 rounded border border-[#384252]">
                     GW {match.gameweek}
                   </span>
@@ -698,7 +725,7 @@
                         class="w-full text-left p-3 rounded-xl bg-[#2A303C] hover:bg-[#323947] border border-[#384252] hover:border-[#F4C152]/60 transition-all shadow-md group"
                       >
                         <div class="flex items-center justify-between text-[11px] text-[#94A3B8] pb-1.5 mb-1.5 border-b border-[#384252]/50">
-                          <span class="font-semibold truncate">{match.roundTitle}</span>
+                          <span class="font-semibold truncate">{cleanMatchTitle(match)}</span>
                           <span class={`text-[10px] font-bold px-1.5 py-0.5 rounded ${match.status === "completed" ? "text-[#9FE88D] bg-[#9FE88D]/10" : "text-[#94A3B8]"}`}>
                             {match.status === "completed" ? "Ferdig" : "Kommende"}
                           </span>

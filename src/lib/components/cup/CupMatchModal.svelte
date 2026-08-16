@@ -50,6 +50,10 @@
   let isRoom2Winner = $derived(
     match?.winnerRoomId && match?.room2Id && match.winnerRoomId === match.room2Id
   );
+
+  let cleanRoundTitle = $derived(
+    match?.roundTitle ? match.roundTitle.replace(/\s*\([^)]*\)/g, "").trim() : "Cup-oppgjør"
+  );
 </script>
 
 {#if isOpen && match}
@@ -80,7 +84,7 @@
           <div>
             <div class="flex items-center gap-2">
               <h2 class="text-base font-bold text-white">
-                {match.roundTitle || "Cup-oppgjør"}
+                {cleanRoundTitle}
               </h2>
               <span
                 class={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${

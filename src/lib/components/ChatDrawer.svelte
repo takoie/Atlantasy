@@ -139,17 +139,17 @@
     // scrollToBottom(true); // Assuming this helper exists
   };
 
-  // Kategoriserte Emojis & Ikoner
+  // Kategoriserte emojier og ikoner
   const emojiCategories = [
     {
-      name: "FPL & Kamp",
+      name: "FPL og kamp",
       emojis: [
         "⚽", "🏆", "👑", "🤖", "🥅", "🎯", "🔥", "🧤", "⚡", "🥇", "🥈", "🥉",
         "🏟️", "👟", "🟥", "🟨", "🪄", "💣", "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "🇳🇴", "🌟", "🛡️",
       ],
     },
     {
-      name: "Reaksjoner & Banter",
+      name: "Reaksjoner og banter",
       emojis: [
         "😂", "😭", "🤦‍♂️", "🚀", "🍿", "🤡", "👀", "💀", "😱", "🥶", "🥵", "🥳",
         "🤷‍♂️", "😴", "🤮", "🤯", "🤝", "👏", "💯", "👍", "👎", "💪", "👊",
@@ -554,14 +554,14 @@
       {#if isTopSolo}
         <span
           class="absolute -top-1.5 -right-1 text-xs filter drop-shadow select-none animate-bounce"
-          title="Sesongleder i Alle mot alle"
+          title="Sesongleder i alle mot alle"
         >
           👑
         </span>
       {:else if isTopRoom}
         <span
           class="absolute -top-1.5 -right-1 text-xs filter drop-shadow select-none"
-          title="Medlem av #1 Rommet"
+          title="Medlem av #1-rommet"
         >
           🏆
         </span>
@@ -599,16 +599,16 @@
         {#if isTopSolo}
           <span
             class="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.2 rounded bg-[#F4C152]/20 text-[#F4C152] border border-[#F4C152]/50 font-bold shadow-[0_0_8px_rgba(244,193,82,0.3)]"
-            title="Leder av Alle mot alle"
+            title="Leder av alle mot alle"
           >
             👑 Sesongleder
           </span>
         {:else if isTopRoom}
           <span
             class="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.2 rounded bg-[#1eb854]/20 text-[#70E1F8] border border-[#1eb854]/50 font-bold shadow-[0_0_8px_rgba(30,184,84,0.3)]"
-            title="Medlem av regjerende #1 Rom"
+            title="Medlem av regjerende #1-rom"
           >
-            🏆 #1 Rom
+            🏆 #1-rom
           </span>
         {/if}
 

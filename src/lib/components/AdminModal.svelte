@@ -29,6 +29,10 @@
     CheckCircle2,
     Shirt,
     Unlink,
+    Crown,
+    MessageSquareX,
+    Brush,
+    Award,
   } from "lucide-svelte";
   import { useQuery, useMutation } from "$lib/convex.svelte";
   import { api } from "../../../convex/_generated/api";
@@ -69,6 +73,9 @@
     onDeleteUser = (_userId: string) => {},
     onDeleteInviteCode = (_codeId: string) => {},
     onCreateManualUser = async (_params: any): Promise<any> => null,
+    onClearChat = async (_scope: string, _roomId?: string): Promise<any> => null,
+    onSetWinnerOverrides = async (_params: any): Promise<any> => null,
+    onResetWinnerOverrides = async (_params: any): Promise<any> => null,
   }: {
     isOpen?: boolean;
     currentUser?: any;
@@ -104,6 +111,9 @@
     onDeleteUser?: (userId: string) => void;
     onDeleteInviteCode?: (codeId: string) => void;
     onCreateManualUser?: (params: any) => Promise<any>;
+    onClearChat?: (scope: string, roomId?: string) => Promise<any>;
+    onSetWinnerOverrides?: (overrides: any) => Promise<any>;
+    onResetWinnerOverrides?: (params: any) => Promise<any>;
   } = $props();
 
   let adminPasswordInput = $state("");
@@ -129,6 +139,7 @@
   let leagueName = $state("Atlantis Bedriftsliga");
   let currentGameweek = $state(1);
   let deductTransferHits = $state(true);
+  let showManualGwOverride = $state(false);
 
   // Ny sesong form-state
   let newSeasonName = $state("2025/2026");
@@ -142,6 +153,134 @@
   let winningMonthName = $state("August");
   let winningScore = $state(76.0);
   let customWinnerMessage = $state("");
+
+  // Kårings- & Vinnerstatus Query (live fra backend)
+  const winnersStatusQuery = useQuery(api.admin.getRoundAndRoomWinnersStatus);
+  let winnersStatus = $derived(winnersStatusQuery.data ?? null);
+
+  // Overstyring form state
+  let overrideWinnerEntryId = $state<number | null>(null);
+  let overrideWinnerScoreInput = $state<number | string>("");
+  let overrideRoomId = $state<string>("");
+  let overrideRoomScoreInput = $state<number | string>("");
+  let isSavingOverrides = $state(false);
+
+  // Synkroniser lokale felter når data lastes inn
+  $effect(() => {
+    if (winnersStatus) {
+      if (winnersStatus.isRoundWinnerOverridden && overrideWinnerEntryId === null) {
+        overrideWinnerEntryId = winnersStatus.activeRoundWinner?.entryId || null;
+        overrideWinnerScoreInput = winnersStatus.activeRoundWinner?.points ?? "";
+      }
+      if (winnersStatus.isTopRoomOverridden && !overrideRoomId) {
+        overrideRoomId = winnersStatus.activeTopRoom?.roomId || "";
+        overrideRoomScoreInput = winnersStatus.activeTopRoom?.score ?? "";
+      }
+    }
+  });
+
+  async function handleSaveRoundWinnerOverride() {
+    if (!overrideWinnerEntryId) {
+      alert("Vennligst velg en manager/spiller å overstyre som rundevinner.");
+      return;
+    }
+    const candidate = winnersStatus?.allTeamsCandidates?.find((t: any) => t.entryId === overrideWinnerEntryId);
+    isSavingOverrides = true;
+    try {
+      await onSetWinnerOverrides({
+        overrideRoundWinnerEntryId: overrideWinnerEntryId,
+        overrideRoundWinnerName: candidate?.managerName,
+        overrideRoundWinnerTeamName: candidate?.teamName,
+        overrideRoundWinnerScore: overrideWinnerScoreInput !== "" ? Number(overrideWinnerScoreInput) : candidate?.points,
+      });
+      showSuccess(`Overstyrte rundevinner til ${candidate?.managerName || "valgt spiller"}!`);
+    } catch (err: any) {
+      alert(formatConvexError(err, "Kunne ikke lagre overstyring."));
+    } finally {
+      isSavingOverrides = false;
+    }
+  }
+
+  async function handleResetRoundWinnerOverride() {
+    isSavingOverrides = true;
+    try {
+      await onResetWinnerOverrides({ resetRoundWinner: true, resetTopRoom: false });
+      overrideWinnerEntryId = null;
+      overrideWinnerScoreInput = "";
+      showSuccess("Rundevinner er tilbakestilt til automatisk beregning!");
+    } catch (err: any) {
+      alert(formatConvexError(err, "Kunne ikke tilbakestille overstyring."));
+    } finally {
+      isSavingOverrides = false;
+    }
+  }
+
+  async function handleSaveTopRoomOverride() {
+    if (!overrideRoomId) {
+      alert("Vennligst velg et rom å overstyre som lederrom.");
+      return;
+    }
+    const candidate = winnersStatus?.allRoomsCandidates?.find((r: any) => r.roomId === overrideRoomId);
+    isSavingOverrides = true;
+    try {
+      await onSetWinnerOverrides({
+        overrideTopRoomId: overrideRoomId,
+        overrideTopRoomScore: overrideRoomScoreInput !== "" ? Number(overrideRoomScoreInput) : candidate?.score,
+      });
+      showSuccess(`Overstyrte lederrom til ${candidate?.name || "valgt rom"}!`);
+    } catch (err: any) {
+      alert(formatConvexError(err, "Kunne ikke lagre overstyring."));
+    } finally {
+      isSavingOverrides = false;
+    }
+  }
+
+  async function handleResetTopRoomOverride() {
+    isSavingOverrides = true;
+    try {
+      await onResetWinnerOverrides({ resetRoundWinner: false, resetTopRoom: true });
+      overrideRoomId = "";
+      overrideRoomScoreInput = "";
+      showSuccess("Lederrom er tilbakestilt til automatisk beregning!");
+    } catch (err: any) {
+      alert(formatConvexError(err, "Kunne ikke tilbakestille overstyring."));
+    } finally {
+      isSavingOverrides = false;
+    }
+  }
+
+  function promptClearChat(scope: "all" | "banter" | "room") {
+    const title =
+      scope === "banter"
+        ? "Tøm Felleskanal (Banter)?"
+        : scope === "room"
+          ? "Tøm alle Rom-chatter?"
+          : "Tøm ALL chat?";
+    const desc =
+      scope === "banter"
+        ? "Dette vil permanent slette alle meldinger i den felles Banter-kanalen."
+        : scope === "room"
+          ? "Dette vil permanent slette alle meldinger i alle interne rom-chatter."
+          : "Dette vil slette ALLE meldinger i felleskanal og alle rom-chatter.";
+
+    confirmDialog = {
+      show: true,
+      title,
+      message: `${desc} Denne handlingen kan ikke angres.`,
+      confirmText: "Ja, slett meldinger",
+      onConfirm: async () => {
+        try {
+          const res = await onClearChat(scope);
+          confirmDialog.show = false;
+          showSuccess(
+            `Slettet ${res?.deletedCount ?? 0} meldinger (${scope === "banter" ? "felleskanal" : scope === "room" ? "romchatter" : "all chat"}).`,
+          );
+        } catch (err: any) {
+          alert(formatConvexError(err, "Kunne ikke slette meldinger."));
+        }
+      },
+    };
+  }
 
   // Invitasjonskode state
   let newCodeCustom = $state("");
@@ -1278,7 +1417,13 @@
             }`}
           >
             <span>🏆</span>
-            <span>Kår vinnere</span>
+            <span>Kåringer og vinnere</span>
+            {#if winnersStatus?.isRoundWinnerOverridden || winnersStatus?.isTopRoomOverridden}
+              <span
+                class="w-2 h-2 rounded-full bg-[#F59E0B] animate-pulse"
+                title="Aktive manuelle overstyringer"
+              ></span>
+            {/if}
           </button>
 
           <button
@@ -1303,6 +1448,18 @@
           >
             <span>🎟️</span>
             <span>Invitasjonskoder</span>
+          </button>
+
+          <button
+            onclick={() => (activeTab = "chat")}
+            class={`px-4 py-3 border-b-2 text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 ${
+              activeTab === "chat"
+                ? "border-[#FB6F84] text-[#FB6F84] font-bold"
+                : "border-transparent text-[#94A3B8] hover:text-white"
+            }`}
+          >
+            <MessageSquareX class="w-4 h-4" />
+            <span>Chat</span>
           </button>
 
           <button
@@ -1947,19 +2104,55 @@
                 />
               </div>
 
-              <div>
-                <label
-                  for="admin-sett-gw"
-                  class="block text-xs font-bold text-white mb-1"
-                >
-                  Gjeldende Gameweek
-                </label>
-                <input
-                  id="admin-sett-gw"
-                  type="number"
-                  bind:value={currentGameweek}
-                  class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
-                />
+              <!-- Gjeldende gameweek (Automatisk styrt fra FPL) -->
+              <div class="p-4 rounded-xl bg-[#242B35] border border-[#384252] space-y-2.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-white block">
+                    Gjeldende gameweek
+                  </span>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#9FE88D]/15 text-[#9FE88D] text-[11px] font-bold border border-[#9FE88D]/30">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#9FE88D] animate-pulse"></span>
+                    <span>Følger FPL automatisk</span>
+                  </span>
+                </div>
+
+                <div class="flex items-center justify-between p-3 rounded-xl bg-[#191E24] border border-[#384252]">
+                  <div>
+                    <div class="text-sm sm:text-base font-black text-white font-mono flex items-center gap-2">
+                      <span class="text-[#9FE88D]">GW {currentGameweek}</span>
+                      {#if currentGameweek === 1}
+                        <span class="text-[11px] font-normal text-[#F4C152] font-sans">(sesongstart om en uke)</span>
+                      {/if}
+                    </div>
+                    <p class="text-[11px] text-[#94A3B8] mt-0.5">
+                      Følger inneværende runde automatisk. Du trenger ikke å endre denne manuelt.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onclick={() => (showManualGwOverride = !showManualGwOverride)}
+                    class="text-[11px] text-[#94A3B8] hover:text-white underline font-semibold px-2 py-1 shrink-0"
+                  >
+                    {showManualGwOverride ? "Skjul overstyring" : "Overstyr"}
+                  </button>
+                </div>
+
+                {#if showManualGwOverride}
+                  <div class="pt-2 border-t border-[#384252]/60 space-y-1.5 animate-in fade-in duration-150">
+                    <label for="admin-sett-gw" class="block text-[11px] font-bold text-[#F4C152]">
+                      Manuell overstyring av gameweek (kun ved spesielle behov):
+                    </label>
+                    <input
+                      id="admin-sett-gw"
+                      type="number"
+                      min="1"
+                      max="38"
+                      bind:value={currentGameweek}
+                      class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#F4C152]/40 text-white text-xs focus:border-[#F4C152] focus:outline-none font-mono"
+                    />
+                  </div>
+                {/if}
               </div>
 
               <!-- Trekk fra transfer hits switch -->
@@ -1968,7 +2161,7 @@
               >
                 <div>
                   <h4 class="text-xs font-bold text-white">
-                    Trekk fra Transfer Hits i rom-score
+                    Trekk fra transfer hits i rom-score
                   </h4>
                   <p class="text-[11px] text-[#94A3B8]">
                     Når aktivert, trekkes -4p per ekstra overgang fra hver
@@ -1989,260 +2182,629 @@
                 </button>
               </div>
 
-              <button
-                onclick={handleSaveSettings}
-                class="px-5 py-2.5 rounded-xl bg-[#9FE88D] hover:bg-[#8ce078] text-[#16380c] font-bold text-xs transition-colors shadow-md"
+              <div class="pt-2">
+                <button
+                  onclick={handleSaveSettings}
+                  class="px-5 py-2.5 rounded-xl bg-[#9FE88D] hover:bg-[#8ce078] text-[#16380c] font-bold text-xs transition-colors shadow-md flex items-center gap-2"
+                >
+                  <Save class="w-4 h-4" />
+                  <span>Lagre innstillinger</span>
+                </button>
+              </div>
+
+              <!-- Chat-administrasjon og rensing -->
+              <div
+                class="mt-8 pt-6 border-t border-[#384252] space-y-4"
               >
-                Lagre Innstillinger
-              </button>
+                <div class="flex items-center gap-2">
+                  <div
+                    class="p-2 rounded-lg bg-[#FB6F84]/15 text-[#FB6F84] border border-[#FB6F84]/30"
+                  >
+                    <MessageSquareX class="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-bold text-white uppercase tracking-wider">
+                      Chat-administrasjon og rensing
+                    </h4>
+                    <p class="text-[11px] text-[#94A3B8]">
+                      Slett meldinger i banter felleskanal, rom-chatter eller tøm hele chathistorikken.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <!-- Tøm Banter -->
+                  <div
+                    class="p-3.5 rounded-xl bg-[#191E24] border border-[#384252] flex flex-col justify-between gap-3"
+                  >
+                    <div>
+                      <span class="text-xs font-bold text-white block">Felleskanal (banter)</span>
+                      <p class="text-[10px] text-[#94A3B8] mt-0.5 leading-relaxed">
+                        Sletter alle meldinger og GIF-er i felleskanalen for alle brukere.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onclick={() => promptClearChat("banter")}
+                      class="w-full py-2 px-3 rounded-lg bg-[#FB6F84]/10 hover:bg-[#FB6F84]/20 text-[#FB6F84] border border-[#FB6F84]/30 text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Brush class="w-3.5 h-3.5" />
+                      <span>Tøm banter</span>
+                    </button>
+                  </div>
+
+                  <!-- Tøm Romchatter -->
+                  <div
+                    class="p-3.5 rounded-xl bg-[#191E24] border border-[#384252] flex flex-col justify-between gap-3"
+                  >
+                    <div>
+                      <span class="text-xs font-bold text-white block">Interne rom-chatter</span>
+                      <p class="text-[10px] text-[#94A3B8] mt-0.5 leading-relaxed">
+                        Sletter meldinger i alle de 12 interne romchattene.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onclick={() => promptClearChat("room")}
+                      class="w-full py-2 px-3 rounded-lg bg-[#FB6F84]/10 hover:bg-[#FB6F84]/20 text-[#FB6F84] border border-[#FB6F84]/30 text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Brush class="w-3.5 h-3.5" />
+                      <span>Tøm rom-chatter</span>
+                    </button>
+                  </div>
+
+                  <!-- Tøm Alt -->
+                  <div
+                    class="p-3.5 rounded-xl bg-[#191E24] border border-[#FB6F84]/40 flex flex-col justify-between gap-3"
+                  >
+                    <div>
+                      <span class="text-xs font-bold text-[#FB6F84] block">Tøm all chat</span>
+                      <p class="text-[10px] text-[#94A3B8] mt-0.5 leading-relaxed">
+                        Nullstiller all chat-historikk fullstendig i hele databasen.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onclick={() => promptClearChat("all")}
+                      class="w-full py-2 px-3 rounded-lg bg-[#FB6F84] hover:bg-[#fa546d] text-[#2c090e] text-xs font-bold transition-colors shadow-md flex items-center justify-center gap-1.5"
+                    >
+                      <Trash2 class="w-3.5 h-3.5" />
+                      <span>Tøm all chat</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         {/if}
 
-        <!-- Tab 3: Kår Månedsvinner (Skrytevegg) -->
+        <!-- Tab 3: Kåringer, rundevinnere og skrytevegg -->
         {#if activeTab === "winner"}
           <div
-            class="p-6 space-y-5 overflow-y-auto flex-1 max-w-3xl custom-scrollbar"
+            class="p-6 space-y-6 overflow-y-auto flex-1 max-w-3xl custom-scrollbar"
           >
-            <!-- Aktiv Skrytevegg Status -->
-            {#if monthWinnersData?.roomWinner || monthWinnersData?.soloWinner}
-              <div
-                class="p-4 rounded-xl bg-[#242B35] border border-[#F4C152]/40 space-y-3"
-              >
-                <div class="flex items-center justify-between">
-                  <h4
-                    class="text-xs font-bold uppercase tracking-wider text-[#F4C152] flex items-center gap-1.5"
+            <!-- 1. LIVE RUNDEVINNER (GAMEWEEK) -->
+            <div
+              class="p-5 rounded-2xl bg-gradient-to-br from-[#F59E0B]/15 via-[#242B35] to-[#191E24] border border-[#F59E0B]/40 space-y-4 shadow-md"
+            >
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#384252]">
+                <div class="flex items-center gap-2.5">
+                  <div
+                    class="p-2 rounded-xl bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/40"
                   >
-                    <Trophy class="w-4 h-4" />
-                    <span>Nåværende aktive vinnere på Skryteveggen</span>
-                  </h4>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  {#if monthWinnersData?.roomWinner}
-                    <div
-                      class="p-3 rounded-lg bg-[#191E24] border border-[#384252] flex items-center justify-between"
-                    >
-                      <div>
-                        <span
-                          class="text-[10px] text-[#F4C152] font-bold uppercase block"
-                          >Månedens Romvinner</span
-                        >
-                        <strong class="text-white text-sm"
-                          >{monthWinnersData.roomWinner.winningRoom?.name ||
-                            monthWinnersData.roomWinner.winnerName}</strong
-                        >
-                        <span class="text-[#94A3B8] block text-[11px]"
-                          >({monthWinnersData.roomWinner.winningScore}p snitt)</span
-                        >
-                      </div>
-                      <button
-                        onclick={() =>
-                          onUnpinWinner(monthWinnersData.roomWinner._id)}
-                        class="p-1.5 rounded-lg bg-[#361c1c] text-[#FB6F84] hover:bg-[#452323] text-xs font-semibold"
-                        title="Fjern fra skrytevegg"
-                      >
-                        Fjern
-                      </button>
-                    </div>
-                  {/if}
-
-                  {#if monthWinnersData?.soloWinner}
-                    <div
-                      class="p-3 rounded-lg bg-[#191E24] border border-[#384252] flex items-center justify-between"
-                    >
-                      <div>
-                        <span
-                          class="text-[10px] text-[#9FE88D] font-bold uppercase block"
-                          >Månedens Solovinner</span
-                        >
-                        <strong class="text-white text-sm"
-                          >{monthWinnersData.soloWinner.winnerName}</strong
-                        >
-                        <span class="text-[#94A3B8] block text-[11px]"
-                          >({monthWinnersData.soloWinner.winningScore}p score)</span
-                        >
-                      </div>
-                      <button
-                        onclick={() =>
-                          onUnpinWinner(monthWinnersData.soloWinner._id)}
-                        class="p-1.5 rounded-lg bg-[#361c1c] text-[#FB6F84] hover:bg-[#452323] text-xs font-semibold"
-                        title="Fjern fra skrytevegg"
-                      >
-                        Fjern
-                      </button>
-                    </div>
-                  {/if}
-                </div>
-              </div>
-            {/if}
-
-            <!-- Kår Vinner Skjema -->
-            <div class="space-y-4">
-              <div class="flex items-center justify-between">
-                <h3
-                  class="text-sm font-bold text-white flex items-center gap-2"
-                >
-                  <Sparkles class="w-4 h-4 text-[#F4C152]" />
-                  <span>Kår Månedens Romvinner eller Solovinner</span>
-                </h3>
-                <button
-                  type="button"
-                  onclick={() => autoSuggestWinner(winnerCategory)}
-                  class="px-3 py-1.5 rounded-lg bg-[#F4C152]/15 text-[#F4C152] hover:bg-[#F4C152]/25 border border-[#F4C152]/40 text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
-                  title="Hent inn beste rom eller individuelle spiller automatisk fra databasen"
-                >
-                  <Sparkles class="w-3.5 h-3.5" />
-                  <span>Autoforeslå leder</span>
-                </button>
-              </div>
-
-              <div class="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onclick={() => {
-                    winnerCategory = "room";
-                    autoSuggestWinner("room");
-                  }}
-                  class={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                    winnerCategory === "room"
-                      ? "bg-[#F4C152]/15 border-[#F4C152] text-[#F4C152]"
-                      : "bg-[#191E24] border-[#384252] text-[#94A3B8]"
-                  }`}
-                >
-                  <span>🏆</span>
-                  <span>Månedens Romvinner</span>
-                </button>
-
-                <button
-                  type="button"
-                  onclick={() => {
-                    winnerCategory = "individual";
-                    autoSuggestWinner("individual");
-                  }}
-                  class={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                    winnerCategory === "individual"
-                      ? "bg-[#9FE88D]/15 border-[#9FE88D] text-[#9FE88D]"
-                      : "bg-[#191E24] border-[#384252] text-[#94A3B8]"
-                  }`}
-                >
-                  <span>👑</span>
-                  <span>Månedens Solovinner</span>
-                </button>
-              </div>
-
-              {#if winnerCategory === "room"}
-                <div>
-                  <label
-                    for="admin-win-room"
-                    class="block text-xs font-bold text-white mb-1"
-                    >Velg Vinnerrom</label
-                  >
-                  <select
-                    id="admin-win-room"
-                    bind:value={selectedWinnerRoomId}
-                    class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
-                  >
-                    <option value="">Velg vinnerrom...</option>
-                    {#each rooms as r}
-                      <option value={r._id}
-                        >{r.name} (Snitt: {r.calculatedAverage ??
-                          (r.teams && r.teams.length > 0
-                            ? Math.round(
-                                (r.totalPoints / r.teams.length) * 10,
-                              ) / 10
-                            : 0)}p)</option
-                      >
-                    {/each}
-                  </select>
-                </div>
-              {:else}
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label
-                      for="admin-win-mgr"
-                      class="block text-xs font-bold text-white mb-1"
-                      >Managers Navn</label
-                    >
-                    <input
-                      id="admin-win-mgr"
-                      type="text"
-                      bind:value={winnerManagerName}
-                      placeholder="f.eks. Trond Hjelle"
-                      class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
-                    />
+                    <Crown class="w-5 h-5" />
                   </div>
                   <div>
-                    <label
-                      for="admin-win-team"
-                      class="block text-xs font-bold text-white mb-1"
-                      >Lagnavn (valgfritt)</label
-                    >
-                    <input
-                      id="admin-win-team"
-                      type="text"
-                      bind:value={winnerTeamName}
-                      placeholder="f.eks. Hjelle FC"
-                      class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                      <span>Rundevinner – gameweek {winnersStatus?.currentGameweek || 1}</span>
+                      {#if winnersStatus?.isRoundWinnerOverridden}
+                        <span class="px-2 py-0.5 rounded-full bg-[#F59E0B]/25 text-[#F59E0B] border border-[#F59E0B]/40 text-[10px] font-bold uppercase tracking-wider">
+                          Manuelt overstyrt
+                        </span>
+                      {:else}
+                        <span class="px-2 py-0.5 rounded-full bg-[#9FE88D]/20 text-[#9FE88D] border border-[#9FE88D]/40 text-[10px] font-bold uppercase tracking-wider">
+                          Automatisk beregnet
+                        </span>
+                      {/if}
+                    </h3>
+                    <p class="text-[11px] text-[#94A3B8]">
+                      Nåværende leder/vinner av runden basert på FPL-poeng {winnersStatus?.deductTransferHits ? "(fratrukket transfer hits)" : ""}.
+                    </p>
+                  </div>
+                </div>
+
+                {#if winnersStatus?.isRoundWinnerOverridden}
+                  <button
+                    type="button"
+                    disabled={isSavingOverrides}
+                    onclick={handleResetRoundWinnerOverride}
+                    class="px-3 py-1.5 rounded-lg bg-[#361c1c] text-[#FB6F84] hover:bg-[#452323] border border-[#FB6F84]/30 text-xs font-bold transition-colors flex items-center gap-1 self-start sm:self-auto"
+                  >
+                    <RotateCcw class="w-3.5 h-3.5" />
+                    <span>Nullstill overstyring</span>
+                  </button>
+                {/if}
+              </div>
+
+              <!-- Vinner-kort med egen fremhevet farge -->
+              {#if winnersStatus?.activeRoundWinner}
+                <div
+                  class="p-4 rounded-xl bg-[#191E24]/90 border-2 border-[#F59E0B] shadow-[0_0_20px_rgba(245,158,11,0.15)] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
+                  <div class="flex items-center gap-3">
+                    <img
+                      src={winnersStatus.activeRoundWinner.userAvatar ||
+                        `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(winnersStatus.activeRoundWinner.managerName)}`}
+                      alt="Avatar"
+                      class="w-12 h-12 rounded-xl bg-[#242B35] border-2 border-[#F59E0B] object-cover shrink-0"
                     />
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-[#F59E0B]">
+                          Gjeldende rundevinner
+                        </span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#384252] text-[#E2E8F0] font-semibold">
+                          {winnersStatus.activeRoundWinner.roomName}
+                        </span>
+                      </div>
+                      <h4 class="text-base font-extrabold text-white">
+                        {winnersStatus.activeRoundWinner.managerName}
+                      </h4>
+                      <p class="text-xs text-[#94A3B8]">
+                        {winnersStatus.activeRoundWinner.teamName}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-[#384252]/50">
+                    <div class="text-2xl font-black text-[#F59E0B]">
+                      {winnersStatus.activeRoundWinner.points}<span class="text-sm font-bold ml-0.5 text-white/80">p</span>
+                    </div>
+                    <span class="text-[10px] text-[#94A3B8]">
+                      {#if winnersStatus.activeRoundWinner.hits > 0}
+                        ({winnersStatus.activeRoundWinner.grossPoints}p brutto – {winnersStatus.activeRoundWinner.hits}p hits)
+                      {:else}
+                        (0 transfer hits)
+                      {/if}
+                    </span>
+                  </div>
+                </div>
+              {:else}
+                <div class="p-4 rounded-xl bg-[#191E24] border border-[#384252] text-xs text-[#94A3B8] text-center">
+                  Ingen lag funnet for å beregne rundevinner. Synkroniser lag i ligainnstillinger.
+                </div>
+              {/if}
+
+              <!-- Overstyrings-kontroller for rundevinner -->
+              <div class="pt-2 border-t border-[#384252]/60 space-y-2">
+                <span class="text-[11px] font-bold text-[#E2E8F0] uppercase tracking-wider block">
+                  Overstyr rundevinner (hvis automatisk beregning må korrigeres):
+                </span>
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                  <div class="sm:col-span-7">
+                    <select
+                      bind:value={overrideWinnerEntryId}
+                      class="w-full px-3 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#F59E0B] focus:outline-none"
+                    >
+                      <option value={null}>-- Velg manager eller lag --</option>
+                      {#each winnersStatus?.allTeamsCandidates || [] as team}
+                        <option value={team.entryId}>
+                          {team.managerName} – {team.teamName} ({team.points}p, {team.roomName})
+                        </option>
+                      {/each}
+                    </select>
+                  </div>
+                  <div class="sm:col-span-2">
+                    <input
+                      type="number"
+                      bind:value={overrideWinnerScoreInput}
+                      placeholder="Poeng"
+                      class="w-full px-3 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#F59E0B] focus:outline-none"
+                    />
+                  </div>
+                  <div class="sm:col-span-3">
+                    <button
+                      type="button"
+                      disabled={isSavingOverrides || !overrideWinnerEntryId}
+                      onclick={handleSaveRoundWinnerOverride}
+                      class="w-full py-2 px-3 rounded-xl bg-[#F59E0B] hover:bg-[#d97706] disabled:opacity-50 text-[#1f1300] font-bold text-xs transition-colors shadow-sm flex items-center justify-center gap-1"
+                    >
+                      <Save class="w-3.5 h-3.5" />
+                      <span>{isSavingOverrides ? "Lagrer..." : "Lagre overstyring"}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. LIVE LEDENDE ROM (ROMLEDER) -->
+            <div
+              class="p-5 rounded-2xl bg-gradient-to-br from-[#10B981]/15 via-[#242B35] to-[#191E24] border border-[#10B981]/40 space-y-4 shadow-md"
+            >
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#384252]">
+                <div class="flex items-center gap-2.5">
+                  <div
+                    class="p-2 rounded-xl bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40"
+                  >
+                    <Trophy class="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                      <span>Ledende rom – gameweek {winnersStatus?.currentGameweek || 1}</span>
+                      {#if winnersStatus?.isTopRoomOverridden}
+                        <span class="px-2 py-0.5 rounded-full bg-[#10B981]/25 text-[#10B981] border border-[#10B981]/40 text-[10px] font-bold uppercase tracking-wider">
+                          Manuelt overstyrt
+                        </span>
+                      {:else}
+                        <span class="px-2 py-0.5 rounded-full bg-[#9FE88D]/20 text-[#9FE88D] border border-[#9FE88D]/40 text-[10px] font-bold uppercase tracking-wider">
+                          Automatisk beregnet
+                        </span>
+                      {/if}
+                    </h3>
+                    <p class="text-[11px] text-[#94A3B8]">
+                      Nåværende lederrom basert på snittet av de to beste spillernes nettoscore.
+                    </p>
+                  </div>
+                </div>
+
+                {#if winnersStatus?.isTopRoomOverridden}
+                  <button
+                    type="button"
+                    disabled={isSavingOverrides}
+                    onclick={handleResetTopRoomOverride}
+                    class="px-3 py-1.5 rounded-lg bg-[#361c1c] text-[#FB6F84] hover:bg-[#452323] border border-[#FB6F84]/30 text-xs font-bold transition-colors flex items-center gap-1 self-start sm:self-auto"
+                  >
+                    <RotateCcw class="w-3.5 h-3.5" />
+                    <span>Nullstill overstyring</span>
+                  </button>
+                {/if}
+              </div>
+
+              <!-- Romleder Kort -->
+              {#if winnersStatus?.activeTopRoom}
+                <div
+                  class="p-4 rounded-xl bg-[#191E24]/90 border-2 border-[#10B981] shadow-[0_0_20px_rgba(16,185,129,0.15)] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="w-12 h-12 rounded-xl flex items-center justify-center font-black text-sm border-2 border-[#10B981] text-white shadow-sm shrink-0"
+                      style={`background-color: ${winnersStatus.activeTopRoom.accentColor || "#1eb854"}`}
+                    >
+                      {winnersStatus.activeTopRoom.roomNumber ? `A${winnersStatus.activeTopRoom.roomNumber}` : "🏆"}
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-[#10B981]">
+                          Ledende rom (#1)
+                        </span>
+                      </div>
+                      <h4 class="text-base font-extrabold text-white">
+                        {winnersStatus.activeTopRoom.name}
+                      </h4>
+                      <p class="text-xs text-[#94A3B8]">
+                        {#if winnersStatus.activeTopRoom.topPlayers && winnersStatus.activeTopRoom.topPlayers.length > 0}
+                          Toppspillere: {winnersStatus.activeTopRoom.topPlayers.map((p: any) => `${p.managerName} (${p.points}p)`).join(", ")}
+                        {:else}
+                          Ingen spillere registrert ennå
+                        {/if}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-[#384252]/50">
+                    <div class="text-2xl font-black text-[#10B981]">
+                      {winnersStatus.activeTopRoom.score}<span class="text-sm font-bold ml-0.5 text-white/80">p</span>
+                    </div>
+                    <span class="text-[10px] text-[#94A3B8]">
+                      (Romsnitt topp 2)
+                    </span>
+                  </div>
+                </div>
+              {:else}
+                <div class="p-4 rounded-xl bg-[#191E24] border border-[#384252] text-xs text-[#94A3B8] text-center">
+                  Ingen romdata tilgjengelig for gjeldende runde.
+                </div>
+              {/if}
+
+              <!-- Overstyrings-kontroller for lederrom -->
+              <div class="pt-2 border-t border-[#384252]/60 space-y-2">
+                <span class="text-[11px] font-bold text-[#E2E8F0] uppercase tracking-wider block">
+                  Overstyr ledende rom (hvis automatisk beregning må korrigeres):
+                </span>
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                  <div class="sm:col-span-7">
+                    <select
+                      bind:value={overrideRoomId}
+                      class="w-full px-3 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#10B981] focus:outline-none"
+                    >
+                      <option value="">-- Velg ledende rom --</option>
+                      {#each winnersStatus?.allRoomsCandidates || [] as room}
+                        <option value={room.roomId}>
+                          {room.name} ({room.score}p snitt)
+                        </option>
+                      {/each}
+                    </select>
+                  </div>
+                  <div class="sm:col-span-2">
+                    <input
+                      type="number"
+                      step="0.5"
+                      bind:value={overrideRoomScoreInput}
+                      placeholder="Snitt"
+                      class="w-full px-3 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#10B981] focus:outline-none"
+                    />
+                  </div>
+                  <div class="sm:col-span-3">
+                    <button
+                      type="button"
+                      disabled={isSavingOverrides || !overrideRoomId}
+                      onclick={handleSaveTopRoomOverride}
+                      class="w-full py-2 px-3 rounded-xl bg-[#10B981] hover:bg-[#059669] disabled:opacity-50 text-[#022c22] font-bold text-xs transition-colors shadow-sm flex items-center justify-center gap-1"
+                    >
+                      <Save class="w-3.5 h-3.5" />
+                      <span>{isSavingOverrides ? "Lagrer..." : "Lagre overstyring"}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. MÅNEDSKÅRING & SKRYTEVEGG (WALL OF FAME) -->
+            <div class="pt-2 border-t border-[#384252] space-y-4">
+              <div class="flex items-center gap-2">
+                <div class="p-2 rounded-xl bg-[#F4C152]/15 text-[#F4C152] border border-[#F4C152]/30">
+                  <Award class="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold text-white">
+                    Månedskåring og skrytevegg
+                  </h3>
+                  <p class="text-[11px] text-[#94A3B8]">
+                    Publiser offisielle månedsvinnere med heder og ære til skryteveggen.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Aktiv Skrytevegg Status -->
+              {#if monthWinnersData?.roomWinner || monthWinnersData?.soloWinner}
+                <div
+                  class="p-4 rounded-xl bg-[#242B35] border border-[#F4C152]/40 space-y-3"
+                >
+                  <div class="flex items-center justify-between">
+                    <h4
+                      class="text-xs font-bold uppercase tracking-wider text-[#F4C152] flex items-center gap-1.5"
+                    >
+                      <Trophy class="w-4 h-4" />
+                      <span>Nåværende aktive vinnere på skryteveggen</span>
+                    </h4>
+                  </div>
+
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    {#if monthWinnersData?.roomWinner}
+                      <div
+                        class="p-3 rounded-lg bg-[#191E24] border border-[#384252] flex items-center justify-between"
+                      >
+                        <div>
+                          <span
+                            class="text-[10px] text-[#F4C152] font-bold uppercase block"
+                            >Månedens romvinner</span
+                          >
+                          <strong class="text-white text-sm"
+                            >{monthWinnersData.roomWinner.winningRoom?.name ||
+                              monthWinnersData.roomWinner.winnerName}</strong
+                          >
+                          <span class="text-[#94A3B8] block text-[11px]"
+                            >({monthWinnersData.roomWinner.winningScore}p snitt)</span
+                          >
+                        </div>
+                        <button
+                          onclick={() =>
+                            onUnpinWinner(monthWinnersData.roomWinner._id)}
+                          class="p-1.5 rounded-lg bg-[#361c1c] text-[#FB6F84] hover:bg-[#452323] text-xs font-semibold"
+                          title="Fjern fra skrytevegg"
+                        >
+                          Fjern
+                        </button>
+                      </div>
+                    {/if}
+
+                    {#if monthWinnersData?.soloWinner}
+                      <div
+                        class="p-3 rounded-lg bg-[#191E24] border border-[#384252] flex items-center justify-between"
+                      >
+                        <div>
+                          <span
+                            class="text-[10px] text-[#9FE88D] font-bold uppercase block"
+                            >Månedens solovinner</span
+                          >
+                          <strong class="text-white text-sm"
+                            >{monthWinnersData.soloWinner.winnerName}</strong
+                          >
+                          <span class="text-[#94A3B8] block text-[11px]"
+                            >({monthWinnersData.soloWinner.winningScore}p score)</span
+                          >
+                        </div>
+                        <button
+                          onclick={() =>
+                            onUnpinWinner(monthWinnersData.soloWinner._id)}
+                          class="p-1.5 rounded-lg bg-[#361c1c] text-[#FB6F84] hover:bg-[#452323] text-xs font-semibold"
+                          title="Fjern fra skrytevegg"
+                        >
+                          Fjern
+                        </button>
+                      </div>
+                    {/if}
                   </div>
                 </div>
               {/if}
 
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label
-                    for="admin-win-month"
-                    class="block text-xs font-bold text-white mb-1">Måned</label
+              <!-- Kår Vinner Skjema -->
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <h3
+                    class="text-sm font-bold text-white flex items-center gap-2"
                   >
-                  <select
-                    id="admin-win-month"
-                    bind:value={winningMonthName}
-                    class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
+                    <Sparkles class="w-4 h-4 text-[#F4C152]" />
+                    <span>Kår månedens romvinner eller solovinner</span>
+                  </h3>
+                  <button
+                    type="button"
+                    onclick={() => autoSuggestWinner(winnerCategory)}
+                    class="px-3 py-1.5 rounded-lg bg-[#F4C152]/15 text-[#F4C152] hover:bg-[#F4C152]/25 border border-[#F4C152]/40 text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
+                    title="Hent inn beste rom eller individuelle spiller automatisk fra databasen"
                   >
-                    {#each ["August", "September", "Oktober", "November", "Desember", "Januar", "Februar", "Mars", "April", "Mai"] as m}
-                      <option value={m}>{m}</option>
-                    {/each}
-                  </select>
+                    <Sparkles class="w-3.5 h-3.5" />
+                    <span>Autoforeslå leder</span>
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onclick={() => {
+                      winnerCategory = "room";
+                      autoSuggestWinner("room");
+                    }}
+                    class={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                      winnerCategory === "room"
+                        ? "bg-[#F4C152]/15 border-[#F4C152] text-[#F4C152]"
+                        : "bg-[#191E24] border-[#384252] text-[#94A3B8]"
+                    }`}
+                  >
+                    <span>🏆</span>
+                    <span>Månedens romvinner</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onclick={() => {
+                      winnerCategory = "individual";
+                      autoSuggestWinner("individual");
+                    }}
+                    class={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                      winnerCategory === "individual"
+                        ? "bg-[#9FE88D]/15 border-[#9FE88D] text-[#9FE88D]"
+                        : "bg-[#191E24] border-[#384252] text-[#94A3B8]"
+                    }`}
+                  >
+                    <span>👑</span>
+                    <span>Månedens solovinner</span>
+                  </button>
+                </div>
+
+                {#if winnerCategory === "room"}
+                  <div>
+                    <label
+                      for="admin-win-room"
+                      class="block text-xs font-bold text-white mb-1"
+                      >Velg vinnerrom</label
+                    >
+                    <select
+                      id="admin-win-room"
+                      bind:value={selectedWinnerRoomId}
+                      class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
+                    >
+                      <option value="">Velg vinnerrom...</option>
+                      {#each rooms as r}
+                        <option value={r._id}
+                          >{r.name} (Snitt: {r.calculatedAverage ??
+                            (r.teams && r.teams.length > 0
+                              ? Math.round(
+                                  (r.totalPoints / r.teams.length) * 10,
+                                ) / 10
+                              : 0)}p)</option
+                        >
+                      {/each}
+                    </select>
+                  </div>
+                {:else}
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label
+                        for="admin-win-mgr"
+                        class="block text-xs font-bold text-white mb-1"
+                        >Managers navn</label
+                      >
+                      <input
+                        id="admin-win-mgr"
+                        type="text"
+                        bind:value={winnerManagerName}
+                        placeholder="f.eks. Trond Hjelle"
+                        class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        for="admin-win-team"
+                        class="block text-xs font-bold text-white mb-1"
+                        >Lagnavn (valgfritt)</label
+                      >
+                      <input
+                        id="admin-win-team"
+                        type="text"
+                        bind:value={winnerTeamName}
+                        placeholder="f.eks. Hjelle FC"
+                        class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                {/if}
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label
+                      for="admin-win-month"
+                      class="block text-xs font-bold text-white mb-1">Måned</label
+                    >
+                    <select
+                      id="admin-win-month"
+                      bind:value={winningMonthName}
+                      class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
+                    >
+                      {#each ["August", "September", "Oktober", "November", "Desember", "Januar", "Februar", "Mars", "April", "Mai"] as m}
+                        <option value={m}>{m}</option>
+                      {/each}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      for="admin-win-score"
+                      class="block text-xs font-bold text-white mb-1"
+                      >Vinnende poengscore / snitt</label
+                    >
+                    <input
+                      id="admin-win-score"
+                      type="number"
+                      step="0.1"
+                      bind:value={winningScore}
+                      class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none font-mono"
+                    />
+                  </div>
                 </div>
 
                 <div>
                   <label
-                    for="admin-win-score"
+                    for="admin-win-msg"
                     class="block text-xs font-bold text-white mb-1"
-                    >Vinnende Poengscore / Snitt</label
+                    >Hyllest / melding (valgfritt)</label
                   >
-                  <input
-                    id="admin-win-score"
-                    type="number"
-                    step="0.1"
-                    bind:value={winningScore}
-                    class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none font-mono"
-                  />
+                  <textarea
+                    id="admin-win-msg"
+                    rows="3"
+                    bind:value={customWinnerMessage}
+                    placeholder="Skriv en personlig gratulasjon som vises på skryteveggen..."
+                    class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
+                  ></textarea>
                 </div>
-              </div>
 
-              <div>
-                <label
-                  for="admin-win-msg"
-                  class="block text-xs font-bold text-white mb-1"
-                  >Hyllest / Melding (Valgfritt)</label
+                <button
+                  onclick={handleWinnerSubmit}
+                  class="px-5 py-2.5 rounded-xl bg-[#F4C152] hover:bg-[#e4b344] text-black font-bold text-xs transition-colors shadow-md"
                 >
-                <textarea
-                  id="admin-win-msg"
-                  rows="3"
-                  bind:value={customWinnerMessage}
-                  placeholder="Skriv en personlig gratulasjon som vises på skryteveggen..."
-                  class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
-                ></textarea>
+                  Kår vinner og publiser på skrytevegg
+                </button>
               </div>
-
-              <button
-                onclick={handleWinnerSubmit}
-                class="px-5 py-2.5 rounded-xl bg-[#F4C152] hover:bg-[#e4b344] text-black font-bold text-xs transition-colors shadow-md"
-              >
-                Kår Vinner og Publiser på Skrytevegg
-              </button>
             </div>
           </div>
         {/if}
@@ -2255,7 +2817,7 @@
             >
               <div>
                 <h3 class="text-sm font-bold text-white">
-                  Registrerte Brukere ({users.length})
+                  Registrerte brukere ({users.length})
                 </h3>
                 <p class="text-xs text-[#94A3B8]">
                   Oversikt over registrerte spillere og admin-roller
@@ -2572,6 +3134,103 @@
                   </div>
                 {/each}
               {/if}
+            </div>
+          </div>
+
+          <!-- Tab 5: Chat-administrasjon og rensing -->
+        {:else if activeTab === "chat"}
+          <div
+            class="p-6 space-y-6 overflow-y-auto flex-1 max-w-3xl custom-scrollbar"
+          >
+            <div
+              class="p-5 rounded-2xl bg-[#242B35] border border-[#FB6F84]/30 space-y-5 shadow-lg"
+            >
+              <div class="flex items-center gap-3 pb-3 border-b border-[#384252]">
+                <div
+                  class="p-2.5 rounded-xl bg-[#FB6F84]/15 text-[#FB6F84] border border-[#FB6F84]/30"
+                >
+                  <MessageSquareX class="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 class="text-base font-bold text-white">
+                    Chat-administrasjon og rensing
+                  </h3>
+                  <p class="text-xs text-[#94A3B8]">
+                    Her kan du slette eller tømme samtalehistorikk i felleskanalen, romchattene eller hele systemet.
+                  </p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <!-- 1. Tøm Banter -->
+                <div
+                  class="p-4 rounded-xl bg-[#191E24] border border-[#384252] flex flex-col justify-between gap-4"
+                >
+                  <div>
+                    <div class="flex items-center gap-1.5 text-white font-bold text-sm mb-1">
+                      <span>💬</span>
+                      <span>Felleskanal (banter)</span>
+                    </div>
+                    <p class="text-xs text-[#94A3B8] leading-relaxed">
+                      Sletter alle meldinger, reaksjoner og GIF-er som er sendt i den åpne banter-kanalen.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onclick={() => promptClearChat("banter")}
+                    class="w-full py-2.5 px-3 rounded-xl bg-[#FB6F84]/10 hover:bg-[#FB6F84]/20 text-[#FB6F84] border border-[#FB6F84]/30 text-xs font-bold transition-colors flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <Brush class="w-4 h-4" />
+                    <span>Tøm banter</span>
+                  </button>
+                </div>
+
+                <!-- 2. Tøm Rom-chatter -->
+                <div
+                  class="p-4 rounded-xl bg-[#191E24] border border-[#384252] flex flex-col justify-between gap-4"
+                >
+                  <div>
+                    <div class="flex items-center gap-1.5 text-white font-bold text-sm mb-1">
+                      <span>🏠</span>
+                      <span>Interne rom-chatter</span>
+                    </div>
+                    <p class="text-xs text-[#94A3B8] leading-relaxed">
+                      Sletter alle meldinger i de 12 interne romchattene (Rom A1 til A12).
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onclick={() => promptClearChat("room")}
+                    class="w-full py-2.5 px-3 rounded-xl bg-[#FB6F84]/10 hover:bg-[#FB6F84]/20 text-[#FB6F84] border border-[#FB6F84]/30 text-xs font-bold transition-colors flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <Brush class="w-4 h-4" />
+                    <span>Tøm rom-chatter</span>
+                  </button>
+                </div>
+
+                <!-- 3. Tøm Alt -->
+                <div
+                  class="p-4 rounded-xl bg-[#191E24] border border-[#FB6F84]/40 flex flex-col justify-between gap-4"
+                >
+                  <div>
+                    <div class="flex items-center gap-1.5 text-[#FB6F84] font-bold text-sm mb-1">
+                      <span>💣</span>
+                      <span>Tøm all chat</span>
+                    </div>
+                    <p class="text-xs text-[#94A3B8] leading-relaxed">
+                      Permanent sletting av all chat-historikk i hele databasen (både felles og alle rom).
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onclick={() => promptClearChat("all")}
+                    class="w-full py-2.5 px-3 rounded-xl bg-[#FB6F84] hover:bg-[#fa546d] text-[#2c090e] text-xs font-bold transition-colors shadow-md flex items-center justify-center gap-2"
+                  >
+                    <Trash2 class="w-4 h-4" />
+                    <span>Tøm all chat</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 

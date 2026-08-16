@@ -170,6 +170,13 @@ export default defineSchema({
     syncIntervalMinutes: v.number(),
     lastSyncedAt: v.number(),
     adminPin: v.string(),          // Sikret admin-pin
+    // Overstyringer av rundevinner og ledende rom:
+    overrideRoundWinnerEntryId: v.optional(v.number()),
+    overrideRoundWinnerName: v.optional(v.string()),
+    overrideRoundWinnerTeamName: v.optional(v.string()),
+    overrideRoundWinnerScore: v.optional(v.number()),
+    overrideTopRoomId: v.optional(v.id("rooms")),
+    overrideTopRoomScore: v.optional(v.number()),
   }),
 
   // Turneringer / Sluttspill (Double Elimination Cup)

@@ -689,3 +689,242 @@ export const createManualUser = mutation({
     };
   },
 });
+
+/**
+ * Tømmer chat-meldinger for et gitt omfang (Kun for Administrator)
+ */
+export const adminClearChat = mutation({
+  args: {
+    adminUserId: v.optional(v.id("users")),
+    scope: v.string(), // "all" | "banter" | "room"
+    roomId: v.optional(v.id("rooms")),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
+
+    let messagesToDelete: any[] = [];
+
+    if (args.scope === "banter") {
+      messagesToDelete = await ctx.db
+        .query("messages")
+        .withIndex("by_channel_and_createdAt", (q) => q.eq("channel", "banter"))
+        .collect();
+    } else if (args.scope === "room") {
+      if (args.roomId) {
+        messagesToDelete = await ctx.db
+          .query("messages")
+          .withIndex("by_roomId_and_createdAt", (q) => q.eq("roomId", args.roomId!))
+          .collect();
+      } else {
+        const allRoomMsgs = await ctx.db
+          .query("messages")
+          .withIndex("by_channel_and_createdAt", (q) => q.eq("channel", "room"))
+          .collect();
+        messagesToDelete = allRoomMsgs;
+      }
+    } else {
+      // "all" - slett alle meldinger
+      messagesToDelete = await ctx.db.query("messages").collect();
+    }
+
+    for (const msg of messagesToDelete) {
+      await ctx.db.delete(msg._id);
+    }
+
+    return {
+      success: true,
+      deletedCount: messagesToDelete.length,
+      scope: args.scope,
+    };
+  },
+});
+
+/**
+ * Henter status for rundevinner og ledende rom, inkludert automatiske beregninger og eventuelle overstyringer
+ */
+export const getRoundAndRoomWinnersStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    const settings = await ctx.db.query("league_settings").first();
+    const currentGw = settings?.currentGameweek || 1;
+    const deductHits = settings?.deductTransferHits ?? true;
+
+    // 1. Hent alle lag og rom
+    const allTeams = await ctx.db.query("fpl_teams").collect();
+    const allRooms = await ctx.db.query("rooms").collect();
+    const allUsers = await ctx.db.query("users").collect();
+
+    const roomMap = new Map(allRooms.map((r) => [r._id, r]));
+    const userByEntryMap = new Map(allUsers.filter((u) => u.fplEntryId).map((u) => [u.fplEntryId!, u]));
+
+    // 2. Beregn automatisk rundevinner (spiller med høyest score i gjeldende GW)
+    const teamsWithScore = allTeams.map((t) => {
+      const netPoints = deductHits ? t.currentGwPoints - t.currentGwTransfersCost : t.currentGwPoints;
+      const room = t.roomId ? roomMap.get(t.roomId) : null;
+      const user = userByEntryMap.get(t.entryId) || null;
+      return {
+        entryId: t.entryId,
+        managerName: t.managerName,
+        teamName: t.teamName,
+        points: netPoints,
+        grossPoints: t.currentGwPoints,
+        hits: t.currentGwTransfersCost,
+        roomId: t.roomId,
+        roomName: room?.name || "Uten rom",
+        userUsername: user?.username || null,
+        userAvatar: user?.avatar || null,
+      };
+    });
+
+    teamsWithScore.sort((a, b) => b.points - a.points);
+    const autoRoundWinner = teamsWithScore.length > 0 ? teamsWithScore[0] : null;
+
+    // 3. Beregn automatisk romleder for runden
+    const roomScores = await ctx.db
+      .query("room_gameweek_scores")
+      .withIndex("by_gameweek", (q) => q.eq("gameweek", currentGw))
+      .collect();
+
+    const roomsWithRoundScore = allRooms.map((room) => {
+      const scoreDoc = roomScores.find((s) => s.roomId === room._id);
+      const roomTeams = teamsWithScore.filter((t) => t.roomId === room._id);
+      roomTeams.sort((a, b) => b.points - a.points);
+      const avg = scoreDoc ? scoreDoc.averageTop2 : (roomTeams.length >= 2 ? (roomTeams[0].points + roomTeams[1].points) / 2 : (roomTeams[0]?.points || 0));
+
+      return {
+        roomId: room._id,
+        roomNumber: room.roomNumber,
+        name: room.name,
+        accentColor: room.accentColor || "#1eb854",
+        score: Math.round(avg * 10) / 10,
+        topPlayers: roomTeams.slice(0, 2),
+      };
+    });
+
+    roomsWithRoundScore.sort((a, b) => b.score - a.score);
+    const autoTopRoomRound = roomsWithRoundScore.length > 0 ? roomsWithRoundScore[0] : null;
+
+    // 4. Overstyrt eller aktiv rundevinner
+    const isRoundWinnerOverridden = typeof settings?.overrideRoundWinnerEntryId === "number";
+    let activeRoundWinner = autoRoundWinner;
+
+    if (isRoundWinnerOverridden) {
+      const matchedTeam = teamsWithScore.find((t) => t.entryId === settings!.overrideRoundWinnerEntryId);
+      activeRoundWinner = {
+        entryId: settings!.overrideRoundWinnerEntryId!,
+        managerName: settings!.overrideRoundWinnerName || matchedTeam?.managerName || "Overstyrt vinner",
+        teamName: settings!.overrideRoundWinnerTeamName || matchedTeam?.teamName || "FPL-lag",
+        points: settings!.overrideRoundWinnerScore ?? (matchedTeam?.points || 0),
+        grossPoints: matchedTeam?.grossPoints || 0,
+        hits: matchedTeam?.hits || 0,
+        roomId: matchedTeam?.roomId,
+        roomName: matchedTeam?.roomName || "Overstyrt",
+        userUsername: matchedTeam?.userUsername || null,
+        userAvatar: matchedTeam?.userAvatar || null,
+      };
+    }
+
+    // 5. Overstyrt eller aktiv romleder
+    const isTopRoomOverridden = !!settings?.overrideTopRoomId;
+    let activeTopRoom = autoTopRoomRound;
+
+    if (isTopRoomOverridden && settings?.overrideTopRoomId) {
+      const matchedRoom = allRooms.find((r) => r._id === settings!.overrideTopRoomId);
+      activeTopRoom = {
+        roomId: settings!.overrideTopRoomId,
+        roomNumber: matchedRoom?.roomNumber || 1,
+        name: matchedRoom?.name || "Overstyrt rom",
+        accentColor: matchedRoom?.accentColor || "#1eb854",
+        score: settings!.overrideTopRoomScore ?? (roomsWithRoundScore.find((r) => r.roomId === settings!.overrideTopRoomId)?.score || 0),
+        topPlayers: roomsWithRoundScore.find((r) => r.roomId === settings!.overrideTopRoomId)?.topPlayers || [],
+      };
+    }
+
+    return {
+      currentGameweek: currentGw,
+      deductTransferHits: deductHits,
+      autoRoundWinner,
+      activeRoundWinner,
+      isRoundWinnerOverridden,
+      autoTopRoomRound,
+      activeTopRoom,
+      isTopRoomOverridden,
+      allTeamsCandidates: teamsWithScore,
+      allRoomsCandidates: roomsWithRoundScore,
+    };
+  },
+});
+
+/**
+ * Setter manuelle overstyringer for rundevinner og/eller ledende rom (Kun for Administrator)
+ */
+export const setRoundAndRoomOverrides = mutation({
+  args: {
+    adminUserId: v.optional(v.id("users")),
+    overrideRoundWinnerEntryId: v.optional(v.number()),
+    overrideRoundWinnerName: v.optional(v.string()),
+    overrideRoundWinnerTeamName: v.optional(v.string()),
+    overrideRoundWinnerScore: v.optional(v.number()),
+    overrideTopRoomId: v.optional(v.id("rooms")),
+    overrideTopRoomScore: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
+
+    const settings = await ctx.db.query("league_settings").first();
+    if (!settings) {
+      throw new Error("Fant ingen ligainnstillinger.");
+    }
+
+    const patchObj: any = {};
+
+    if (args.overrideRoundWinnerEntryId !== undefined) {
+      patchObj.overrideRoundWinnerEntryId = args.overrideRoundWinnerEntryId;
+      patchObj.overrideRoundWinnerName = args.overrideRoundWinnerName;
+      patchObj.overrideRoundWinnerTeamName = args.overrideRoundWinnerTeamName;
+      patchObj.overrideRoundWinnerScore = args.overrideRoundWinnerScore;
+    }
+
+    if (args.overrideTopRoomId !== undefined) {
+      patchObj.overrideTopRoomId = args.overrideTopRoomId;
+      patchObj.overrideTopRoomScore = args.overrideTopRoomScore;
+    }
+
+    await ctx.db.patch(settings._id, patchObj);
+    return { success: true };
+  },
+});
+
+/**
+ * Nullstiller overstyringer for rundevinner og/eller ledende rom (Kun for Administrator)
+ */
+export const resetRoundAndRoomOverrides = mutation({
+  args: {
+    adminUserId: v.optional(v.id("users")),
+    resetRoundWinner: v.optional(v.boolean()),
+    resetTopRoom: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
+
+    const settings = await ctx.db.query("league_settings").first();
+    if (!settings) return { success: true };
+
+    const patchObj: any = {};
+
+    if (args.resetRoundWinner ?? true) {
+      patchObj.overrideRoundWinnerEntryId = undefined;
+      patchObj.overrideRoundWinnerName = undefined;
+      patchObj.overrideRoundWinnerTeamName = undefined;
+      patchObj.overrideRoundWinnerScore = undefined;
+    }
+
+    if (args.resetTopRoom ?? true) {
+      patchObj.overrideTopRoomId = undefined;
+      patchObj.overrideTopRoomScore = undefined;
+    }
+
+    await ctx.db.patch(settings._id, patchObj);
+    return { success: true };
+  },
+});

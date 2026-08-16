@@ -348,7 +348,7 @@ async function generateLuckyLoser12Bracket(
     bracketType: "knockout",
     stage: "knockout",
     roundNumber: 2,
-    roundTitle: "Kvartfinale 1 (Vinner K1 vs Vinner K6)",
+    roundTitle: "Kvartfinale 1",
     matchIndex: 1,
     gameweek: startGw + 1,
     nextMatchId: semi1Id,
@@ -362,7 +362,7 @@ async function generateLuckyLoser12Bracket(
     bracketType: "knockout",
     stage: "knockout",
     roundNumber: 2,
-    roundTitle: "Kvartfinale 2 (Vinner K2 vs Vinner K5)",
+    roundTitle: "Kvartfinale 2",
     matchIndex: 2,
     gameweek: startGw + 1,
     nextMatchId: semi1Id,
@@ -376,7 +376,7 @@ async function generateLuckyLoser12Bracket(
     bracketType: "knockout",
     stage: "knockout",
     roundNumber: 2,
-    roundTitle: "Kvartfinale 3 (Vinner K3 vs Lucky Loser 2)",
+    roundTitle: "Kvartfinale 3",
     matchIndex: 3,
     gameweek: startGw + 1,
     nextMatchId: semi2Id,
@@ -390,7 +390,7 @@ async function generateLuckyLoser12Bracket(
     bracketType: "knockout",
     stage: "knockout",
     roundNumber: 2,
-    roundTitle: "Kvartfinale 4 (Vinner K4 vs Lucky Loser 1)",
+    roundTitle: "Kvartfinale 4",
     matchIndex: 4,
     gameweek: startGw + 1,
     nextMatchId: semi2Id,
@@ -401,12 +401,12 @@ async function generateLuckyLoser12Bracket(
 
   // Runde 1: 6 kamper for alle 12 lag (GW startGw)
   const r1Matchups = [
-    { r1: seededRooms[0]?._id, r2: seededRooms[11]?._id, nextW: qf1Id, slotW: 1, title: "Runde 1 - Kamp 1 (Seed 1 vs 12)" },
-    { r1: seededRooms[1]?._id, r2: seededRooms[10]?._id, nextW: qf2Id, slotW: 1, title: "Runde 1 - Kamp 2 (Seed 2 vs 11)" },
-    { r1: seededRooms[2]?._id, r2: seededRooms[9]?._id,  nextW: qf3Id, slotW: 1, title: "Runde 1 - Kamp 3 (Seed 3 vs 10)" },
-    { r1: seededRooms[3]?._id, r2: seededRooms[8]?._id,  nextW: qf4Id, slotW: 1, title: "Runde 1 - Kamp 4 (Seed 4 vs 9)" },
-    { r1: seededRooms[4]?._id, r2: seededRooms[7]?._id,  nextW: qf2Id, slotW: 2, title: "Runde 1 - Kamp 5 (Seed 5 vs 8)" },
-    { r1: seededRooms[5]?._id, r2: seededRooms[6]?._id,  nextW: qf1Id, slotW: 2, title: "Runde 1 - Kamp 6 (Seed 6 vs 7)" },
+    { r1: seededRooms[0]?._id, r2: seededRooms[11]?._id, nextW: qf1Id, slotW: 1, title: "Runde 1 - Kamp 1" },
+    { r1: seededRooms[1]?._id, r2: seededRooms[10]?._id, nextW: qf2Id, slotW: 1, title: "Runde 1 - Kamp 2" },
+    { r1: seededRooms[2]?._id, r2: seededRooms[9]?._id,  nextW: qf3Id, slotW: 1, title: "Runde 1 - Kamp 3" },
+    { r1: seededRooms[3]?._id, r2: seededRooms[8]?._id,  nextW: qf4Id, slotW: 1, title: "Runde 1 - Kamp 4" },
+    { r1: seededRooms[4]?._id, r2: seededRooms[7]?._id,  nextW: qf2Id, slotW: 2, title: "Runde 1 - Kamp 5" },
+    { r1: seededRooms[5]?._id, r2: seededRooms[6]?._id,  nextW: qf1Id, slotW: 2, title: "Runde 1 - Kamp 6" },
   ];
 
   for (let i = 0; i < r1Matchups.length; i++) {
@@ -792,10 +792,10 @@ async function generateTop8Bracket(
 
   // Kvartfinaler (Runde 1, GW startGw)
   const qfMatchups = [
-    { r1: seededRooms[0]?._id, r2: seededRooms[7]?._id, nextW: semi1Id, slotW: 1, title: "Kvartfinale 1 (Seed 1 vs 8)" },
-    { r1: seededRooms[3]?._id, r2: seededRooms[4]?._id, nextW: semi1Id, slotW: 2, title: "Kvartfinale 2 (Seed 4 vs 5)" },
-    { r1: seededRooms[1]?._id, r2: seededRooms[6]?._id, nextW: semi2Id, slotW: 1, title: "Kvartfinale 3 (Seed 2 vs 7)" },
-    { r1: seededRooms[2]?._id, r2: seededRooms[5]?._id, nextW: semi2Id, slotW: 2, title: "Kvartfinale 4 (Seed 3 vs 6)" },
+    { r1: seededRooms[0]?._id, r2: seededRooms[7]?._id, nextW: semi1Id, slotW: 1, title: "Kvartfinale 1" },
+    { r1: seededRooms[3]?._id, r2: seededRooms[4]?._id, nextW: semi1Id, slotW: 2, title: "Kvartfinale 2" },
+    { r1: seededRooms[1]?._id, r2: seededRooms[6]?._id, nextW: semi2Id, slotW: 1, title: "Kvartfinale 3" },
+    { r1: seededRooms[2]?._id, r2: seededRooms[5]?._id, nextW: semi2Id, slotW: 2, title: "Kvartfinale 4" },
   ];
 
   for (let i = 0; i < qfMatchups.length; i++) {

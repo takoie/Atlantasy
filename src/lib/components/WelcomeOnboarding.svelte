@@ -255,7 +255,7 @@
             2
           </span>
           <span class={`text-xs font-semibold ${step === 2 ? "text-white" : "text-[#94A3B8]"}`}>
-            FPL-lag & Rom
+            FPL-lag og rom
           </span>
         </div>
       </div>
@@ -332,7 +332,7 @@
               disabled={isValidating}
               class="w-full py-3 rounded-xl bg-[#9FE88D] hover:bg-[#8ce078] disabled:opacity-50 text-[#16380c] font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 mt-2"
             >
-              <span>{isValidating ? "Validerer kode..." : "Gå videre til lag og rom (Steg 2 av 2)"}</span>
+              <span>{isValidating ? "Validerer kode..." : "Gå videre til lag og rom (steg 2 av 2)"}</span>
               <ArrowRight class="w-4 h-4" />
             </button>
           </div>
@@ -364,7 +364,7 @@
                 bind:value={selectedFplEntryId}
                 class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
               >
-                <option value={null}>-- Jeg velger lag senere / Ikke på listen ennå --</option>
+                <option value={null}>-- Jeg velger lag senere / ikke på listen ennå --</option>
                 {#each availableFplTeams as team (team.entryId)}
                   <option value={team.entryId}>
                     {team.teamName} ({team.managerName})
@@ -386,7 +386,7 @@
               </label>
               {#if validatedTargetRoomId}
                 <div class="p-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white font-semibold flex items-center justify-between">
-                  <span>{rooms.find((r) => r._id === validatedTargetRoomId)?.name || "Tildelt Rom"}</span>
+                  <span>{rooms.find((r) => r._id === validatedTargetRoomId)?.name || "Tildelt rom"}</span>
                   <span class="text-[10px] text-[#9FE88D] font-bold">Låst av invitasjonskode</span>
                 </div>
               {:else}

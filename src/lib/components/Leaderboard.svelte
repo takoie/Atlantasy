@@ -62,7 +62,7 @@
           </span>
         </h2>
         <p class="text-[11px] text-[#94A3B8]">
-          {sortBy === "season" ? "Rangert etter sesongtotal (Topp 2 snitt per runde)" : sortBy === "month" ? "Rangert etter månedssnitt" : "Rangert etter live runde (Topp 2 snitt)"}
+          {sortBy === "season" ? "Rangert etter sesongtotal (topp 2-snitt per runde)" : sortBy === "month" ? "Rangert etter månedssnitt" : "Rangert etter live runde (topp 2-snitt)"}
         </p>
       </div>
     </div>
@@ -270,8 +270,8 @@
         {#if expandedRooms[room._id]}
           <div class="mt-2.5 pt-2.5 border-t border-[#384252] bg-[#191E24] rounded-lg p-2 space-y-1.5 animate-in fade-in duration-150">
             <div class="flex items-center justify-between text-[11px] text-[#94A3B8] font-semibold px-2 pb-1">
-              <span>Manager & Lag</span>
-              <span>Poeng (Hits)</span>
+              <span>Manager og lag</span>
+              <span>Poeng (hits)</span>
             </div>
 
             {#if !room.teams || room.teams.length === 0}

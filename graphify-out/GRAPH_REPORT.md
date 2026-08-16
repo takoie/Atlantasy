@@ -1,16 +1,16 @@
 # Graph Report - Atlantasy  (2026-08-16)
 
 ## Corpus Check
-- 264 files · ~393,009 words
+- 264 files · ~392,637 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3377 nodes · 4050 edges · 286 communities (246 shown, 40 thin omitted)
+- 3377 nodes · 4050 edges · 285 communities (246 shown, 39 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 54 edges (avg confidence: 0.53)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e2623dc8`
+- Built from commit: `88e00230`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -142,7 +142,7 @@
 - inject-brand-context.cjs
 - CIP Design Style Guide
 - embed-tokens.cjs
-- duration
+- primitive
 - patch
 - Returns: "OK" or lists conflicts
 - fpl.ts
@@ -177,7 +177,7 @@
 - Slides Reference
 - HTML Slide Template
 - HTML Slide Template
-- default
+- md
 - Hermes Agent Tool Mapping
 - destructive
 - ⚡ Rask 1-2-3 Guide
@@ -186,9 +186,9 @@
 - Hybrid Convex Components
 - Local Convex Components
 - Convex
-- sm
+- shadow
 - Slides
-- _row_identities
+- _suggest_identities
 - using-superpowers/SKILL.md
 - render-graphs.js
 - Skill Discovery Optimization (SDO)
@@ -204,7 +204,6 @@
 - Anti-Patterns
 - Testing All Skill Types
 - RED-GREEN-REFACTOR for Skills
-- TestDiagnosticsContracts
 - package.json
 - cip/search.py
 - ⚽ Atlantasy Desktop
@@ -319,7 +318,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (286 total, 40 thin omitted)
+## Communities (285 total, 39 thin omitted)
 
 ### Community 0 - "compilerOptions"
 Cohesion: 0.07
@@ -406,8 +405,8 @@ Cohesion: 0.06
 Nodes (34): $type, $value, $type, $value, $type, $value, $type, $value (+26 more)
 
 ### Community 28 - "search_stack"
-Cohesion: 0.10
-Nodes (10): _exact_stack_identifier(), _project_row(), Resolve a standalone API identifier even when its BM25 IDF is low., Search stack-specific guidelines, search_stack(), _valid_max_results(), _rows(), TestNativeDesktopStackFreshness (+2 more)
+Cohesion: 0.09
+Nodes (11): _exact_stack_identifier(), _project_row(), Resolve a standalone API identifier even when its BM25 IDF is low., Search stack-specific guidelines, search_stack(), _valid_max_results(), TestDiagnosticsContracts, _rows() (+3 more)
 
 ### Community 29 - "Form & Input Components"
 Cohesion: 0.06
@@ -458,8 +457,8 @@ Cohesion: 0.14
 Nodes (24): get_context(), is_allowed_exception(), is_allowed_rgba(), is_inside_block(), load_css_variables(), main(), print_result(), print_summary() (+16 more)
 
 ### Community 41 - "scripts/core.py"
-Cohesion: 0.12
-Nodes (25): _contains_phrase(), _domain_keywords(), _file_signature(), _get_bm25(), _load_csv(), _load_csv_snapshot(), _load_product_keywords(), _load_rows_or_empty() (+17 more)
+Cohesion: 0.11
+Nodes (27): _contains_phrase(), _domain_keywords(), _file_signature(), _get_bm25(), _load_csv(), _load_csv_snapshot(), _load_product_keywords(), _load_rows_or_empty() (+19 more)
 
 ### Community 42 - "search"
 Cohesion: 0.12
@@ -666,8 +665,8 @@ Cohesion: 0.13
 Nodes (14): AIDA (Attention-Interest-Desire-Action), Before-After-Bridge, Contrast Patterns, Copywriting Formulas, Core Formulas, Cost of Inaction, FAB (Features-Advantages-Benefits), Formula-to-Slide Mapping (+6 more)
 
 ### Community 94 - "BM25"
-Cohesion: 0.19
-Nodes (7): BM25, BM25 ranking algorithm for text search, Lowercase, normalize synonyms, split, remove punctuation, filter stopwords, Build BM25 index from documents, Suggest complete public identities so a retry can bypass score thresholds., _suggest_identities(), TestTokenizer
+Cohesion: 0.33
+Nodes (3): BM25, BM25 ranking algorithm for text search, TestTokenizer
 
 ### Community 95 - "detect_domain"
 Cohesion: 0.23
@@ -730,12 +729,12 @@ Cohesion: 0.14
 Nodes (8): Handle shadcn/ui component installation., ShadcnInstaller, Test adding components that are already installed., Test initialization with default project root., Test initialization with custom project root., Test checking for non-existent shadcn config., Test getting installed components when none exist., Test getting installed components when files exist.
 
 ### Community 110 - "radius"
-Cohesion: 0.24
-Nodes (10): $type, $value, $type, $value, primitive, radius, shadow, full (+2 more)
+Cohesion: 0.29
+Nodes (8): $type, $value, $type, $value, radius, default, full, default
 
 ### Community 111 - "parse_decision_rules"
-Cohesion: 0.19
-Nodes (8): Find matching reasoning rule for a category., Apply reasoning rules to search results., apply_decision_rules(), _object_without_duplicates(), parse_decision_rules(), Return deterministic mutations and an audit trail; never execute data., Parse the canonical condition -> action-array representation., _validate_action()
+Cohesion: 0.27
+Nodes (6): apply_decision_rules(), _object_without_duplicates(), parse_decision_rules(), Return deterministic mutations and an audit trail; never execute data., Parse the canonical condition -> action-array representation., _validate_action()
 
 ### Community 112 - "update.md"
 Cohesion: 0.15
@@ -825,9 +824,9 @@ Nodes (10): Bold Dynamic, CIP Design Style Guide, Classic Traditional, Color Psy
 Cohesion: 0.20
 Nodes (9): args, extractTokens(), fs, minimal, MINIMAL_TOKENS, path, projectRoot, tokensPath (+1 more)
 
-### Community 134 - "duration"
-Cohesion: 0.20
-Nodes (10): fast, normal, slow, $type, $value, $type, $value, duration (+2 more)
+### Community 134 - "primitive"
+Cohesion: 0.18
+Nodes (11): fast, normal, slow, $type, $value, $type, $value, primitive (+3 more)
 
 ### Community 135 - "patch"
 Cohesion: 0.18
@@ -902,8 +901,8 @@ Cohesion: 0.20
 Nodes (10): Avoid deeply nested references, Naming conventions, Pattern 1: High-level guide with references, Pattern 2: Domain-specific organization, Pattern 3: Conditional details, Progressive disclosure patterns, Skill structure, Structure longer reference files with table of contents (+2 more)
 
 ### Community 153 - "DesignSystemGenerator"
-Cohesion: 0.22
-Nodes (5): DesignSystemGenerator, Generates design system recommendations from aggregated searches., Load reasoning rules from CSV., Select best matching result based on priority keywords., TestReasoningMatch
+Cohesion: 0.17
+Nodes (7): DesignSystemGenerator, Generates design system recommendations from aggregated searches., Load reasoning rules from CSV., Find matching reasoning rule for a category., Apply reasoning rules to search results., Select best matching result based on priority keywords., TestReasoningMatch
 
 ### Community 154 - "helper.js"
 Cohesion: 0.42
@@ -965,9 +964,9 @@ Nodes (6): Animation Classes, Background Images, Base Structure, Chart.js Integr
 Cohesion: 0.29
 Nodes (6): Animation Classes, Background Images, Base Structure, Chart.js Integration, CSS Variables Reference, HTML Slide Template
 
-### Community 169 - "default"
+### Community 169 - "md"
 Cohesion: 0.67
-Nodes (4): $type, $value, default, default
+Nodes (4): $type, $value, md, md
 
 ### Community 170 - "Hermes Agent Tool Mapping"
 Cohesion: 0.29
@@ -1001,17 +1000,17 @@ Nodes (5): Checklist, Default Layout, Local Convex Components, When to Choose Th
 Cohesion: 0.33
 Nodes (5): Bundled skills, Convex, How to route, Rules, Why reach for Convex
 
-### Community 178 - "sm"
-Cohesion: 0.60
-Nodes (5): sm, sm, sm, $type, $value
+### Community 178 - "shadow"
+Cohesion: 0.47
+Nodes (6): sm, shadow, sm, sm, $type, $value
 
 ### Community 179 - "Slides"
 Cohesion: 0.33
 Nodes (5): References (Knowledge Base), Routing, Slides, Subcommands, When to Use
 
-### Community 180 - "_row_identities"
-Cohesion: 0.33
-Nodes (6): _exact_row_identity(), Return non-empty public identities from ordinary and alias fields., Resolve an explicit style identity without opening generic variant ranking., Return one row whose stable public identity exactly matches the query., _row_identities(), _style_identity()
+### Community 180 - "_suggest_identities"
+Cohesion: 0.25
+Nodes (8): _exact_row_identity(), Suggest complete public identities so a retry can bypass score thresholds., Return non-empty public identities from ordinary and alias fields., Resolve an explicit style identity without opening generic variant ranking., Return one row whose stable public identity exactly matches the query., _row_identities(), _style_identity(), _suggest_identities()
 
 ### Community 181 - "using-superpowers/SKILL.md"
 Cohesion: 0.33
@@ -1268,16 +1267,16 @@ Nodes (4): format_output(), generate_design_brief(), Format results for Claude c
 ## Knowledge Gaps
 - **1663 isolated node(s):** `crypto`, `http`, `fs`, `path`, `OPCODES` (+1658 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **40 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **39 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `search()` connect `search` to `.generate`, `TestDiagnosticsContracts`, `validate_data.py`, `scripts/core.py`, `design_system.py`, `_row_identities`, `test_core.py`, `test_text_layout_resilience.py`, `search_stack`, `_normalize`, `BM25`, `detect_domain`?**
+- **Why does `search()` connect `search` to `.generate`, `validate_data.py`, `scripts/core.py`, `design_system.py`, `_suggest_identities`, `test_core.py`, `test_text_layout_resilience.py`, `search_stack`, `_normalize`, `detect_domain`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
-- **Why does `primitive` connect `radius` to `duration`, `gray`, `fontSize`, `design-tokens-starter.json`, `spacing`?**
+- **Why does `primitive` connect `primitive` to `radius`, `gray`, `fontSize`, `shadow`, `design-tokens-starter.json`, `spacing`?**
   _High betweenness centrality (0.007) - this node is a cross-community bridge._
-- **Why does `DesignSystemGenerator` connect `DesignSystemGenerator` to `.generate`, `test_data_contracts.py`, `TestDiagnosticsContracts`, `test_design_system_mode.py`, `search`, `parse_decision_rules`, `design_system.py`, `test_core.py`, `_style_is_dark_primary`, `BM25`, `detect_domain`?**
+- **Why does `DesignSystemGenerator` connect `DesignSystemGenerator` to `.generate`, `test_data_contracts.py`, `test_design_system_mode.py`, `search`, `design_system.py`, `test_core.py`, `search_stack`, `_style_is_dark_primary`, `BM25`, `detect_domain`?**
   _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `TailwindConfigGenerator` (e.g. with `TestGeneratedConfigIsValidJs` and `TestTailwindConfigGenerator`) actually correct?**
   _`TailwindConfigGenerator` has 2 INFERRED edges - model-reasoned connections that need verification._

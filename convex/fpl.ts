@@ -114,6 +114,28 @@ export const fetchFplLeagueStandings = action({
 
       const formattedStandings = Array.from(entryMap.values());
 
+      // Finn gjeldende gameweek fra bootstrap-static
+      let activeGw = 1;
+      try {
+        const bootRes = await fetch(
+          "https://fantasy.premierleague.com/api/bootstrap-static/",
+          { headers: FPL_HEADERS }
+        );
+        if (bootRes.ok) {
+          const bootData = await bootRes.json();
+          const currentEvent =
+            bootData.events?.find((e: any) => e.is_current) ||
+            bootData.events?.find((e: any) => e.is_next) ||
+            bootData.events?.[0];
+          if (currentEvent?.id) {
+            activeGw = currentEvent.id;
+          }
+        }
+      } catch {
+        const settings = await ctx.runQuery(api.admin.getSettings);
+        activeGw = settings?.currentGameweek || 1;
+      }
+
       // 3. Lagre lagene automatisk i Convex fpl_teams databasen
       if (formattedStandings.length > 0) {
         const teamsData = formattedStandings.map((s) => ({
@@ -126,7 +148,7 @@ export const fetchFplLeagueStandings = action({
         }));
 
         await ctx.runMutation(api.fpl.saveLiveFplSyncResult, {
-          currentGameweek: 1,
+          currentGameweek: activeGw,
           teamsData,
         });
       }

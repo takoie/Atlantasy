@@ -109,7 +109,7 @@
 
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label for="reg-team" class="block text-xs font-bold text-white mb-1">FPL Lagnavn</label>
+            <label for="reg-team" class="block text-xs font-bold text-white mb-1">FPL-lagnavn</label>
             <input
               id="reg-team"
               type="text"
@@ -120,7 +120,7 @@
           </div>
 
           <div>
-            <label for="reg-manager" class="block text-xs font-bold text-white mb-1">FPL Manager</label>
+            <label for="reg-manager" class="block text-xs font-bold text-white mb-1">FPL-manager</label>
             <input
               id="reg-manager"
               type="text"
@@ -132,13 +132,13 @@
         </div>
 
         <div>
-          <label for="reg-room" class="block text-xs font-bold text-white mb-1">Ønsket Rom</label>
+          <label for="reg-room" class="block text-xs font-bold text-white mb-1">Ønsket rom</label>
           <select
             id="reg-room"
             bind:value={preferredRoomId}
             class="w-full px-3 py-2 text-xs rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
           >
-            <option value="">Ingen preferanse / Fordeles av admin</option>
+            <option value="">Ingen preferanse / fordeles av admin</option>
             {#each rooms as room}
               <option value={room._id}>{room.name}</option>
             {/each}

@@ -95,6 +95,9 @@
   const deleteAllUsersMutation = useMutation(api.admin.deleteAllUsers);
   const deleteUserMutation = useMutation(api.admin.deleteUser);
   const deleteInviteMutation = useMutation(api.admin.deleteInviteCode);
+  const clearChatMutation = useMutation(api.admin.adminClearChat);
+  const setWinnerOverridesMutation = useMutation(api.admin.setRoundAndRoomOverrides);
+  const resetWinnerOverridesMutation = useMutation(api.admin.resetRoundAndRoomOverrides);
 
   // Convex Actions for Live FPL API Integration
   const syncLiveFplAction = useAction(api.fpl.syncLiveFplData);
@@ -502,7 +505,7 @@
                 <Trophy class="w-5 h-5" />
               </div>
               <div>
-                <h2 class="text-base font-bold text-white">Månedens Vinnere & Hedersvegg</h2>
+                <h2 class="text-base font-bold text-white">Månedens vinnere og hedersvegg</h2>
                 <p class="text-xs text-[#94A3B8]">Offisiell hedersplass for de skarpeste FPL-rommene og solovinnerne</p>
               </div>
             </div>
@@ -532,7 +535,7 @@
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-bold uppercase tracking-wider text-[#F4C152] bg-[#F4C152]/15 px-2.5 py-0.5 rounded-md border border-[#F4C152]/30 flex items-center gap-1">
                       <Trophy class="w-3 h-3" />
-                      <span>Månedens Vinnerrom • {roomWinner.monthName || "Denne måneden"}</span>
+                      <span>Månedens vinnerrom • {roomWinner.monthName || "Denne måneden"}</span>
                     </span>
                     <span class="text-2xl">🏆</span>
                   </div>
@@ -574,7 +577,7 @@
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-bold uppercase tracking-wider text-[#9FE88D] bg-[#9FE88D]/15 px-2.5 py-0.5 rounded-md border border-[#9FE88D]/30 flex items-center gap-1">
                       <Crown class="w-3 h-3" />
-                      <span>Månedens Solovinner • {soloWinner.monthName || "Denne måneden"}</span>
+                      <span>Månedens solovinner • {soloWinner.monthName || "Denne måneden"}</span>
                     </span>
                     <span class="text-2xl">👑</span>
                   </div>
@@ -714,6 +717,9 @@
     onDeleteUser={(uId) => deleteUserMutation.mutate({ userId: uId as any, adminUserId: currentUser?._id })}
     onDeleteInviteCode={(cId) => deleteInviteMutation.mutate({ codeId: cId as any, adminUserId: currentUser?._id })}
     onCreateManualUser={(params) => createManualUserMutation.mutate({ ...params, adminUserId: currentUser?._id })}
+    onClearChat={(scope, roomId) => clearChatMutation.mutate({ adminUserId: currentUser?._id, scope, roomId })}
+    onSetWinnerOverrides={(overrides) => setWinnerOverridesMutation.mutate({ ...overrides, adminUserId: currentUser?._id })}
+    onResetWinnerOverrides={(params) => resetWinnerOverridesMutation.mutate({ ...params, adminUserId: currentUser?._id })}
   />
 
   <RegisterModal
@@ -738,7 +744,7 @@
   <UpdateModal
     bind:isOpen={isUpdateModalOpen}
     bind:this={updateModalRef}
-    currentVersion="0.8.0"
+    currentVersion="0.9.0"
     autoCheck={true}
   />
 

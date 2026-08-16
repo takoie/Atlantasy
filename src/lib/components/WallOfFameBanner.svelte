@@ -89,7 +89,7 @@
           onclick={() => (isCollapsed = false)}
           class="px-2 py-0.5 rounded bg-[#242B35] hover:bg-[#384252] text-[#E2E8F0] text-[11px] font-semibold transition-colors flex items-center gap-1 border border-[#384252]"
         >
-          <span>Vis Skrytevegg</span>
+          <span>Vis skrytevegg</span>
           <ChevronDown class="w-3 h-3" />
         </button>
       </div>
@@ -120,7 +120,7 @@
             onclick={onOpenWallOfFame}
             class="px-2.5 py-1 rounded-lg bg-[#242B35] hover:bg-[#384252] text-[#E2E8F0] hover:text-white border border-[#384252] text-[11px] font-semibold transition-colors flex items-center gap-1"
           >
-            <span>Se hedersvegg & historikk</span>
+            <span>Se hedersvegg og historikk</span>
             <ChevronRight class="w-3 h-3" />
           </button>
           <button
@@ -156,7 +156,7 @@
                 <div class="min-w-0">
                   <div class="flex items-center gap-1.5 flex-wrap">
                     <span class="rounded bg-[#F4C152]/20 px-1.5 py-0.2 text-[9px] font-bold uppercase tracking-wider text-[#F4C152] border border-[#F4C152]/30">
-                      Månedens Romvinner
+                      Månedens romvinner
                     </span>
                     {#if resolvedRoomWinner.monthName}
                       <span class="text-[10px] font-semibold text-[#94A3B8]">
@@ -221,7 +221,7 @@
                 <div class="min-w-0">
                   <div class="flex items-center gap-1.5 flex-wrap">
                     <span class="rounded bg-[#9FE88D]/20 px-1.5 py-0.2 text-[9px] font-bold uppercase tracking-wider text-[#9FE88D] border border-[#9FE88D]/30">
-                      Månedens Solovinner
+                      Månedens solovinner
                     </span>
                     {#if resolvedSoloWinner.monthName}
                       <span class="text-[10px] font-semibold text-[#94A3B8]">
@@ -230,7 +230,7 @@
                     {/if}
                   </div>
                   <h4 class="text-sm font-bold text-white truncate mt-0.5 flex items-center gap-1.5">
-                    <span>{resolvedSoloWinner.winnerName || "Individuell Vinner"}</span>
+                    <span>{resolvedSoloWinner.winnerName || "Individuell vinner"}</span>
                     {#if resolvedSoloWinner.winnerTeamName}
                       <span class="text-xs text-[#94A3B8] font-normal">({resolvedSoloWinner.winnerTeamName})</span>
                     {/if}
