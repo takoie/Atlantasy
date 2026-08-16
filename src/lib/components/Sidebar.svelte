@@ -352,7 +352,7 @@
     <!-- Versjon, Lisenser & Oppdateringssjekk -->
     <div class="flex items-center justify-between px-1 text-[11px] text-[#94A3B8]">
       <div class="flex items-center gap-1.5">
-        <span class="font-mono text-white/80">v0.7.1</span>
+        <span class="font-mono text-white/80">v0.7.2</span>
         <button
           type="button"
           onclick={onOpenLicenses}
