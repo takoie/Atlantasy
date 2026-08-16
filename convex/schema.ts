@@ -133,6 +133,7 @@ export default defineSchema({
     channel: v.string(),           // "banter" | "room"
     roomId: v.optional(v.id("rooms")),
     content: v.string(),
+    imageUrl: v.optional(v.string()),
     type: v.string(),              // "chat" | "announcement" | "fpl_bot" | "banter"
     isPinned: v.optional(v.boolean()),
     editedAt: v.optional(v.number()),

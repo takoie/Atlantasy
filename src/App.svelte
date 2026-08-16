@@ -217,8 +217,8 @@
     showOnboarding = true;
   }
 
-  async function handleSendMessage(content: string, channel: string, roomId?: string) {
-    if (!content.trim() || !currentUser) return;
+  async function handleSendMessage(content: string, channel: string, roomId?: string, imageUrl?: string) {
+    if ((!content.trim() && !imageUrl) || !currentUser) return;
     try {
       await sendMessageMutation.mutate({
         senderId: currentUser._id,
@@ -227,7 +227,8 @@
         senderAvatar: currentUser.avatar,
         channel,
         roomId: (roomId as any) || undefined,
-        content,
+        content: content.trim(),
+        imageUrl: imageUrl || undefined,
       });
     } catch (err) {
       console.error("Kunne ikke sende melding:", err);
@@ -737,7 +738,7 @@
   <UpdateModal
     bind:isOpen={isUpdateModalOpen}
     bind:this={updateModalRef}
-    currentVersion="0.6.0"
+    currentVersion="0.6.1"
     autoCheck={true}
   />
 

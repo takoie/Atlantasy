@@ -46,11 +46,12 @@ export const sendMessage = mutation({
     channel: v.string(), // "banter" | "room"
     roomId: v.optional(v.id("rooms")),
     content: v.string(),
+    imageUrl: v.optional(v.string()),
     type: v.optional(v.string()), // "chat" | "announcement" | "fpl_bot" | "banter"
   },
   handler: async (ctx, args) => {
     const cleanContent = args.content.trim();
-    if (!cleanContent) {
+    if (!cleanContent && !args.imageUrl) {
       throw new Error("Meldingen kan ikke være tom.");
     }
 
@@ -68,6 +69,7 @@ export const sendMessage = mutation({
       channel: args.channel,
       roomId: args.roomId,
       content: cleanContent,
+      imageUrl: args.imageUrl,
       type: args.type ?? "chat",
       createdAt: Date.now(),
     });
