@@ -75,7 +75,7 @@
   let deletingMessageId = $state<string | null>(null);
 
   // Utvidet Chat Funksjonalitet: Drawer & Verktøylinje
-  let activeToolTab = $state<"format" | "emoji" | "phrases" | "image" | null>(null);
+  let activeToolTab = $state<"format" | "emoji" | "image" | null>(null);
   let attachedImage = $state<string | null>(null);
   let attachedImageName = $state<string>("");
   let lightboxImageUrl = $state<string | null>(null);
@@ -104,20 +104,6 @@
         "🦾", "🥂", "🍻", "🍕", "☕", "🎉", "💤", "💎", "💰",
       ],
     },
-  ];
-
-  // Raske FPL / Banter Fraser
-  const quickPhrases = [
-    { title: "Captain blank 😭", text: "Kapteinen min blanka selvsagt igjen... 😭" },
-    { title: "Green arrow! 🚀", text: "Grønne piler og full jubel denne runden! 🚀🔥" },
-    { title: "Clean sheet wipeout 🤦‍♂️", text: "Der røyk clean sheet i det 89. minutt... 🤦‍♂️" },
-    { title: "Haaland hattrick 🤖", text: "Erling Braut Haaland redder helga som vanlig 🤖⚽⚽⚽" },
-    { title: "Hvor er assisten? 🤷‍♂️", text: "Hvor i all verden ble det av den assisten til FPL?! 🤷‍♂️" },
-    { title: "Solgte før runden 💀", text: "Jeg solgte han rett før deadline, og nå scorer han hattrick... 💀" },
-    { title: "Trippelkaptein 🔥", text: "Trippelkaptein-chipen er fyrt av! Måtte FPL-gudene være med meg 🙏" },
-    { title: "Pep Roulette 👨‍🦲", text: "Pep Roulette rammer igjen. Benched! 👨‍🦲🎲" },
-    { title: "Bench boost 🧠", text: "Bench boost masterclass! Poengene renner inn fra benken 🧠" },
-    { title: "Minuspoeng på hits 📉", text: "-8 på hits var kanskje ikke den beste ideen... 📉" },
   ];
 
   let filteredEmojis = $derived(
@@ -343,15 +329,7 @@
     }
   }
 
-  function insertPhrase(phraseText: string) {
-    messageInput = messageInput ? `${messageInput} ${phraseText}` : phraseText;
-    activeToolTab = null;
-    if (inputEl) {
-      inputEl.focus();
-    }
-  }
-
-  function toggleToolTab(tab: "format" | "emoji" | "phrases" | "image") {
+  function toggleToolTab(tab: "format" | "emoji" | "image") {
     if (activeToolTab === tab) {
       activeToolTab = null;
     } else {
@@ -756,11 +734,6 @@
               <Smile class="w-3.5 h-3.5" />
               <span>Ikoner & Emojis</span>
             </span>
-          {:else if activeToolTab === "phrases"}
-            <span class="flex items-center gap-1.5 text-[#70E1F8]">
-              <Zap class="w-3.5 h-3.5" />
-              <span>Raske Banter Fraser</span>
-            </span>
           {:else if activeToolTab === "image"}
             <span class="flex items-center gap-1.5 text-[#9FE88D]">
               <ImageIcon class="w-3.5 h-3.5" />
@@ -906,27 +879,7 @@
         </div>
       {/if}
 
-      <!-- Tab 3: Raske Banter Fraser -->
-      {#if activeToolTab === "phrases"}
-        <div class="max-h-44 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-1.5 pr-1 custom-scrollbar">
-          {#each quickPhrases as phrase}
-            <button
-              type="button"
-              onclick={() => insertPhrase(phrase.text)}
-              class="p-2 text-left rounded-xl bg-[#242B35] hover:bg-[#2A303C] border border-[#384252] hover:border-[#70E1F8] transition-all group/p"
-            >
-              <div class="text-xs font-bold text-white group-hover/p:text-[#70E1F8] transition-colors">
-                {phrase.title}
-              </div>
-              <div class="text-[11px] text-[#94A3B8] truncate mt-0.5">
-                {phrase.text}
-              </div>
-            </button>
-          {/each}
-        </div>
-      {/if}
-
-      <!-- Tab 4: Bilde & Utklippstavle -->
+      <!-- Tab 3: Bilde & Utklippstavle -->
       {#if activeToolTab === "image"}
         <div class="space-y-2.5">
           <div class="p-3 rounded-xl bg-[#242B35] border border-dashed border-[#384252] text-center space-y-2">
@@ -955,77 +908,50 @@
   {/if}
 
   <!-- Kompakt Hurtiglinje over inputfeltet -->
-  <div class="flex items-center justify-between gap-1 px-1">
+  <div class="flex items-center justify-start gap-1 px-1">
     <!-- Hurtigknapper for Verktøyskuff -->
-    <div class="flex items-center gap-1">
+    <div class="flex items-center gap-1.5">
       <button
         type="button"
         onclick={() => toggleToolTab("format")}
-        class={`px-2 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1 ${
+        class={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${
           activeToolTab === "format"
             ? "bg-[#9FE88D]/20 text-[#9FE88D] border-[#9FE88D]/50 shadow-sm"
             : "bg-[#242B35] text-[#94A3B8] border-[#384252] hover:text-white hover:border-[#4B5563]"
         }`}
         title="Formater tekst (Fet, Kursiv, Kode, Sitat)"
       >
-        <Bold class="w-3 h-3" />
-        <span class="text-[10px] hidden sm:inline">Format</span>
+        <Bold class="w-3.5 h-3.5" />
+        <span class="text-xs">Format</span>
       </button>
 
       <button
         type="button"
         onclick={() => toggleToolTab("emoji")}
-        class={`px-2 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1 ${
+        class={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${
           activeToolTab === "emoji"
             ? "bg-[#F4C152]/20 text-[#F4C152] border-[#F4C152]/50 shadow-sm"
             : "bg-[#242B35] text-[#94A3B8] border-[#384252] hover:text-white hover:border-[#4B5563]"
         }`}
         title="Ikoner & Emojis"
       >
-        <Smile class="w-3 h-3" />
-        <span class="text-[10px] hidden sm:inline">Emojis</span>
+        <Smile class="w-3.5 h-3.5" />
+        <span class="text-xs">Emojis</span>
       </button>
 
       <button
         type="button"
         onclick={() => toggleToolTab("image")}
-        class={`px-2 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1 ${
+        class={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${
           activeToolTab === "image" || attachedImage
             ? "bg-[#9FE88D]/20 text-[#9FE88D] border-[#9FE88D]/50 shadow-sm"
             : "bg-[#242B35] text-[#94A3B8] border-[#384252] hover:text-white hover:border-[#4B5563]"
         }`}
         title="Bilde / Skjermbilde fra utklippstavle"
       >
-        <ImageIcon class="w-3 h-3" />
-        <span class="text-[10px] hidden sm:inline">Bilde</span>
+        <ImageIcon class="w-3.5 h-3.5" />
+        <span class="text-xs">Bilde</span>
       </button>
-
-      <button
-        type="button"
-        onclick={() => toggleToolTab("phrases")}
-        class={`px-2 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1 ${
-          activeToolTab === "phrases"
-            ? "bg-[#70E1F8]/20 text-[#70E1F8] border-[#70E1F8]/50 shadow-sm"
-            : "bg-[#242B35] text-[#94A3B8] border-[#384252] hover:text-white hover:border-[#4B5563]"
-        }`}
-        title="Raske Banter Fraser"
-      >
-        <Zap class="w-3 h-3" />
-        <span class="text-[10px] hidden sm:inline">Fraser</span>
-      </button>
-    </div>
-
-    <!-- Raske Inline Emojis -->
-    <div class="flex items-center gap-1">
-      {#each ["🔥", "🏆", "😂", "🚀", "👑", "⚽"] as emoji}
-        <button
-          type="button"
-          onclick={() => insertEmoji(emoji)}
-          class="text-sm hover:scale-125 transition-transform px-1 py-0.5 select-none"
-        >
-          {emoji}
-        </button>
-      {/each}
     </div>
   </div>
 {/snippet}

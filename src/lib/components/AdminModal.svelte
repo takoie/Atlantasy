@@ -28,6 +28,7 @@
     RefreshCw,
     CheckCircle2,
     Shirt,
+    Unlink,
   } from "lucide-svelte";
   import { useQuery, useMutation } from "$lib/convex.svelte";
   import { api } from "../../../convex/_generated/api";
@@ -2382,6 +2383,32 @@
                       <Shirt class="w-3 h-3" />
                       <span>{u.fplEntryId ? "Endre lag" : "Koble lag"}</span>
                     </button>
+                    {#if u.fplEntryId}
+                      <button
+                        type="button"
+                        onclick={() => {
+                          confirmDialog = {
+                            show: true,
+                            title: `Fjerne FPL-lag for ${u.username}?`,
+                            message: `Brukeren vil ikke lenger være koblet til FPL-laget "${u.fplTeamName || "FPL-lag"}". Laget blir frigjort og tilgjengelig for andre.`,
+                            confirmText: "Fjern kobling",
+                            onConfirm: async () => {
+                              try {
+                                await onLinkUserTeam(u._id, undefined);
+                                showSuccess(`Fjernet FPL-kobling for ${u.username}.`);
+                              } catch (err: any) {
+                                showError(err.message || "Kunne ikke fjerne FPL-kobling.");
+                              }
+                            },
+                          };
+                        }}
+                        class="px-2.5 py-1 rounded-lg bg-[#FB6F84]/10 hover:bg-[#FB6F84]/20 text-[11px] text-[#FB6F84] border border-[#FB6F84]/30 flex items-center gap-1 font-semibold transition-colors"
+                        title="Fjern kobling mellom denne brukeren og FPL-laget"
+                      >
+                        <Unlink class="w-3 h-3" />
+                        <span>Fjern lag</span>
+                      </button>
+                    {/if}
                     <button
                       onclick={() =>
                         onSetUserRole(
@@ -3300,15 +3327,42 @@
       </div>
 
       <div
-        class="p-4 border-t border-[#384252] bg-[#191E24] flex items-center justify-between gap-3"
+        class="p-4 border-t border-[#384252] bg-[#191E24] flex items-center justify-between gap-3 flex-wrap"
       >
-        <button
-          type="button"
-          onclick={() => (linkingUserModal.show = false)}
-          class="px-4 py-2 rounded-xl bg-[#2A303C] hover:bg-[#384252] text-xs font-semibold text-[#94A3B8] hover:text-white transition-colors"
-        >
-          Avbryt
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            onclick={() => (linkingUserModal.show = false)}
+            class="px-4 py-2 rounded-xl bg-[#2A303C] hover:bg-[#384252] text-xs font-semibold text-[#94A3B8] hover:text-white transition-colors"
+          >
+            Avbryt
+          </button>
+
+          {#if linkingUserModal.user.fplEntryId}
+            <button
+              type="button"
+              disabled={isSavingUserLink}
+              onclick={async () => {
+                isSavingUserLink = true;
+                try {
+                  await onLinkUserTeam(linkingUserModal.user._id, undefined);
+                  showSuccess(
+                    `Fjernet FPL-kobling for ${linkingUserModal.user.username}`,
+                  );
+                  linkingUserModal.show = false;
+                } catch (err: any) {
+                  showError(err.message || "Kunne ikke fjerne FPL-kobling.");
+                } finally {
+                  isSavingUserLink = false;
+                }
+              }}
+              class="px-3.5 py-2 rounded-xl bg-[#FB6F84]/15 hover:bg-[#FB6F84]/25 text-[#FB6F84] border border-[#FB6F84]/30 text-xs font-bold transition-colors flex items-center gap-1.5"
+            >
+              <Unlink class="w-3.5 h-3.5" />
+              <span>Fjern kobling</span>
+            </button>
+          {/if}
+        </div>
 
         <button
           type="button"

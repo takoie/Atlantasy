@@ -55,8 +55,8 @@
     "semantic_hash": "eac59311a63d5e54e3f8104409b2e250"
   },
   "src-tauri/tauri.conf.json": {
-    "mtime": 1786873232.8827853,
-    "ast_hash": "e350bb6d2e5ecbad03a5041efdc94c3d",
+    "mtime": 1786874163.7038112,
+    "ast_hash": "18903f2415db372026ce819398fe897f",
     "semantic_hash": ""
   },
   "src/App.svelte": {
@@ -510,8 +510,8 @@
     "semantic_hash": ""
   },
   "src/lib/components/ChatDrawer.svelte": {
-    "mtime": 1786873175.7970154,
-    "ast_hash": "48a3082d7bdc7ffe405b50c6d7289a27",
+    "mtime": 1786874683.325758,
+    "ast_hash": "0e287bed31a91a05a8b09694b0f70123",
     "semantic_hash": ""
   },
   "src/lib/components/ClaimFplTeamModal.svelte": {
@@ -575,8 +575,8 @@
     "semantic_hash": ""
   },
   "src/lib/components/UpdateModal.svelte": {
-    "mtime": 1786873249.2331202,
-    "ast_hash": "0d8f4c34a42e713a9e9ba13611c3380b",
+    "mtime": 1786874158.568106,
+    "ast_hash": "a4c59f5b73a93b086b726b1c61992529",
     "semantic_hash": ""
   },
   "src/lib/components/WallOfFameBanner.svelte": {
