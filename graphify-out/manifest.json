@@ -25,8 +25,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1786875321.0355058,
-    "ast_hash": "b96cee7980a9e1b776d63102ea79ef41",
+    "mtime": 1786876902.0567641,
+    "ast_hash": "deb1350764b4420d41c51b6c37a523f7",
     "semantic_hash": ""
   },
   "postcss.config.js": {
@@ -55,13 +55,13 @@
     "semantic_hash": "eac59311a63d5e54e3f8104409b2e250"
   },
   "src-tauri/tauri.conf.json": {
-    "mtime": 1786875325.072783,
-    "ast_hash": "6579d365c0e68293353c8ca1f0746b03",
+    "mtime": 1786876906.956351,
+    "ast_hash": "85f1a3e835f29874422608d8de75e91e",
     "semantic_hash": ""
   },
   "src/App.svelte": {
-    "mtime": 1786875338.9487765,
-    "ast_hash": "1c6a0177445079aa4109529f8b9956b0",
+    "mtime": 1786876920.34905,
+    "ast_hash": "77040bd53c44537f830dce982d8e8050",
     "semantic_hash": ""
   },
   "src/lib/convex.svelte.ts": {
@@ -560,8 +560,8 @@
     "semantic_hash": ""
   },
   "src/lib/components/Sidebar.svelte": {
-    "mtime": 1786875334.8937232,
-    "ast_hash": "ec0dcf9a313aad9b4376e590349ba3ab",
+    "mtime": 1786876916.4826014,
+    "ast_hash": "86ef9b0ca614f2eda86daf71c3e7adea",
     "semantic_hash": ""
   },
   "src/lib/components/TeamProfileModal.svelte": {
@@ -575,8 +575,8 @@
     "semantic_hash": ""
   },
   "src/lib/components/UpdateModal.svelte": {
-    "mtime": 1786875579.6937828,
-    "ast_hash": "5b96c0cb1c673f856f7b336890e89a12",
+    "mtime": 1786876923.850705,
+    "ast_hash": "1500f89694632f6767dc097e996648aa",
     "semantic_hash": ""
   },
   "src/lib/components/WallOfFameBanner.svelte": {

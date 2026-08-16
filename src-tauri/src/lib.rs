@@ -46,12 +46,36 @@ async fn download_and_launch_installer(
     file.flush().map_err(|e| format!("Kunne ikke fullføre filskriving: {}", e))?;
     drop(file);
 
-    // Start installasjonsprogrammet
-    std::process::Command::new(&setup_path)
-        .spawn()
-        .map_err(|e| format!("Kunne ikke starte installasjonsprogrammet: {}", e))?;
+    // Start installasjonsprogrammet med UAC-elevasjonsstøtte (ShellExecute)
+    #[cfg(target_os = "windows")]
+    {
+        let status = std::process::Command::new("cmd")
+            .args(["/c", "start", "", &setup_path.to_string_lossy()])
+            .spawn();
 
-    // Lukk Atlantasy så filene kan oppdateres
+        if let Err(cmd_err) = status {
+            std::process::Command::new("powershell")
+                .args([
+                    "-NoProfile",
+                    "-WindowStyle",
+                    "Hidden",
+                    "-Command",
+                    &format!("Start-Process -FilePath \"{}\"", setup_path.display()),
+                ])
+                .spawn()
+                .map_err(|e| format!("Kunne ikke starte installasjonsprogrammet: {} ({})", e, cmd_err))?;
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        std::process::Command::new(&setup_path)
+            .spawn()
+            .map_err(|e| format!("Kunne ikke starte installasjonsprogrammet: {}", e))?;
+    }
+
+    // Gi Windows Shell litt tid til å registrere prosessen og åpne UAC før Atlantasy lukkes
+    std::thread::sleep(std::time::Duration::from_millis(600));
     std::process::exit(0);
 }
 
