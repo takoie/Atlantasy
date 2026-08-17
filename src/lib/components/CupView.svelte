@@ -219,7 +219,7 @@
               title="Beregn romsnitt for den aktive runden og send vinnere videre"
             >
               <RefreshCw class={`w-3.5 h-3.5 ${isCalculating ? "animate-spin" : ""}`} />
-              <span>{isCalculating ? "Beregner..." : "Oppdater Runderesultat"}</span>
+              <span>{isCalculating ? "Beregner..." : "Oppdater resultater"}</span>
             </button>
           {/if}
         </div>
@@ -321,7 +321,7 @@
       </div>
 
       <!-- Det Visuelle Bracket-treet -->
-      <div class="flex-1 overflow-auto custom-scrollbar pr-1 min-h-0">
+      <div class="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar pr-1 min-h-0">
         <CupBracket
           {cup}
           {matches}

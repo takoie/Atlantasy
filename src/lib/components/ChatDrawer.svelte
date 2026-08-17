@@ -209,8 +209,7 @@
 
     // Er avsenderen i vinnerrommet?
     const isTopRoom = !!(
-      (topRoomId && (senderUser?.roomId === topRoomId || msg.roomId === topRoomId)) ||
-      (isAdmin && !senderUser?.roomId)
+      topRoomId && (senderUser?.roomId === topRoomId || msg.roomId === topRoomId)
     );
 
     // Er avsenderen sesongleder i Alle mot alle?
@@ -218,8 +217,7 @@
       (topSoloEntryId && senderUser?.fplEntryId === topSoloEntryId) ||
       (topSoloManagerName &&
         senderUser?.username &&
-        senderUser.username.toLowerCase() === topSoloManagerName.toLowerCase()) ||
-      (isAdmin && senderUser?.role === "admin")
+        senderUser.username.toLowerCase() === topSoloManagerName.toLowerCase())
     );
 
     return {
@@ -1142,7 +1140,7 @@
         </div>
         <div>
           <h2 class="text-base font-bold text-white flex items-center gap-2">
-            Banter & Chat
+            Banter
           </h2>
           <p class="text-xs text-[#94A3B8]">
             Diskuter runden, del skjermbilder og gi oppløftende kommentarer
@@ -1260,7 +1258,7 @@
         </div>
         <div>
           <h2 class="text-sm font-bold text-white flex items-center gap-2">
-            Banter & Chat
+            Banter
           </h2>
           <p class="text-[11px] text-[#94A3B8]">
             Diskuter runden og hets kollegaene dine

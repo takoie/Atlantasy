@@ -112,7 +112,6 @@
     {
       id: "leaderboard",
       label: "Arbeidsrom",
-      sublabel: "Rom vs. rom",
       icon: Trophy,
       color: "text-[#9FE88D]",
       badge: null,
@@ -120,7 +119,6 @@
     {
       id: "individual",
       label: "Alle mot alle",
-      sublabel: "Alle FPL-spillere",
       icon: Users,
       color: "text-[#70E1F8]",
       badge: null,
@@ -128,7 +126,6 @@
     {
       id: "cup",
       label: "Cup",
-      sublabel: "",
       icon: Swords,
       color: "text-[#F4C152]",
       badge: "Cup",
@@ -136,7 +133,6 @@
     {
       id: "insights",
       label: "Ligainnsikt",
-      sublabel: "Benk, klatrere & chips",
       icon: Sparkles,
       color: "text-[#F4C152]",
       badge: null,
@@ -144,7 +140,6 @@
     {
       id: "chat",
       label: "Chat",
-      sublabel: "Banter & romprat",
       icon: MessageSquare,
       color: "text-[#9FE88D]",
       badge: "Live",
@@ -152,7 +147,6 @@
     {
       id: "wall_of_fame",
       label: "Skrytevegg",
-      sublabel: "Månedens vinnere",
       icon: Crown,
       color: "text-[#F4C152]",
       badge: null,
@@ -160,7 +154,6 @@
     {
       id: "news",
       label: "Nyheter",
-      sublabel: "Rapporter & runder",
       icon: Newspaper,
       color: "text-[#F471B5]",
       badge: null,
@@ -168,62 +161,62 @@
   ];
 </script>
 
-<aside class="w-64 sm:w-72 bg-[#1c2128] border-r border-[#384252] flex flex-col justify-between select-none shrink-0 z-30 font-sans">
-  <div class="p-4 space-y-4 overflow-y-auto custom-scrollbar flex-1">
-    <!-- Live Deadline Countdown Banner -->
-    <div class="pb-3 border-b border-[#384252]">
-      <!-- Frist & Countdown Boks -->
-      <div class="p-3.5 rounded-xl bg-[#242B35] border border-[#384252] space-y-2 shadow-md">
-        <div class="flex items-center justify-between text-xs font-bold">
-          <span class="text-[#F4C152] flex items-center gap-1.5 text-xs">
-            <Timer class="w-4 h-4 text-[#F4C152] animate-pulse" />
-            <span>Frist {cleanGwLabel}:</span>
-          </span>
-          <span class="text-white font-mono text-xs font-bold bg-[#191E24] px-2.5 py-1 rounded-lg border border-[#384252] shadow-inner">
-            {formattedDeadlineTime}
-          </span>
-        </div>
-
-        {#if timeLeft.isExpired}
-          <div class="text-xs font-mono font-bold text-[#FB6F84] text-center bg-[#FB6F84]/10 py-1.5 rounded-lg border border-[#FB6F84]/20">
-            Fristen er passert! (Spilles nå)
-          </div>
-        {:else}
-          <div class="flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg bg-[#191E24] border border-[#384252] font-mono font-bold text-sm sm:text-base text-white shadow-inner">
-            {#if timeLeft.days > 0}
-              <span class="text-[#9FE88D]">{timeLeft.days}d</span>
-              <span class="text-[#94A3B8] text-xs">:</span>
-            {/if}
-            <span class="text-white">{String(timeLeft.hours).padStart(2, "0")}t</span>
-            <span class="text-[#94A3B8] text-xs">:</span>
-            <span class="text-white">{String(timeLeft.minutes).padStart(2, "0")}m</span>
-            <span class="text-[#94A3B8] text-xs">:</span>
-            <span class="text-[#F4C152]">{String(timeLeft.seconds).padStart(2, "0")}s</span>
-          </div>
-        {/if}
+<aside class="w-64 sm:w-72 bg-[#1c2128] border-r border-[#384252] flex flex-col justify-between select-none shrink-0 z-30 font-sans h-full">
+  <!-- Statisk Toppseksjon: Live Deadline Countdown Banner -->
+  <div class="p-3.5 pb-3 border-b border-[#384252] bg-[#191E24]/70 shrink-0">
+    <!-- Frist & Countdown Boks -->
+    <div class="p-3 rounded-xl bg-[#242B35] border border-[#384252] space-y-2 shadow-md">
+      <div class="flex items-center justify-between text-xs font-bold">
+        <span class="text-[#F4C152] flex items-center gap-1.5 text-xs">
+          <Timer class="w-4 h-4 text-[#F4C152] animate-pulse" />
+          <span>Frist {cleanGwLabel}:</span>
+        </span>
+        <span class="text-white font-mono text-xs font-bold bg-[#191E24] px-2 py-0.5 rounded-lg border border-[#384252] shadow-inner">
+          {formattedDeadlineTime}
+        </span>
       </div>
-    </div>
 
-    <!-- Menyliste (DaisyUI Dim Design) -->
-    <nav class="space-y-1.5">
-      <span class="text-xs uppercase font-bold text-[#94A3B8] px-2.5 tracking-wider block text-center">
+      {#if timeLeft.isExpired}
+        <div class="text-xs font-mono font-bold text-[#FB6F84] text-center bg-[#FB6F84]/10 py-1.5 rounded-lg border border-[#FB6F84]/20">
+          Fristen er passert! (Spilles nå)
+        </div>
+      {:else}
+        <div class="flex items-center justify-center gap-1.5 py-1 px-2 rounded-lg bg-[#191E24] border border-[#384252] font-mono font-bold text-sm text-white shadow-inner">
+          {#if timeLeft.days > 0}
+            <span class="text-[#9FE88D]">{timeLeft.days}d</span>
+            <span class="text-[#94A3B8] text-xs">:</span>
+          {/if}
+          <span class="text-white">{String(timeLeft.hours).padStart(2, "0")}t</span>
+          <span class="text-[#94A3B8] text-xs">:</span>
+          <span class="text-white">{String(timeLeft.minutes).padStart(2, "0")}m</span>
+          <span class="text-[#94A3B8] text-xs">:</span>
+          <span class="text-[#F4C152]">{String(timeLeft.seconds).padStart(2, "0")}s</span>
+        </div>
+      {/if}
+    </div>
+  </div>
+
+  <!-- Rullbart Menyinnhold (dersom skjermen er lav) -->
+  <div class="p-3 space-y-1 overflow-y-auto custom-scrollbar flex-1">
+    <nav class="space-y-1">
+      <span class="text-[11px] uppercase font-bold text-[#94A3B8] px-2.5 tracking-wider block text-left">
         Meny
       </span>
 
-      <div class="space-y-1.5 pt-1">
+      <div class="space-y-1 pt-0.5">
         {#each navItems as item}
           {@const isActive = activeView === item.id}
           <button
             onclick={() => onSelectView(item.id)}
-            class={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-semibold transition-all group ${
+            class={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-semibold transition-all group ${
               isActive
                 ? "bg-[#2A303C] border border-[#9FE88D]/50 text-white shadow-sm"
                 : "text-[#94A3B8] hover:bg-[#2A303C]/60 hover:text-white border border-transparent"
             }`}
           >
-            <div class="flex items-center gap-3.5 min-w-0">
+            <div class="flex items-center gap-3 min-w-0">
               <div
-                class={`p-2 rounded-xl transition-colors ${
+                class={`p-1.5 rounded-lg transition-colors ${
                   isActive
                     ? "bg-[#9FE88D]/20 text-[#9FE88D]"
                     : "bg-[#242B35] text-[#94A3B8] group-hover:text-white"
@@ -232,37 +225,29 @@
                 <item.icon class="w-4 h-4" />
               </div>
 
-              <div class="text-left min-w-0">
-                <span class="block font-bold text-sm truncate leading-tight">
-                  {item.label}
-                </span>
-                {#if item.sublabel}
-                  <span class="text-xs text-[#94A3B8] block truncate leading-tight mt-0.5">
-                    {item.sublabel}
-                  </span>
-                {/if}
-              </div>
+              <span class="font-bold text-sm truncate leading-tight">
+                {item.label}
+              </span>
             </div>
 
             <div class="flex items-center gap-2">
               {#if item.id === "chat"}
                 {#if unreadChatCount > 0}
-                  <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-[#FB6F84] text-white border border-[#FB6F84]/50 shadow-sm animate-pulse flex items-center gap-1">
+                  <span class="text-[11px] font-bold px-1.5 py-0.2 rounded-full bg-[#FB6F84] text-white border border-[#FB6F84]/50 shadow-sm animate-pulse flex items-center gap-1">
                     <span>+{unreadChatCount > 99 ? "99" : unreadChatCount}</span>
-                    <span class="hidden sm:inline text-[10px]">nye</span>
                   </span>
                 {:else}
-                  <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-[#9FE88D]/20 text-[#9FE88D] border border-[#9FE88D]/40">
+                  <span class="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#9FE88D]/20 text-[#9FE88D] border border-[#9FE88D]/40">
                     Live
                   </span>
                 {/if}
               {:else if item.badge}
-                <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-[#9FE88D]/20 text-[#9FE88D] border border-[#9FE88D]/40">
+                <span class="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#9FE88D]/20 text-[#9FE88D] border border-[#9FE88D]/40">
                   {item.badge}
                 </span>
               {/if}
               {#if isActive}
-                <div class="w-2 h-2 rounded-full bg-[#9FE88D]"></div>
+                <div class="w-1.5 h-1.5 rounded-full bg-[#9FE88D]"></div>
               {/if}
             </div>
           </button>
@@ -352,7 +337,7 @@
     <!-- Versjon, Lisenser & Oppdateringssjekk -->
     <div class="flex items-center justify-between px-1 text-[11px] text-[#94A3B8]">
       <div class="flex items-center gap-1.5">
-        <span class="font-mono text-white/80">v0.9.0</span>
+        <span class="font-mono text-white/80">v0.9.2</span>
         <button
           type="button"
           onclick={onOpenLicenses}

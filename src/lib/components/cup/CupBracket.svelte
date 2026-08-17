@@ -8,6 +8,8 @@
     Calendar,
     Layers,
     Users,
+    ChevronLeft,
+    ChevronRight,
   } from "lucide-svelte";
 
   let {
@@ -23,6 +25,13 @@
     onSelectMatch?: (match: any) => void;
     onOpenProfile?: (entryId: number) => void;
   } = $props();
+
+  function scrollHorizontal(id: string, amount: number) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollBy({ left: amount, behavior: "smooth" });
+    }
+  }
 
   let activeBracketTab = $state<"all" | "winners" | "losers" | "finals">("all");
   let activeGroupTab = $state<"all" | "A" | "B" | "playoffs">("all");
@@ -157,14 +166,36 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-2 text-xs text-[#94A3B8]">
-          <span class="inline-block w-2 h-2 rounded-full bg-[#9FE88D]"></span>
-          <span>Topp 2-snitt per rom avgjør</span>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1.5 bg-[#191E24] px-2 py-1 rounded-xl border border-[#384252]">
+            <span class="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider hidden sm:inline mr-0.5">Rull:</span>
+            <button
+              type="button"
+              onclick={() => scrollHorizontal("bracket-scroll-knockout", -320)}
+              class="p-1 rounded-lg bg-[#2A303C] hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors"
+              title="Rull mot venstre"
+            >
+              <ChevronLeft class="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onclick={() => scrollHorizontal("bracket-scroll-knockout", 320)}
+              class="p-1 rounded-lg bg-[#2A303C] hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors"
+              title="Rull mot høyre"
+            >
+              <ChevronRight class="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2 text-xs text-[#94A3B8]">
+            <span class="inline-block w-2 h-2 rounded-full bg-[#9FE88D]"></span>
+            <span>Topp 2-snitt per rom avgjør</span>
+          </div>
         </div>
       </div>
 
       <!-- Horisontal rullekolonne for runder -->
-      <div class="overflow-x-auto pb-4 custom-scrollbar">
+      <div id="bracket-scroll-knockout" class="cup-scroll-container pb-4">
         <div class="flex items-start gap-6 min-w-max pt-2">
           {#each knockoutRounds as round, rIdx}
             <div class="w-72 flex flex-col space-y-3 shrink-0">
@@ -362,9 +393,29 @@
               </p>
             </div>
           </div>
+
+          <div class="flex items-center gap-1.5 bg-[#191E24] px-2 py-1 rounded-xl border border-[#384252]">
+            <span class="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider hidden sm:inline mr-0.5">Rull:</span>
+            <button
+              type="button"
+              onclick={() => scrollHorizontal("bracket-scroll-winners", -320)}
+              class="p-1 rounded-lg bg-[#2A303C] hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors"
+              title="Rull mot venstre"
+            >
+              <ChevronLeft class="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onclick={() => scrollHorizontal("bracket-scroll-winners", 320)}
+              class="p-1 rounded-lg bg-[#2A303C] hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors"
+              title="Rull mot høyre"
+            >
+              <ChevronRight class="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        <div class="overflow-x-auto pb-4 custom-scrollbar">
+        <div id="bracket-scroll-winners" class="cup-scroll-container pb-4">
           <div class="flex items-start gap-5 min-w-max pt-2">
             {#each winnersRounds as round}
               <div class="w-72 flex flex-col space-y-3 shrink-0">
@@ -445,9 +496,29 @@
               </p>
             </div>
           </div>
+
+          <div class="flex items-center gap-1.5 bg-[#191E24] px-2 py-1 rounded-xl border border-[#384252]">
+            <span class="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider hidden sm:inline mr-0.5">Rull:</span>
+            <button
+              type="button"
+              onclick={() => scrollHorizontal("bracket-scroll-losers", -320)}
+              class="p-1 rounded-lg bg-[#2A303C] hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors"
+              title="Rull mot venstre"
+            >
+              <ChevronLeft class="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onclick={() => scrollHorizontal("bracket-scroll-losers", 320)}
+              class="p-1 rounded-lg bg-[#2A303C] hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors"
+              title="Rull mot høyre"
+            >
+              <ChevronRight class="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        <div class="overflow-x-auto pb-4 custom-scrollbar">
+        <div id="bracket-scroll-losers" class="cup-scroll-container pb-4">
           <div class="flex items-start gap-5 min-w-max pt-2">
             {#each losersRounds as round}
               <div class="w-72 flex flex-col space-y-3 shrink-0">
@@ -463,7 +534,7 @@
                     <button
                       type="button"
                       onclick={() => onSelectMatch(match)}
-                      class="w-full text-left p-3 rounded-xl bg-[#2A303C] hover:bg-[#323947] border border-[#384252] hover:border-[#FB6F84]/60 transition-all shadow-md group relative overflow-hidden focus:outline-none"
+                      class="w-full text-left p-3 rounded-xl bg-[#2A303C] hover:bg-[#323947] border border-[#384252] hover:border-[#FB6F84]/60 transition-all shadow-md group relative overflow-hidden focus:outline-none focus:ring-1 focus:ring-[#FB6F84]"
                     >
                       <div class="flex items-center justify-between text-[11px] text-[#94A3B8] pb-2 mb-2 border-b border-[#384252]/50">
                         <span class="font-semibold truncate max-w-[150px]">{cleanMatchTitle(match)}</span>
@@ -614,8 +685,8 @@
                 <span class="text-[11px] text-[#94A3B8]">Topp 2 videre</span>
               </div>
 
-              <div class="overflow-x-auto custom-scrollbar">
-                <table class="w-full text-xs text-left border-collapse">
+              <div class="cup-scroll-container">
+                <table class="w-full text-xs text-left border-collapse min-w-[340px]">
                   <thead>
                     <tr class="text-[#94A3B8] border-b border-[#384252]/60 pb-1">
                       <th class="py-1.5 px-2">#</th>
@@ -633,8 +704,8 @@
                       <tr class={`border-b border-[#384252]/40 hover:bg-[#191E24]/50 transition-colors ${i < 2 ? "bg-[#9FE88D]/10 font-bold" : ""}`}>
                         <td class="py-2 px-2 text-[#94A3B8]">{i + 1}</td>
                         <td class="py-2 px-2 text-white truncate max-w-[130px] flex items-center gap-1.5">
-                          <span class="w-2 h-2 rounded-full" style={`background-color: ${row.room?.accentColor || "#9FE88D"}`}></span>
-                          <span>{row.room?.name || "Rom"}</span>
+                          <span class="w-2 h-2 rounded-full shrink-0" style={`background-color: ${row.room?.accentColor || "#9FE88D"}`}></span>
+                          <span class="truncate">{row.room?.name || "Rom"}</span>
                         </td>
                         <td class="py-2 px-2 text-center">{row.played}</td>
                         <td class="py-2 px-2 text-center text-[#9FE88D]">{row.won}</td>
@@ -660,8 +731,8 @@
                 <span class="text-[11px] text-[#94A3B8]">Topp 2 videre</span>
               </div>
 
-              <div class="overflow-x-auto custom-scrollbar">
-                <table class="w-full text-xs text-left border-collapse">
+              <div class="cup-scroll-container">
+                <table class="w-full text-xs text-left border-collapse min-w-[340px]">
                   <thead>
                     <tr class="text-[#94A3B8] border-b border-[#384252]/60 pb-1">
                       <th class="py-1.5 px-2">#</th>
@@ -679,8 +750,8 @@
                       <tr class={`border-b border-[#384252]/40 hover:bg-[#191E24]/50 transition-colors ${i < 2 ? "bg-[#38bdf8]/10 font-bold" : ""}`}>
                         <td class="py-2 px-2 text-[#94A3B8]">{i + 1}</td>
                         <td class="py-2 px-2 text-white truncate max-w-[130px] flex items-center gap-1.5">
-                          <span class="w-2 h-2 rounded-full" style={`background-color: ${row.room?.accentColor || "#38bdf8"}`}></span>
-                          <span>{row.room?.name || "Rom"}</span>
+                          <span class="w-2 h-2 rounded-full shrink-0" style={`background-color: ${row.room?.accentColor || "#38bdf8"}`}></span>
+                          <span class="truncate">{row.room?.name || "Rom"}</span>
                         </td>
                         <td class="py-2 px-2 text-center">{row.played}</td>
                         <td class="py-2 px-2 text-center text-[#9FE88D]">{row.won}</td>
@@ -701,13 +772,35 @@
       <!-- Sluttspill Semifinaler og Finale (for gruppespill) -->
       {#if activeGroupTab === "all" || activeGroupTab === "playoffs"}
         <div class="space-y-4 pt-2">
-          <h4 class="text-xs font-bold text-[#F4C152] uppercase tracking-wider flex items-center gap-1.5">
-            <Crown class="w-4 h-4 text-[#F4C152]" />
-            <span>Sluttspill (Semifinaler & Storfinale)</span>
-          </h4>
+          <div class="flex items-center justify-between pb-2 border-b border-[#384252]">
+            <h4 class="text-xs font-bold text-[#F4C152] uppercase tracking-wider flex items-center gap-1.5">
+              <Crown class="w-4 h-4 text-[#F4C152]" />
+              <span>Sluttspill (Semifinaler & Storfinale)</span>
+            </h4>
 
-          <div class="overflow-x-auto pb-4 custom-scrollbar">
-            <div class="flex items-start gap-6 min-w-max">
+            <div class="flex items-center gap-1.5 bg-[#191E24] px-2 py-1 rounded-xl border border-[#384252]">
+              <span class="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider hidden sm:inline mr-0.5">Rull:</span>
+              <button
+                type="button"
+                onclick={() => scrollHorizontal("bracket-scroll-playoffs", -320)}
+                class="p-1 rounded-lg bg-[#2A303C] hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors"
+                title="Rull mot venstre"
+              >
+                <ChevronLeft class="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onclick={() => scrollHorizontal("bracket-scroll-playoffs", 320)}
+                class="p-1 rounded-lg bg-[#2A303C] hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors"
+                title="Rull mot høyre"
+              >
+                <ChevronRight class="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <div id="bracket-scroll-playoffs" class="cup-scroll-container pb-4">
+            <div class="flex items-start gap-6 min-w-max pt-1">
               {#each knockoutRounds.filter((r) => r.roundNum >= 4) as round}
                 <div class="w-72 flex flex-col space-y-3 shrink-0">
                   <div class="p-2.5 rounded-xl bg-[#191E24] border border-[#384252] flex items-center justify-between shadow-sm">
@@ -753,3 +846,33 @@
     </div>
   {/if}
 </div>
+
+<style>
+  .cup-scroll-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #9FE88D #191E24;
+    padding-bottom: 6px;
+  }
+
+  .cup-scroll-container::-webkit-scrollbar {
+    height: 10px;
+  }
+
+  .cup-scroll-container::-webkit-scrollbar-track {
+    background: #191E24;
+    border-radius: 8px;
+    border: 1px solid #384252;
+  }
+
+  .cup-scroll-container::-webkit-scrollbar-thumb {
+    background: #9FE88D;
+    border-radius: 8px;
+    border: 2px solid #191E24;
+  }
+
+  .cup-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #bbf7ab;
+  }
+</style>

@@ -513,7 +513,7 @@
       </div>
       <div>
         <h2 class="text-base font-bold text-white flex items-center gap-2">
-          <span>Atlantasy Nyheter</span>
+          <span>Nyheter</span>
           <span class="text-xs px-2.5 py-0.5 rounded-full bg-[#2A303C] text-[#F471B5] font-bold border border-[#384252]">
             {activeCount} artikler
           </span>
@@ -554,7 +554,7 @@
           class="px-3.5 py-2 rounded-xl bg-[#9FE88D] hover:bg-[#8fd97e] text-[#16380c] text-xs font-bold transition-all shadow-md flex items-center gap-1.5"
         >
           <Plus class="w-4 h-4" />
-          <span>Skriv Nyhet</span>
+          <span>Skriv nyhet</span>
         </button>
       {/if}
     </div>
@@ -570,7 +570,7 @@
         <p class="text-base font-bold text-white">Ingen nyheter publisert her enda</p>
         <p class="text-xs text-[#94A3B8] max-w-sm">
           {currentUser?.role === "admin"
-            ? "Trykk på 'Skriv Nyhet' øverst for å publisere den første runderapporten med bilder og sitater!"
+            ? "Trykk på 'Skriv nyhet' øverst for å publisere den første runderapporten med bilder og sitater!"
             : "Ligaledelsen vil publisere runderapporter og nyheter her etter hvert som runden spilles."}
         </p>
       </div>

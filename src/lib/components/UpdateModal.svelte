@@ -19,7 +19,7 @@
 
   let {
     isOpen = $bindable(false),
-    currentVersion = "0.9.0",
+    currentVersion = "0.9.2",
     autoCheck = true,
   }: {
     isOpen?: boolean;

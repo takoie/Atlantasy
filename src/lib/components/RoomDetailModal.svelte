@@ -22,8 +22,19 @@
   let isEditingName = $state(false);
   let nicknameInput = $state("");
 
+  let hasTeamInRoom = $derived(
+    Boolean(
+      currentUser?.fplEntryId &&
+        room?.teams?.some((t: any) => t.entryId === currentUser.fplEntryId)
+    )
+  );
+
+  let isRoomMember = $derived(
+    Boolean(currentUser?.roomId && room?._id && currentUser.roomId === room._id)
+  );
+
   let canEditRoom = $derived(
-    currentUser?.role === "admin" || (currentUser && currentUser.roomId === room?._id)
+    currentUser?.role === "admin" || (isRoomMember && hasTeamInRoom)
   );
 
   $effect(() => {
@@ -91,7 +102,7 @@
               A{room.roomNumber} • {room.description || "Offisielt liga-rom"}
               {#if !canEditRoom}
                 <span class="text-[10px] text-[#94A3B8]/70 ml-1.5 inline-flex items-center gap-1">
-                  <Lock class="w-2.5 h-2.5" /> Kun rom-leder kan endre navn
+                  <Lock class="w-2.5 h-2.5" /> Kun rom-medlemmer med lag kan endre navn
                 </span>
               {/if}
             </p>

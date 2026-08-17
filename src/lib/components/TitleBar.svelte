@@ -2,6 +2,7 @@
   import {
     Minus,
     Square,
+    Copy,
     X,
     Trophy,
     Wifi,
@@ -11,6 +12,7 @@
     User,
   } from "lucide-svelte";
   import { onMount, onDestroy } from "svelte";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
 
   let {
     currentGw = 1,
@@ -30,10 +32,9 @@
     onLogout?: () => void;
   } = $props();
 
-  import { getCurrentWindow } from "@tauri-apps/api/window";
-
   let isMaximized = $state(false);
   let appWindow: any = null;
+  let headerElement: HTMLElement | null = $state(null);
 
   // Countdown state
   let targetDeadline = $derived(
@@ -65,6 +66,15 @@
     timeLeft = { days, hours, minutes, seconds, isExpired: false };
   }
 
+  async function syncWindowState() {
+    try {
+      const win = await getWin();
+      if (win) {
+        isMaximized = await win.isMaximized();
+      }
+    } catch {}
+  }
+
   onMount(async () => {
     updateCountdown();
     timerInterval = setInterval(updateCountdown, 1000);
@@ -72,14 +82,45 @@
     try {
       appWindow = getCurrentWindow();
       if (appWindow) {
-        isMaximized = await appWindow.isMaximized();
-        await appWindow.onResized(async () => {
-          isMaximized = await appWindow.isMaximized();
-        });
+        await syncWindowState();
+        await appWindow.onResized(syncWindowState);
       }
     } catch (err) {
       console.warn("Tauri API ikke tilgjengelig (kjører i nettleser):", err);
     }
+
+    const handleDblClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && !target.closest(".titlebar-no-drag")) {
+        handleToggleMaximize();
+      }
+    };
+
+    if (headerElement) {
+      headerElement.addEventListener("dblclick", handleDblClick);
+    }
+
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      if (e.key === "F11") {
+        e.preventDefault();
+        try {
+          const win = await getWin();
+          if (win) {
+            const isFs = await win.isFullscreen();
+            await win.setFullscreen(!isFs);
+            await syncWindowState();
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      if (headerElement) {
+        headerElement.removeEventListener("dblclick", handleDblClick);
+      }
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   });
 
   onDestroy(() => {
@@ -111,8 +152,11 @@
     try {
       const win = await getWin();
       if (win) {
+        if (await win.isFullscreen()) {
+          await win.setFullscreen(false);
+        }
         await win.toggleMaximize();
-        isMaximized = await win.isMaximized();
+        await syncWindowState();
       }
     } catch (err) {
       console.error("Kunne ikke toggle maksimering:", err);
@@ -132,6 +176,7 @@
 </script>
 
 <header
+  bind:this={headerElement}
   class="relative h-11 w-full bg-[#191E24] border-b border-[#384252] flex items-center justify-between select-none shrink-0 z-40 titlebar-drag-region text-[#E2E8F0] font-sans px-3"
   data-tauri-drag-region
 >
@@ -208,7 +253,7 @@
       </span>
     </div>
 
-    <!-- Windows Vinduskontroller (Minimer, Maksimer, Lukk) -->
+    <!-- Windows Vinduskontroller (Minimer, Maksimer/Gjenopprett, Lukk) -->
     <div class="flex items-center -mr-1">
       <button
         type="button"
@@ -224,7 +269,11 @@
         class="h-8 w-9 flex items-center justify-center hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors"
         title={isMaximized ? "Gjenopprett" : "Maksimer"}
       >
-        <Square class="w-3 h-3" />
+        {#if isMaximized}
+          <Copy class="w-3 h-3 rotate-180" />
+        {:else}
+          <Square class="w-3 h-3" />
+        {/if}
       </button>
       <button
         type="button"

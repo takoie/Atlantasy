@@ -971,6 +971,9 @@ export const updateCupSettings = mutation({
     name: v.optional(v.string()),
     status: v.optional(v.string()),
     currentRound: v.optional(v.number()),
+    winnerRoomId: v.optional(v.id("rooms")),
+    runnerUpRoomId: v.optional(v.id("rooms")),
+    thirdPlaceRoomId: v.optional(v.id("rooms")),
     roundGwMap: v.optional(
       v.array(
         v.object({
@@ -1195,11 +1198,24 @@ export const calculateCupRoundScores = mutation({
         }
       }
 
-      // Kår vinner hvis dette er Grand Final
+      // Registrer 3. plass (Bronse) hvis dette er Taperfinalen (Double Elimination LB Final)
+      if (
+        loserId &&
+        match.bracketType === "losers" &&
+        (match.roundTitle.toLowerCase().includes("taperfinale") || match.nextMatchSlot === 2)
+      ) {
+        await ctx.db.patch(cup._id, {
+          thirdPlaceRoomId: loserId,
+          updatedAt: Date.now(),
+        });
+      }
+
+      // Kår vinner og sølvvinner hvis dette er Grand Final / Finalen
       const isFinalRound =
         args.roundNumber === cup.totalRounds ||
         match.bracketType === "grand_final" ||
-        match.roundTitle.includes("Storfinale");
+        match.roundTitle.includes("Storfinale") ||
+        match.roundTitle.toLowerCase().includes("finale");
 
       if (isFinalRound && winnerId) {
         await ctx.db.patch(cup._id, {
@@ -1433,11 +1449,24 @@ export const advanceMatchManually = mutation({
       await ctx.db.patch(match.nextLoserMatchId, patchObj);
     }
 
-    if (match.bracketType === "grand_final" || match.roundTitle?.includes("Storfinale")) {
+    if (
+      match.bracketType === "grand_final" ||
+      match.roundTitle?.includes("Storfinale") ||
+      match.roundTitle?.toLowerCase().includes("finale")
+    ) {
       await ctx.db.patch(match.cupId, {
         winnerRoomId: args.winnerRoomId,
         runnerUpRoomId: loserId,
         status: "completed",
+        updatedAt: Date.now(),
+      });
+    } else if (
+      loserId &&
+      match.bracketType === "losers" &&
+      (match.roundTitle?.toLowerCase().includes("taperfinale") || match.nextMatchSlot === 2)
+    ) {
+      await ctx.db.patch(match.cupId, {
+        thirdPlaceRoomId: loserId,
         updatedAt: Date.now(),
       });
     }

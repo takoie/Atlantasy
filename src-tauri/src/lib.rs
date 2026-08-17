@@ -1,5 +1,5 @@
 use std::io::Write;
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -85,6 +85,25 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .setup(|app| {
+            if let Some(window) = app.get_webview_window("main") {
+                if let Ok(Some(monitor)) = window.current_monitor() {
+                    let scale_factor = monitor.scale_factor();
+                    let physical_size = monitor.size();
+                    let logical_width = physical_size.width as f64 / scale_factor;
+                    let logical_height = physical_size.height as f64 / scale_factor;
+
+                    // Beregn optimal vindusstørrelse tilpasset skjermoppløsning og Windows-oppgavelinje
+                    // For f.eks. 1920x1080 med 125% DPI (1536x864 logisk) eller 100% DPI (1920x1080)
+                    let target_width = (logical_width * 0.86).clamp(980.0, 1440.0);
+                    let target_height = (logical_height * 0.84).clamp(580.0, 860.0);
+
+                    let _ = window.set_size(tauri::LogicalSize::new(target_width, target_height));
+                    let _ = window.center();
+                }
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![greet, download_and_launch_installer])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

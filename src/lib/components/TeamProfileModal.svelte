@@ -266,6 +266,21 @@
     (profile?.cupTrophies?.length || 0) + (profile?.monthlyTrophies?.length || 0)
   );
 
+  let goldCount = $derived(
+    (profile?.cupTrophies?.filter((t) => t.place === 1).length || 0) +
+    (profile?.monthlyTrophies?.filter((t) => t.place === 1).length || 0)
+  );
+
+  let silverCount = $derived(
+    (profile?.cupTrophies?.filter((t) => t.place === 2).length || 0) +
+    (profile?.monthlyTrophies?.filter((t) => t.place === 2).length || 0)
+  );
+
+  let bronzeCount = $derived(
+    (profile?.cupTrophies?.filter((t) => t.place === 3).length || 0) +
+    (profile?.monthlyTrophies?.filter((t) => t.place === 3).length || 0)
+  );
+
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === "Escape" && isOpen) {
       if (isEditingProfile) {
@@ -348,10 +363,18 @@
               {/if}
 
               {#if totalTrophiesCount > 0}
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#F4C152]/15 text-[#F4C152] border border-[#F4C152]/30 flex items-center gap-1">
-                  <Trophy class="w-3 h-3" />
+                <button
+                  type="button"
+                  onclick={() => (activeTab = "trophies")}
+                  title={`Trofeer: ${goldCount}x Gull 🥇, ${silverCount}x Sølv 🥈, ${bronzeCount}x Bronse 🥉 (Klikk for å se troférom)`}
+                  class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#F4C152]/15 text-[#F4C152] border border-[#F4C152]/30 flex items-center gap-1.5 hover:bg-[#F4C152]/25 transition-all shadow-sm"
+                >
+                  <Trophy class="w-3 h-3 text-[#F4C152]" />
                   <span>{totalTrophiesCount} {totalTrophiesCount === 1 ? "Pokal" : "Pokaler"}</span>
-                </span>
+                  {#if goldCount > 0}<span>🥇{goldCount}</span>{/if}
+                  {#if silverCount > 0}<span>🥈{silverCount}</span>{/if}
+                  {#if bronzeCount > 0}<span>🥉{bronzeCount}</span>{/if}
+                </button>
               {/if}
             </div>
 
@@ -605,18 +628,25 @@
 
               <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {#each profile?.cupTrophies || [] as trophy}
-                  <div class="p-4 rounded-2xl bg-[#191E24] border border-[#F4C152]/40 shadow-lg space-y-2 relative overflow-hidden">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <span class="text-2xl">
+                  <div
+                    class="p-4 rounded-2xl bg-[#191E24] border border-[#F4C152]/40 shadow-lg space-y-3 relative overflow-hidden group hover:border-[#F4C152] transition-all hover:scale-[1.01]"
+                    title={`Turnering: ${trophy.cupName} | Sesong: ${trophy.season || '2025/2026'} | Plassering: ${trophy.place}. plass | Lag: ${profile?.roomName || 'Rom'}`}
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="flex items-center gap-2.5">
+                        <span class="text-3xl drop-shadow">
                           {trophy.place === 1 ? "🥇" : trophy.place === 2 ? "🥈" : "🥉"}
                         </span>
                         <div>
                           <h5 class="text-xs font-bold text-white leading-tight">{trophy.title}</h5>
-                          <span class="text-[10px] text-[#94A3B8]">{trophy.cupName}</span>
+                          <span class="text-[11px] font-semibold text-[#94A3B8] flex items-center gap-1 mt-0.5">
+                            <span>{profile?.roomName || "Rom"}</span>
+                            <span>•</span>
+                            <span>{trophy.season || "2025/2026"}</span>
+                          </span>
                         </div>
                       </div>
-                      <span class={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      <span class={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 shadow-sm ${
                         trophy.place === 1
                           ? "bg-[#F4C152]/20 text-[#F4C152] border border-[#F4C152]/40"
                           : trophy.place === 2
@@ -625,6 +655,21 @@
                       }`}>
                         {trophy.place}. plass
                       </span>
+                    </div>
+
+                    <!-- Fremhevet Cupnavn-boks (Lettlest & Hover-info) -->
+                    <div class="p-2 rounded-xl bg-[#242B35] border border-[#384252] flex items-center justify-between text-xs">
+                      <div class="flex items-center gap-1.5 truncate">
+                        <Trophy class="w-3.5 h-3.5 text-[#F4C152] shrink-0" />
+                        <span class="text-xs font-bold text-white truncate" title={trophy.cupName}>
+                          {trophy.cupName}
+                        </span>
+                      </div>
+                      {#if trophy.date}
+                        <span class="text-[10px] text-[#94A3B8] font-mono shrink-0 ml-2">
+                          {new Date(trophy.date).toLocaleDateString("no-NO", { month: "short", year: "numeric" })}
+                        </span>
+                      {/if}
                     </div>
                   </div>
                 {:else}
@@ -641,32 +686,32 @@
             <div class="space-y-3 pt-2">
               <h4 class="text-xs font-bold text-[#9FE88D] uppercase tracking-wider flex items-center gap-1.5">
                 <Crown class="w-4 h-4 text-[#9FE88D]" />
-                <span>Månedens managere og solovinnere</span>
+                <span>Månedsvinnere og beste rom</span>
               </h4>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {#each profile?.monthlyTrophies || [] as trophy}
                   <div class="p-4 rounded-2xl bg-[#191E24] border border-[#9FE88D]/40 shadow-lg space-y-2 relative overflow-hidden">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <span class="text-2xl">
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="text-3xl drop-shadow shrink-0">
                           {trophy.place === 1 ? "🥇" : trophy.place === 2 ? "🥈" : "🥉"}
                         </span>
-                        <div>
-                          <h5 class="text-xs font-bold text-white leading-tight">{trophy.title}</h5>
-                          <span class="text-[10px] text-[#9FE88D] font-mono">{trophy.score} poeng</span>
+                        <div class="min-w-0">
+                          <h5 class="text-xs font-bold text-white leading-tight truncate">{trophy.title}</h5>
+                          <span class="text-[10px] text-[#9FE88D] font-mono mt-0.5 block">{trophy.score} poeng</span>
                         </div>
                       </div>
-                      <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#9FE88D]/20 text-[#9FE88D] border border-[#9FE88D]/40">
-                        {trophy.category === "individual" ? "Soloener" : "Romvinner"}
+                      <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#9FE88D]/20 text-[#9FE88D] border border-[#9FE88D]/40 whitespace-nowrap shrink-0 shadow-sm">
+                        {trophy.category === "individual" ? "Solo" : "Beste rom"}
                       </span>
                     </div>
                   </div>
                 {:else}
                   <div class="col-span-full p-6 rounded-2xl bg-[#191E24] border border-[#384252] text-center space-y-1">
                     <Medal class="w-8 h-8 text-[#94A3B8] mx-auto opacity-40" />
-                    <p class="text-xs text-[#94A3B8]">Ingen månedens ener-pokaler ennå</p>
-                    <p class="text-[11px] text-[#94A3B8]/60">Vinneren med flest poeng i måneden kåres til månedens ener!</p>
+                    <p class="text-xs text-[#94A3B8]">Ingen månedsvinner-pokaler ennå</p>
+                    <p class="text-[11px] text-[#94A3B8]/60">Vinnerne med flest poeng i måneden kåres til månedsvinner og beste rom!</p>
                   </div>
                 {/each}
               </div>

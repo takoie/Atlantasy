@@ -203,8 +203,21 @@ export const updateRoom = mutation({
     const callerId = args.adminUserId || args.userId;
     const user = await requireUser(ctx, callerId);
 
-    if (user.role !== "admin" && user.roomId !== args.roomId) {
-      throw new Error("Kun rom-medlem eller administrator kan endre dette rommet.");
+    if (user.role !== "admin") {
+      // Bruker må være koblet til dette rommet OG ha et tilknyttet FPL-lag
+      if (!user.roomId || user.roomId !== args.roomId || !user.fplEntryId) {
+        throw new Error("Kun brukere som er koblet opp mot et rom med lag kan endre romnavnet sitt.");
+      }
+
+      // Verifiser at laget faktisk tilhører dette rommet i fpl_teams
+      const userTeam = await ctx.db
+        .query("fpl_teams")
+        .withIndex("by_entryId", (q) => q.eq("entryId", user.fplEntryId!))
+        .first();
+
+      if (!userTeam || userTeam.roomId !== args.roomId) {
+        throw new Error("Du har ikke et aktivt lag tilknyttet dette rommet.");
+      }
     }
 
     await ctx.db.patch(args.roomId, {
@@ -721,53 +734,106 @@ export const getTeamProfile = query({
     const managerName = team?.managerName || user?.username || "Ukjent Manager";
     const teamName = team?.teamName || "FPL Lag";
 
-    // 1. Cup-trofeer (Topp 3 plasseringer i Cup / Sluttspill)
+    // 1. Cup-trofeer (Topp 3 plasseringer i Cup / Sluttspill: Gull, Sølv og Bronse)
+    const userRoomId = team?.roomId || user?.roomId;
     const cupTrophies: Array<{
       place: 1 | 2 | 3;
       title: string;
       cupName: string;
+      season?: string;
+      format?: string;
       date?: number;
       type: "cup";
     }> = [];
 
-    const allCups = await ctx.db.query("cups").collect();
-    for (const cup of allCups) {
-      if (cup.winnerRoomId && team?.roomId && cup.winnerRoomId === team.roomId) {
-        cupTrophies.push({
-          place: 1,
-          title: "Cupmester (1. Plass Gull)",
-          cupName: cup.name,
-          date: cup.createdAt,
-          type: "cup",
-        });
-      }
-
-      // Sjekk kamper for 2. og 3. plass
-      const matches = await ctx.db
-        .query("cup_matches")
-        .withIndex("by_cupId", (q) => q.eq("cupId", cup._id))
-        .collect();
-
-      const finalMatch = matches.find(
-        (m) =>
-          m.bracketType === "grand_final" ||
-          m.roundTitle?.toLowerCase().includes("storfinale") ||
-          m.roundTitle?.toLowerCase().includes("finale")
-      );
-
-      if (finalMatch && finalMatch.status === "completed" && team?.roomId) {
-        if (
-          finalMatch.winnerRoomId &&
-          (finalMatch.room1Id === team.roomId || finalMatch.room2Id === team.roomId) &&
-          finalMatch.winnerRoomId !== team.roomId
-        ) {
+    if (userRoomId) {
+      const allCups = await ctx.db.query("cups").collect();
+      for (const cup of allCups) {
+        // 1. Plass Gull 🥇
+        if (cup.winnerRoomId && cup.winnerRoomId === userRoomId) {
           cupTrophies.push({
-            place: 2,
-            title: "Sølvfinale (2. Plass Sølv)",
+            place: 1,
+            title: "Cupmester",
             cupName: cup.name,
-            date: cup.createdAt,
+            season: cup.season || "2025/2026",
+            format: cup.format,
+            date: cup.updatedAt || cup.createdAt,
             type: "cup",
           });
+        }
+        // 2. Plass Sølv 🥈
+        else if (cup.runnerUpRoomId && cup.runnerUpRoomId === userRoomId) {
+          cupTrophies.push({
+            place: 2,
+            title: "Finalist",
+            cupName: cup.name,
+            season: cup.season || "2025/2026",
+            format: cup.format,
+            date: cup.updatedAt || cup.createdAt,
+            type: "cup",
+          });
+        }
+        // 3. Plass Bronse 🥉
+        else if (cup.thirdPlaceRoomId && cup.thirdPlaceRoomId === userRoomId) {
+          cupTrophies.push({
+            place: 3,
+            title: "3. plass",
+            cupName: cup.name,
+            season: cup.season || "2025/2026",
+            format: cup.format,
+            date: cup.updatedAt || cup.createdAt,
+            type: "cup",
+          });
+        }
+        // Fallback ved eldre cuper hvor runnerUpRoomId / thirdPlaceRoomId ikke ble lagret direkte på cup-dokumentet
+        else {
+          const matches = await ctx.db
+            .query("cup_matches")
+            .withIndex("by_cupId", (q) => q.eq("cupId", cup._id))
+            .collect();
+
+          const finalMatch = matches.find(
+            (m) =>
+              m.bracketType === "grand_final" ||
+              m.roundTitle?.toLowerCase().includes("storfinale") ||
+              m.roundTitle?.toLowerCase().includes("finale")
+          );
+
+          if (finalMatch && finalMatch.status === "completed") {
+            if (
+              finalMatch.winnerRoomId &&
+              (finalMatch.room1Id === userRoomId || finalMatch.room2Id === userRoomId) &&
+              finalMatch.winnerRoomId !== userRoomId
+            ) {
+              cupTrophies.push({
+                place: 2,
+                title: "Finalist",
+                cupName: cup.name,
+                season: cup.season || "2025/2026",
+                format: cup.format,
+                date: finalMatch.updatedAt || cup.createdAt,
+                type: "cup",
+              });
+            }
+          }
+
+          // Sjekk taperfinale (Double Elimination Losers Final / 3. plass)
+          const lbFinalMatch = matches.find(
+            (m) =>
+              m.bracketType === "losers" &&
+              (m.roundTitle?.toLowerCase().includes("taperfinale") || m.nextMatchSlot === 2)
+          );
+          if (lbFinalMatch && lbFinalMatch.status === "completed" && lbFinalMatch.loserRoomId === userRoomId) {
+            cupTrophies.push({
+              place: 3,
+              title: "3. plass",
+              cupName: cup.name,
+              season: cup.season || "2025/2026",
+              format: cup.format,
+              date: lbFinalMatch.updatedAt || cup.createdAt,
+              type: "cup",
+            });
+          }
         }
       }
     }
@@ -800,7 +866,7 @@ export const getTeamProfile = query({
       ) {
         monthlyTrophies.push({
           place: 1,
-          title: `Månedens Ener (${mw.monthName || "Måned"})`,
+          title: `Månedsvinner (${mw.monthName || "Måned"})`,
           category: "individual",
           monthName: mw.monthName || "Måned",
           score: mw.winningScore || 0,
@@ -811,7 +877,7 @@ export const getTeamProfile = query({
       if (isRoomWin && team?.roomId && mw.winningRoomId === team.roomId) {
         monthlyTrophies.push({
           place: 1,
-          title: `Månedens Romvinner (${mw.monthName || "Måned"})`,
+          title: `Beste rom (${mw.monthName || "Måned"})`,
           category: "room",
           monthName: mw.monthName || "Måned",
           score: mw.winningScore || 0,

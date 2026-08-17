@@ -35,17 +35,19 @@
 
 /* Custom DaisyUI Dim scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 9px;
 }
 
 ::-webkit-scrollbar-track {
   background: #191E24;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #384252;
+  background: #475569;
   border-radius: 9999px;
+  border: 1px solid #191E24;
 }
 
 ::-webkit-scrollbar-thumb:hover {

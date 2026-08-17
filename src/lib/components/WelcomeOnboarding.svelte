@@ -173,21 +173,13 @@
   class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 select-none overflow-y-auto"
 >
   <div
-    class="relative w-full max-w-lg bg-[#2A303C] border border-[#384252] rounded-2xl shadow-2xl p-6 md:p-8 space-y-5 my-auto text-[#E2E8F0] font-sans"
+    class="relative w-full max-w-md bg-[#2A303C] border border-[#384252] rounded-2xl shadow-2xl p-5 md:p-6 space-y-4 my-auto text-[#E2E8F0] font-sans"
   >
-    <!-- Logo & Tittel -->
-    <div class="text-center space-y-1.5">
-      <div
-        class="inline-flex w-12 h-12 rounded-xl bg-[#9FE88D] items-center justify-center text-[#16380c] font-black shadow-sm mb-1"
-      >
-        <Trophy class="w-6 h-6 text-[#16380c]" />
-      </div>
-      <h1 class="text-2xl font-black text-white tracking-wide">
+    <!-- Tittel -->
+    <div class="text-center pt-1">
+      <h1 class="text-xl sm:text-2xl font-black text-white tracking-wide">
         Velkommen til <span class="text-[#9FE88D]">Atlantasy</span>
       </h1>
-      <p class="text-xs text-[#94A3B8] max-w-sm mx-auto leading-relaxed">
-        Den interne FPL-bedriftsligaen.
-      </p>
     </div>
 
     <!-- Modusvelger (Ny spiller / Logg inn) -->
@@ -226,10 +218,10 @@
 
     <!-- Steg-indikator for Ny Spiller -->
     {#if mode === "register"}
-      <div class="flex items-center justify-center gap-3 py-1">
+      <div class="flex items-center justify-center gap-3 py-0.5">
         <div class="flex items-center gap-2">
           <span
-            class={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center transition-colors ${
+            class={`w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center transition-colors ${
               step === 1
                 ? "bg-[#9FE88D] text-[#16380c]"
                 : "bg-[#9FE88D]/20 text-[#9FE88D] border border-[#9FE88D]/40"
@@ -246,7 +238,7 @@
 
         <div class="flex items-center gap-2">
           <span
-            class={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center transition-colors ${
+            class={`w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center transition-colors ${
               step === 2
                 ? "bg-[#9FE88D] text-[#16380c]"
                 : "bg-[#191E24] text-[#94A3B8] border border-[#384252]"
@@ -264,7 +256,7 @@
     <!-- Feilmelding -->
     {#if errorMessage}
       <div
-        class="p-3 rounded-lg bg-[#FB6F84]/15 border border-[#FB6F84]/30 text-[#FB6F84] text-xs font-medium flex items-center gap-2 animate-in fade-in"
+        class="p-2.5 rounded-lg bg-[#FB6F84]/15 border border-[#FB6F84]/30 text-[#FB6F84] text-xs font-medium flex items-center gap-2 animate-in fade-in"
       >
         <AlertCircle class="w-4 h-4 shrink-0" />
         <span>{errorMessage}</span>
@@ -272,12 +264,12 @@
     {/if}
 
     <!-- Skjema -->
-    <div class="space-y-4 text-xs">
+    <div class="space-y-3.5 text-xs">
       <!-- MODUS 1: REGISTRERING -->
       {#if mode === "register"}
         {#if step === 1}
           <!-- STEG 1: Brukernavn, Passord & Invitasjonskode -->
-          <div class="space-y-3.5 animate-in fade-in duration-150">
+          <div class="space-y-3 animate-in fade-in duration-150">
             <div>
               <label for="onboard-username" class="block font-semibold text-[#E2E8F0] mb-1">
                 Ditt navn eller brukernavn *
@@ -286,8 +278,8 @@
                 id="onboard-username"
                 type="text"
                 bind:value={username}
-                placeholder="F.eks. Stian"
-                class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+                placeholder="Ditt navn eller kallenavn"
+                class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
               />
             </div>
 
@@ -300,8 +292,8 @@
                 id="onboard-password"
                 type="password"
                 bind:value={password}
-                placeholder="F.eks. en firesifret PIN eller passord"
-                class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+                placeholder="Enkelt passord eller PIN"
+                class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
               />
             </div>
 
@@ -318,8 +310,8 @@
                 type="text"
                 bind:value={inviteCode}
                 onkeydown={(e) => e.key === "Enter" && handleProceedToStep2()}
-                placeholder="F.eks. ATLANTIS-2025 eller din personlige kode"
-                class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white font-mono uppercase focus:border-[#9FE88D] focus:outline-none"
+                placeholder="Kode får du av Stian!"
+                class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white font-mono uppercase focus:border-[#9FE88D] focus:outline-none"
               />
               <p class="text-[11px] text-[#94A3B8] mt-1">
                 Du må ha en gyldig kode fra administrator for å opprette konto.
