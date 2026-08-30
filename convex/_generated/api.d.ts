@@ -12,8 +12,11 @@ import type * as admin from "../admin.js";
 import type * as articles from "../articles.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
+import type * as cupEngine from "../cupEngine.js";
 import type * as cups from "../cups.js";
 import type * as fpl from "../fpl.js";
+import type * as fplCalendar from "../fplCalendar.js";
+import type * as roomColors from "../roomColors.js";
 import type * as rooms from "../rooms.js";
 import type * as security from "../security.js";
 
@@ -28,8 +31,11 @@ declare const fullApi: ApiFromModules<{
   articles: typeof articles;
   auth: typeof auth;
   chat: typeof chat;
+  cupEngine: typeof cupEngine;
   cups: typeof cups;
   fpl: typeof fpl;
+  fplCalendar: typeof fplCalendar;
+  roomColors: typeof roomColors;
   rooms: typeof rooms;
   security: typeof security;
 }>;

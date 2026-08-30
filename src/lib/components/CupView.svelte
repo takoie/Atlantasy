@@ -2,7 +2,6 @@
   import {
     Trophy,
     Crown,
-    Swords,
     Sparkles,
     Shield,
     Calendar,
@@ -13,7 +12,6 @@
     RefreshCw,
     Plus,
     CheckCircle2,
-    Users,
   } from "lucide-svelte";
   import CupBracket from "./cup/CupBracket.svelte";
   import CupMatchModal from "./cup/CupMatchModal.svelte";
@@ -34,6 +32,28 @@
   const cupQuery = useQuery(api.cups.getActiveCup);
   let cup = $derived(cupQuery.data ?? null);
   let matches = $derived(cup?.matches ?? []);
+
+  function formatLabel(fmt: string | undefined): string {
+    switch (fmt) {
+      case "single_elimination":
+      case "top8_single":
+        return "Enkel knockout";
+      case "double_elimination":
+      case "double_elimination_12":
+        return "Dobbel knockout";
+      case "round_robin":
+        return "Serie (alle mot alle)";
+      case "group_stage":
+      case "group_stage_12":
+        return "Gruppespill + playoffs";
+      case "lucky_loser":
+      case "lucky_loser_12":
+        return "Lucky loser";
+      default:
+        return "Knockout";
+    }
+  }
+  let cupFormatLabel = $derived(formatLabel(cup?.format));
 
   const calculateRoundMutation = useMutation(api.cups.calculateCupRoundScores);
   const advanceMatchMutation = useMutation(api.cups.advanceMatchManually);
@@ -61,19 +81,6 @@
       }
     }
     return max > 0 ? { score: max, roomName: topRoomName } : null;
-  });
-
-  // Antall ubeseirede lag (i vinnerbraketten)
-  let undefeatedRoomsCount = $derived.by(() => {
-    const activeWinners = matches.filter(
-      (m) => m.bracketType === "winners" && m.status !== "completed"
-    );
-    const rooms = new Set<string>();
-    for (const m of activeWinners) {
-      if (m.room1Id) rooms.add(m.room1Id);
-      if (m.room2Id) rooms.add(m.room2Id);
-    }
-    return rooms.size;
   });
 
   function handleOpenMatchDetails(match: any) {
@@ -124,23 +131,23 @@
 
 <div class="flex-1 flex flex-col min-h-0 space-y-3 overflow-hidden text-[#E2E8F0] font-sans">
   {#if cupQuery.isLoading}
-    <div class="flex-1 flex items-center justify-center bg-[#2A303C] rounded-2xl border border-[#384252] p-8">
-      <div class="flex flex-col items-center gap-3 text-[#94A3B8]">
+    <div class="flex-1 flex items-center justify-center bg-white/[0.055] backdrop-blur-sm rounded-2xl border border-white/10 p-8">
+      <div class="flex flex-col items-center gap-3 text-[#AEB9CC]">
         <RefreshCw class="w-8 h-8 animate-spin text-[#9FE88D]" />
-        <span class="text-sm font-semibold">Laster inn Cup & Sluttspill...</span>
+        <span class="text-sm font-semibold">Laster inn Cup & Playoffs...</span>
       </div>
     </div>
   {:else if !cup}
     <!-- Tom tilstand når ingen cup er opprettet -->
-    <div class="flex-1 flex flex-col items-center justify-center bg-[#2A303C] rounded-2xl border border-[#384252] p-8 text-center space-y-4">
+    <div class="flex-1 flex flex-col items-center justify-center bg-white/[0.055] backdrop-blur-sm rounded-2xl border border-white/10 p-8 text-center space-y-4">
       <div class="p-4 rounded-2xl bg-[#9FE88D]/15 border border-[#9FE88D]/30 text-[#9FE88D]">
         <Trophy class="w-12 h-12" />
       </div>
 
       <div class="max-w-md space-y-1">
         <h2 class="text-xl font-bold text-white">Ingen aktiv Cup opprettet ennå</h2>
-        <p class="text-xs text-[#94A3B8] leading-relaxed">
-          Sluttspillet spilles som en Double Elimination turnering der rom matches mot rom basert på snittet av de 2 beste spillerne per runde.
+        <p class="text-xs text-[#AEB9CC] leading-relaxed">
+          Playoffet spilles rom mot rom, avgjort av snittet av de 2 beste spillerne per gameweek. Format velges når cupen opprettes i adminpanelet.
         </p>
       </div>
 
@@ -153,16 +160,16 @@
           <span>Opprett og Seede Ny Cup i Adminpanelet</span>
         </button>
       {:else}
-        <div class="text-xs text-[#94A3B8] bg-[#191E24] px-4 py-2 rounded-xl border border-[#384252]">
+        <div class="text-xs text-[#AEB9CC] bg-black/20 px-4 py-2 rounded-xl border border-white/10">
           Venter på at ligaledelsen setter opp cupbraketten.
         </div>
       {/if}
     </div>
   {:else}
     <!-- Aktiv Cup Visning -->
-    <div class="flex-1 flex flex-col min-h-0 bg-[#2A303C] rounded-2xl border border-[#384252] p-3.5 sm:p-4 shadow-sm overflow-hidden space-y-3">
+    <div class="flex-1 flex flex-col min-h-0 bg-white/[0.055] backdrop-blur-sm rounded-2xl border border-white/10 p-3.5 sm:p-4 shadow-sm overflow-hidden space-y-3">
       <!-- Cup Toppheader -->
-      <div class="flex items-center justify-between pb-3 border-b border-[#384252] flex-wrap gap-2 shrink-0">
+      <div class="flex items-center justify-between pb-3 border-b border-white/10 flex-wrap gap-2 shrink-0">
         <div class="flex items-center gap-3">
           <div class="p-2.5 rounded-xl bg-gradient-to-br from-[#F4C152]/20 to-[#F4C152]/5 border border-[#F4C152]/30 text-[#F4C152] shadow-sm">
             <Trophy class="w-6 h-6" />
@@ -171,7 +178,7 @@
           <div>
             <div class="flex items-center gap-2">
               <h1 class="text-lg font-bold text-white tracking-tight">
-                {cup.name || "Atlantasy Sluttspill"}
+                {cup.name || "Atlantasy Playoffs"}
               </h1>
               <span
                 class={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
@@ -184,14 +191,14 @@
               </span>
             </div>
 
-            <div class="flex items-center gap-2 text-xs text-[#94A3B8] mt-0.5">
+            <div class="flex items-center gap-2 text-xs text-[#AEB9CC] mt-0.5">
               <span>Sesong {cup.season || "2025/2026"}</span>
               <span>•</span>
               <span class="text-[#F4C152] font-semibold">
                 Runde {cup.currentRound || 1} av {cup.totalRounds || 7}
               </span>
               <span>•</span>
-              <span class="text-[#9FE88D]">Double Elimination</span>
+              <span class="text-[#9FE88D]">{cupFormatLabel}</span>
             </div>
           </div>
         </div>
@@ -200,7 +207,7 @@
         <div class="flex items-center gap-2">
           <button
             onclick={() => (showRulesInfo = !showRulesInfo)}
-            class="px-3 py-1.5 rounded-xl bg-[#242B35] hover:bg-[#384252] text-xs font-semibold text-[#E2E8F0] border border-[#384252] transition-colors flex items-center gap-1.5"
+            class="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/10 text-xs font-semibold text-[#E2E8F0] border border-white/10 transition-colors flex items-center gap-1.5"
           >
             <Info class="w-3.5 h-3.5 text-[#70E1F8]" />
             <span>Slik fungerer Cupen</span>
@@ -235,29 +242,31 @@
 
       <!-- Nedfellbar Regelforklaring -->
       {#if showRulesInfo}
-        <div class="p-4 rounded-xl bg-[#191E24] border border-[#384252] text-xs text-[#E2E8F0] space-y-2 animate-in fade-in shrink-0">
+        <div class="p-4 rounded-xl bg-black/20 border border-white/10 text-xs text-[#E2E8F0] space-y-2 animate-in fade-in shrink-0">
           <div class="flex items-center gap-2 text-white font-bold">
             <Sparkles class="w-4 h-4 text-[#F4C152]" />
-            <span>Regler for {cup.name} ({cup.format === "lucky_loser_12" ? "12 Lag: 6 Kamper + 2 Lucky Losers" : cup.format === "double_elimination_12" ? "Double Elimination" : cup.format === "group_stage_12" ? "Gruppespill + Sluttspill" : "Topp 8 Sluttspill"})</span>
+            <span>Regler for {cup.name} ({cupFormatLabel})</span>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1 text-[#94A3B8] leading-relaxed">
-            <div class="p-2.5 rounded-lg bg-[#242B35] border border-[#384252]">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1 text-[#AEB9CC] leading-relaxed">
+            <div class="p-2.5 rounded-lg bg-white/[0.04] border border-white/10">
               <strong class="text-white block mb-1">1. Romsnitt (Topp 2)</strong>
               I hvert oppgjør er det gjennomsnittet av de 2 høyeste nettopoengene i hvert rom for gjeldende GW som avgjør hvem som vinner.
             </div>
-            <div class="p-2.5 rounded-lg bg-[#242B35] border border-[#384252]">
+            <div class="p-2.5 rounded-lg bg-white/[0.04] border border-white/10">
               <strong class="text-[#9FE88D] block mb-1">2. Avansering</strong>
-              {#if cup.format === "lucky_loser_12"}
-                Alle 12 lag spiller i R1. De 6 vinnerne + de 2 taperne med høyest romsnitt («Lucky Losers») går til kvartfinalene.
-              {:else if cup.format === "double_elimination_12"}
-                Et rom er først ute av cupen etter **2 tap**. Vinnere fortsetter i WB, mens tapere faller ned i LB.
-              {:else if cup.format === "group_stage_12"}
-                Rommene kjemper om puljepoeng i Gruppe A og B. Topp 2 fra hver gruppe går til Semifinalene.
+              {#if cup.format === "lucky_loser" || cup.format === "lucky_loser_12"}
+                Vinnerne går videre. Taperen i runde 1 med høyest romsnitt får en ny sjanse og fyller en ledig plass i bracketen.
+              {:else if cup.format === "double_elimination" || cup.format === "double_elimination_12"}
+                Et rom er først ute av cupen etter <strong>2 tap</strong>. Vinnere fortsetter i vinnerbraketten, tapere faller ned i taperbraketten og kan kjempe seg tilbake.
+              {:else if cup.format === "round_robin"}
+                Alle møter alle. Plasseringen avgjøres av gruppepoeng (3 for seier, 1 for uavgjort), deretter samlet romsnitt.
+              {:else if cup.format === "group_stage" || cup.format === "group_stage_12"}
+                Rommene kjemper om gruppepoeng i sine grupper. Gruppevinnerne går videre til playoffset.
               {:else}
-                Vinnerne avanserer direkte til neste runde i knockout-treet.
+                Vinnerne avanserer direkte til neste runde. Lag uten motstander i en runde får walkover.
               {/if}
             </div>
-            <div class="p-2.5 rounded-lg bg-[#242B35] border border-[#384252]">
+            <div class="p-2.5 rounded-lg bg-white/[0.04] border border-white/10">
               <strong class="text-[#F4C152] block mb-1">3. Tittel & Trofé</strong>
               Vinneren av den store finalen kåres til ligaens offisielle cupmester med evig heder på skryteveggen!
             </div>
@@ -268,9 +277,9 @@
       <!-- Raske Nøkkeltall / Statistikk -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
         <!-- Aktiv Runde -->
-        <div class="p-3 rounded-xl bg-[#242B35] border border-[#384252] flex items-center justify-between">
+        <div class="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between">
           <div>
-            <span class="text-[10px] uppercase font-bold text-[#94A3B8] tracking-wider">
+            <span class="text-[10px] uppercase font-bold text-[#AEB9CC] tracking-wider">
               Gjeldende Runde
             </span>
             <p class="text-sm font-bold text-white mt-0.5">
@@ -281,9 +290,9 @@
         </div>
 
         <!-- Høyeste Romsnitt i Cupen -->
-        <div class="p-3 rounded-xl bg-[#242B35] border border-[#384252] flex items-center justify-between">
+        <div class="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between">
           <div>
-            <span class="text-[10px] uppercase font-bold text-[#94A3B8] tracking-wider">
+            <span class="text-[10px] uppercase font-bold text-[#AEB9CC] tracking-wider">
               Beste Romsnitt
             </span>
             <p class="text-sm font-bold text-[#9FE88D] mt-0.5">
@@ -294,22 +303,22 @@
         </div>
 
         <!-- Format Badge -->
-        <div class="p-3 rounded-xl bg-[#242B35] border border-[#384252] flex items-center justify-between">
+        <div class="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between">
           <div>
-            <span class="text-[10px] uppercase font-bold text-[#94A3B8] tracking-wider">
+            <span class="text-[10px] uppercase font-bold text-[#AEB9CC] tracking-wider">
               Turneringsmodell
             </span>
             <p class="text-sm font-bold text-[#70E1F8] truncate mt-0.5">
-              {cup.format === "lucky_loser_12" ? "12L Lucky Loser" : cup.format === "double_elimination_12" ? "Double Elimination" : cup.format === "group_stage_12" ? "Gruppespill + Sluttspill" : "Topp 8 Sluttspill"}
+              {cupFormatLabel}
             </p>
           </div>
           <Shield class="w-5 h-5 text-[#70E1F8]" />
         </div>
 
         <!-- Tittelforsvarer / Mester -->
-        <div class="p-3 rounded-xl bg-[#242B35] border border-[#384252] flex items-center justify-between">
+        <div class="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between">
           <div>
-            <span class="text-[10px] uppercase font-bold text-[#94A3B8] tracking-wider">
+            <span class="text-[10px] uppercase font-bold text-[#AEB9CC] tracking-wider">
               Status / Mester
             </span>
             <p class="text-sm font-bold text-[#F4C152] truncate mt-0.5">

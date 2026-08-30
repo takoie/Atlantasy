@@ -38,7 +38,7 @@
 
   // Countdown state
   let targetDeadline = $derived(
-    deadlineEpoch || (Date.now() + (6 * 24 + 18) * 3600 * 1000) // Standard neste fredag frist
+    deadlineEpoch || (Date.now() + (6 * 24 + 18) * 3600 * 1000) // Standard neste fredag deadline
   );
 
   let timeLeft = $state({
@@ -177,7 +177,7 @@
 
 <header
   bind:this={headerElement}
-  class="relative h-11 w-full bg-[#191E24] border-b border-[#384252] flex items-center justify-between select-none shrink-0 z-40 titlebar-drag-region text-[#E2E8F0] font-sans px-3"
+  class="relative h-11 w-full bg-transparent flex items-center justify-between select-none shrink-0 z-40 titlebar-drag-region text-[#E2E8F0] font-sans px-3"
   data-tauri-drag-region
 >
   <!-- Venstre: Usynlig avstandsholder -->
@@ -202,17 +202,17 @@
   <div class="flex items-center gap-2 titlebar-no-drag ml-auto">
     <!-- Brukerstatus & Logg inn / ut -->
     {#if currentUser}
-      <div class="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[#242B35] border border-[#384252] shadow-sm">
+      <div class="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-white/[0.05] border border-white/[0.08] shadow-sm backdrop-blur-sm">
         <img
           src={currentUser.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${currentUser.username}`}
           alt=""
-          class="w-5 h-5 rounded-full bg-[#191E24] border border-[#384252]"
+          class="w-5 h-5 rounded-full bg-white/[0.06] border border-white/[0.1]"
         />
         <div class="hidden sm:flex flex-col text-left">
           <span class="text-xs font-bold text-white leading-tight truncate max-w-[110px]">
             {currentUser.username}
           </span>
-          <span class="text-[9px] font-mono text-[#94A3B8] uppercase leading-tight">
+          <span class="text-[9px] font-mono text-[#AEB9CC] uppercase leading-tight">
             {currentUser.role === "admin" ? "Admin" : (currentUser.fplTeamName || "Spiller")}
           </span>
         </div>
@@ -220,7 +220,7 @@
           type="button"
           onclick={onLogout}
           title="Logg ut av bruker"
-          class="p-1 rounded-lg text-[#94A3B8] hover:text-[#FB6F84] hover:bg-[#384252] transition-colors ml-0.5"
+          class="p-1 rounded-lg text-[#AEB9CC] hover:text-[#FB6F84] hover:bg-white/[0.09] transition-colors ml-0.5"
         >
           <LogOut class="w-3.5 h-3.5" />
         </button>
@@ -238,7 +238,7 @@
 
     <!-- Tilkoblingsstatus -->
     <div
-      class="hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded text-xs text-[#94A3B8]"
+      class="hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded text-xs text-[#AEB9CC]"
       title={isConvexConnected
         ? "Tilkoblet Convex sanntidsdatabase"
         : "Frakoblet / Prøver å koble til..."}
@@ -258,7 +258,7 @@
       <button
         type="button"
         onclick={handleMinimize}
-        class="h-8 w-9 flex items-center justify-center hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors"
+        class="h-8 w-9 flex items-center justify-center hover:bg-white/[0.09] text-[#AEB9CC] hover:text-white transition-colors"
         title="Minimer"
       >
         <Minus class="w-3.5 h-3.5" />
@@ -266,7 +266,7 @@
       <button
         type="button"
         onclick={handleToggleMaximize}
-        class="h-8 w-9 flex items-center justify-center hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors"
+        class="h-8 w-9 flex items-center justify-center hover:bg-white/[0.09] text-[#AEB9CC] hover:text-white transition-colors"
         title={isMaximized ? "Gjenopprett" : "Maksimer"}
       >
         {#if isMaximized}
@@ -278,7 +278,7 @@
       <button
         type="button"
         onclick={handleClose}
-        class="h-8 w-9 flex items-center justify-center hover:bg-[#FB6F84] text-[#94A3B8] hover:text-white transition-colors rounded-tr-lg"
+        class="h-8 w-9 flex items-center justify-center hover:bg-[#FB6F84] text-[#AEB9CC] hover:text-white transition-colors rounded-tr-lg"
         title="Lukk"
       >
         <X class="w-4 h-4" />

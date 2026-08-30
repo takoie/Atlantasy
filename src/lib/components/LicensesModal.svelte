@@ -192,10 +192,10 @@ Copyright (c) Microsoft Corporation.`,
 {#if isOpen}
   <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
     <div
-      class="bg-[#242B35] border border-[#384252] rounded-3xl w-full max-w-3xl max-h-[85vh] overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150 font-sans text-[#E2E8F0] flex flex-col"
+      class="bg-white/[0.04] border border-white/10 rounded-3xl w-full max-w-3xl max-h-[85vh] overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150 font-sans text-[#E2E8F0] flex flex-col"
     >
       <!-- Header -->
-      <div class="p-6 bg-[#191E24] border-b border-[#384252] flex items-start justify-between gap-4">
+      <div class="p-6 bg-black/20 border-b border-white/10 flex items-start justify-between gap-4">
         <div class="flex items-center gap-3.5">
           <div class="w-12 h-12 rounded-2xl bg-[#70E1F8]/20 border border-[#70E1F8]/40 text-[#70E1F8] flex items-center justify-center shadow-inner shrink-0">
             <ShieldCheck class="w-6 h-6 text-[#70E1F8]" />
@@ -204,11 +204,11 @@ Copyright (c) Microsoft Corporation.`,
           <div>
             <h3 class="text-lg font-black text-white leading-tight flex items-center gap-2">
               <span>Lisenser</span>
-              <span class="text-xs px-2.5 py-0.5 rounded-full bg-[#2A303C] text-[#70E1F8] font-bold border border-[#384252]">
+              <span class="text-xs px-2.5 py-0.5 rounded-full bg-white/[0.055] backdrop-blur-sm text-[#70E1F8] font-bold border border-white/10">
                 {licenses.length} biblioteker
               </span>
             </h3>
-            <p class="text-xs text-[#94A3B8] mt-0.5">
+            <p class="text-xs text-[#AEB9CC] mt-0.5">
               Oversikt over åpen kildekode (Open Source) og tredjepartskomponenter brukt i Atlantasy.
             </p>
           </div>
@@ -217,7 +217,7 @@ Copyright (c) Microsoft Corporation.`,
         <button
           type="button"
           onclick={() => (isOpen = false)}
-          class="p-2 rounded-xl text-[#94A3B8] hover:text-white hover:bg-[#2A303C] transition-colors"
+          class="p-2 rounded-xl text-[#AEB9CC] hover:text-white hover:bg-white/[0.055] transition-colors"
           title="Lukk"
         >
           <X class="w-5 h-5" />
@@ -225,14 +225,14 @@ Copyright (c) Microsoft Corporation.`,
       </div>
 
       <!-- Søk og Kategori-faner -->
-      <div class="p-4 bg-[#1F252E] border-b border-[#384252] space-y-3 shrink-0">
+      <div class="p-4 bg-white/[0.04] border-b border-white/10 space-y-3 shrink-0">
         <div class="relative">
-          <Search class="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search class="w-4 h-4 text-[#AEB9CC] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             bind:value={searchQuery}
             placeholder="Søk etter pakke, lisens eller forfatter (f.eks. Svelte, MIT, Tauri)..."
-            class="w-full pl-10 pr-4 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-xs text-white placeholder-[#94A3B8] focus:border-[#70E1F8] focus:outline-none"
+            class="w-full pl-10 pr-4 py-2 rounded-xl bg-black/20 border border-white/10 text-xs text-white placeholder-[#AEB9CC] focus:border-[#70E1F8] focus:outline-none"
           />
         </div>
 
@@ -243,7 +243,7 @@ Copyright (c) Microsoft Corporation.`,
             class={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
               selectedCategory === "all"
                 ? "bg-[#70E1F8] text-black shadow-sm"
-                : "bg-[#242B35] text-[#94A3B8] hover:text-white border border-[#384252]"
+                : "bg-white/[0.04] text-[#AEB9CC] hover:text-white border border-white/10"
             }`}
           >
             Alle ({licenses.length})
@@ -254,7 +254,7 @@ Copyright (c) Microsoft Corporation.`,
             class={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
               selectedCategory === "frontend"
                 ? "bg-[#70E1F8] text-black shadow-sm"
-                : "bg-[#242B35] text-[#94A3B8] hover:text-white border border-[#384252]"
+                : "bg-white/[0.04] text-[#AEB9CC] hover:text-white border border-white/10"
             }`}
           >
             Frontend
@@ -265,7 +265,7 @@ Copyright (c) Microsoft Corporation.`,
             class={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
               selectedCategory === "desktop"
                 ? "bg-[#70E1F8] text-black shadow-sm"
-                : "bg-[#242B35] text-[#94A3B8] hover:text-white border border-[#384252]"
+                : "bg-white/[0.04] text-[#AEB9CC] hover:text-white border border-white/10"
             }`}
           >
             Desktop & Rust
@@ -276,7 +276,7 @@ Copyright (c) Microsoft Corporation.`,
             class={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
               selectedCategory === "backend"
                 ? "bg-[#70E1F8] text-black shadow-sm"
-                : "bg-[#242B35] text-[#94A3B8] hover:text-white border border-[#384252]"
+                : "bg-white/[0.04] text-[#AEB9CC] hover:text-white border border-white/10"
             }`}
           >
             Backend
@@ -287,7 +287,7 @@ Copyright (c) Microsoft Corporation.`,
             class={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
               selectedCategory === "assets"
                 ? "bg-[#70E1F8] text-black shadow-sm"
-                : "bg-[#242B35] text-[#94A3B8] hover:text-white border border-[#384252]"
+                : "bg-white/[0.04] text-[#AEB9CC] hover:text-white border border-white/10"
             }`}
           >
             Ikoner & Fonter
@@ -298,8 +298,8 @@ Copyright (c) Microsoft Corporation.`,
       <!-- Lisensliste -->
       <div class="p-6 space-y-3 flex-1 overflow-y-auto custom-scrollbar">
         {#if filteredLicenses.length === 0}
-          <div class="py-12 text-center text-[#94A3B8] space-y-2">
-            <Info class="w-8 h-8 mx-auto text-[#94A3B8]" />
+          <div class="py-12 text-center text-[#AEB9CC] space-y-2">
+            <Info class="w-8 h-8 mx-auto text-[#AEB9CC]" />
             <p class="text-sm font-bold text-white">Ingen biblioteker matchet søket ditt</p>
             <p class="text-xs">Prøv et annet søkeord eller velg en annen kategori.</p>
           </div>
@@ -308,8 +308,8 @@ Copyright (c) Microsoft Corporation.`,
             {#each filteredLicenses as item (item.name)}
               {@const isExpanded = expandedPackage === item.name}
               <div
-                class={`p-4 rounded-2xl bg-[#191E24] border transition-all duration-200 ${
-                  isExpanded ? "border-[#70E1F8]/60 shadow-md" : "border-[#384252] hover:border-[#70E1F8]/30"
+                class={`p-4 rounded-2xl bg-black/20 border transition-all duration-200 ${
+                  isExpanded ? "border-[#70E1F8]/60 shadow-md" : "border-white/10 hover:border-[#70E1F8]/30"
                 }`}
               >
                 <div class="flex items-start justify-between gap-3">
@@ -318,7 +318,7 @@ Copyright (c) Microsoft Corporation.`,
                       <span class="font-black text-white text-sm sm:text-base">
                         {item.name}
                       </span>
-                      <span class="text-[11px] font-mono text-[#94A3B8]">
+                      <span class="text-[11px] font-mono text-[#AEB9CC]">
                         v{item.version}
                       </span>
                       <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-[#70E1F8]/15 text-[#70E1F8] border border-[#70E1F8]/30">
@@ -326,7 +326,7 @@ Copyright (c) Microsoft Corporation.`,
                       </span>
                     </div>
 
-                    <p class="text-xs text-[#94A3B8]">
+                    <p class="text-xs text-[#AEB9CC]">
                       Utviklet av: <strong class="text-white">{item.author}</strong>
                     </p>
 
@@ -340,7 +340,7 @@ Copyright (c) Microsoft Corporation.`,
                       href={item.url}
                       target="_blank"
                       rel="noreferrer"
-                      class="p-2 rounded-xl bg-[#242B35] hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors border border-[#384252]"
+                      class="p-2 rounded-xl bg-white/[0.04] hover:bg-white/10 text-[#AEB9CC] hover:text-white transition-colors border border-white/10"
                       title="Åpne offisiell nettside / kildekode"
                     >
                       <ExternalLink class="w-3.5 h-3.5" />
@@ -350,7 +350,7 @@ Copyright (c) Microsoft Corporation.`,
                       <button
                         type="button"
                         onclick={() => toggleExpand(item.name)}
-                        class="px-3 py-1.5 rounded-xl bg-[#242B35] hover:bg-[#384252] text-xs font-bold text-[#E2E8F0] transition-colors border border-[#384252]"
+                        class="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/10 text-xs font-bold text-[#E2E8F0] transition-colors border border-white/10"
                       >
                         {isExpanded ? "Skjul tekst" : "Vis lisens"}
                       </button>
@@ -360,8 +360,8 @@ Copyright (c) Microsoft Corporation.`,
 
                 <!-- Utvidet lisenstekst -->
                 {#if isExpanded && item.fullText}
-                  <div class="mt-3 pt-3 border-t border-[#384252]/60 space-y-2 animate-in fade-in duration-150">
-                    <div class="flex items-center justify-between text-[11px] text-[#94A3B8]">
+                  <div class="mt-3 pt-3 border-t border-white/10/60 space-y-2 animate-in fade-in duration-150">
+                    <div class="flex items-center justify-between text-[11px] text-[#AEB9CC]">
                       <span>Full lisenstekst:</span>
                       <button
                         type="button"
@@ -378,7 +378,7 @@ Copyright (c) Microsoft Corporation.`,
                       </button>
                     </div>
 
-                    <pre class="p-3 rounded-xl bg-[#12161B] border border-[#384252] text-[11px] font-mono text-[#94A3B8] whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto custom-scrollbar">{item.fullText}</pre>
+                    <pre class="p-3 rounded-xl bg-black/30 border border-white/10 text-[11px] font-mono text-[#AEB9CC] whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto custom-scrollbar">{item.fullText}</pre>
                   </div>
                 {/if}
               </div>
@@ -388,7 +388,7 @@ Copyright (c) Microsoft Corporation.`,
       </div>
 
       <!-- Footer -->
-      <div class="p-4 bg-[#191E24] border-t border-[#384252] flex items-center justify-between text-xs text-[#94A3B8] shrink-0">
+      <div class="p-4 bg-black/20 border-t border-white/10 flex items-center justify-between text-xs text-[#AEB9CC] shrink-0">
         <span>Atlantasy er bygget med stolthet på åpen kildekode</span>
         <button
           type="button"

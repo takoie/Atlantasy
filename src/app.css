@@ -5,6 +5,14 @@
 @layer base {
   :root {
     color-scheme: dark;
+
+    /* Helhetlig, litt blåtonet mørk palett (mindre "grå") */
+    --app-bg: #141821;
+    --app-bg-elev: #171c26;
+    --surface: #1b2330;
+    --surface-2: #202a3a;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --hairline-soft: rgba(255, 255, 255, 0.035);
   }
 
   * {
@@ -12,13 +20,15 @@
   }
 
   body {
-    @apply bg-[#1c2128] text-[#E2E8F0] antialiased select-none font-sans overflow-hidden;
+    @apply text-[#E2E8F0] antialiased select-none font-sans overflow-hidden;
     margin: 0;
     padding: 0;
     height: 100vh;
     width: 100vw;
     user-select: none;
     -webkit-user-select: none;
+    /* Selve gradienten males på <main> (ett element, ingen skjøter) */
+    background-color: #0f1826;
   }
 }
 
@@ -40,14 +50,14 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #191E24;
+  background: #141b27;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: #3a4a66;
   border-radius: 9999px;
-  border: 1px solid #191E24;
+  border: 1px solid #141b27;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -56,12 +66,12 @@
 
 /* DaisyUI Dim themed panels */
 .dim-panel {
-  background: #2A303C;
-  border: 1px solid #384252;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
 }
 
 .dim-card {
-  background: #242B35;
-  border: 1px solid #384252;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
 }
 

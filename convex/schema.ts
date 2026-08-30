@@ -27,7 +27,8 @@ export default defineSchema({
   // Rom (Rom A1 - A12)
   rooms: defineTable({
     roomNumber: v.number(), // 1 - 12
-    name: v.string(),       // f.eks. "A1 - The Devs" eller "A1"
+    name: v.string(),       // fullt romnavn, f.eks. "The Devs"
+    tag: v.optional(v.string()), // kort "nick"/etikett, f.eks. "A1" – redigerbar
     description: v.optional(v.string()),
     accentColor: v.optional(v.string()), // Hex eller Tailwind farge
     avatar: v.optional(v.string()),
@@ -45,6 +46,11 @@ export default defineSchema({
     totalPoints: v.number(),
     currentGwPoints: v.number(),
     currentGwTransfersCost: v.number(), // Transfer hits (-4 per ekstra bytte)
+    captainName: v.optional(v.string()),
+    captainPoints: v.optional(v.number()),
+    benchPoints: v.optional(v.number()),
+    benchedPlayer: v.optional(v.string()),
+    totalHitsCost: v.optional(v.number()),
     lastUpdated: v.number(),
   })
     .index("by_entryId", ["entryId"])
@@ -75,10 +81,16 @@ export default defineSchema({
   gameweek_scores: defineTable({
     entryId: v.number(),
     gameweek: v.number(),
+    monthKey: v.optional(v.string()),      // "YYYY-MM" utledet fra GW-fristen
     points: v.number(),
     transfersCost: v.number(),     // Hits
     netPoints: v.number(),         // Points - transfersCost
+    benchPoints: v.optional(v.number()),   // points_on_bench for runden
     captainName: v.optional(v.string()),
+    captainPoints: v.optional(v.number()), // kapteinens rå event-poeng
+    activeChip: v.optional(v.string()),    // wildcard | 3xc | bboost | freehit
+    source: v.optional(v.string()),        // "live" (full picks-synk) | "backfill" (kun history)
+    f1Points: v.optional(v.number()),      // F1-poeng for runden (25,18,15,... etter netto-rangering), lagres når GW er ferdig
     rank: v.optional(v.number()),
     lastCalculated: v.number(),
   })
@@ -89,6 +101,7 @@ export default defineSchema({
   room_gameweek_scores: defineTable({
     roomId: v.id("rooms"),
     gameweek: v.number(),
+    monthKey: v.optional(v.string()),      // "YYYY-MM" utledet fra GW-fristen
     averageTop2: v.number(),       // (Top1 + Top2) / 2
     top1EntryId: v.number(),
     top1Points: v.number(),

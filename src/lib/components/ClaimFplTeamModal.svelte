@@ -80,21 +80,21 @@
 
 {#if isOpen}
   <div class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 select-none">
-    <div class="relative w-full max-w-md bg-[#242B35] border border-[#384252] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+    <div class="relative w-full max-w-md bg-white/[0.04] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
       <!-- Header -->
-      <div class="flex items-center justify-between p-4 px-5 border-b border-[#384252] bg-[#191E24]">
+      <div class="flex items-center justify-between p-4 px-5 border-b border-white/10 bg-black/20">
         <div class="flex items-center gap-2.5">
           <div class="p-2 rounded-xl bg-[#70E1F8]/10 text-[#70E1F8] border border-[#70E1F8]/30">
             <Shirt class="w-4 h-4" />
           </div>
           <div>
             <h3 class="text-sm font-bold text-white">Koble ditt FPL-lag</h3>
-            <p class="text-[11px] text-[#94A3B8]">Velg laget ditt i Fantasy Premier League</p>
+            <p class="text-[11px] text-[#AEB9CC]">Velg laget ditt i Fantasy Premier League</p>
           </div>
         </div>
         <button
           onclick={onClose}
-          class="p-1.5 rounded-lg text-[#94A3B8] hover:text-white hover:bg-[#2A303C] transition-colors"
+          class="p-1.5 rounded-lg text-[#AEB9CC] hover:text-white hover:bg-white/[0.055] transition-colors"
         >
           <X class="w-4 h-4" />
         </button>
@@ -120,12 +120,12 @@
         <!-- Søkefelt og Oppdateringsknapp -->
         <div class="flex items-center gap-2">
           <div class="relative flex-1">
-            <Search class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
+            <Search class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#AEB9CC]" />
             <input
               type="text"
               bind:value={searchQuery}
               placeholder="Søk etter lagnavn, manager eller entry ID..."
-              class="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-xs text-white placeholder-[#94A3B8] focus:border-[#9FE88D] focus:outline-none"
+              class="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-black/20 border border-white/10 text-xs text-white placeholder-[#AEB9CC] focus:border-[#9FE88D] focus:outline-none"
             />
           </div>
           <button
@@ -133,7 +133,7 @@
             disabled={isSyncing}
             onclick={handleRefresh}
             title="Synkroniser og oppdater laglisten direkte fra FPL"
-            class="p-2.5 rounded-xl bg-[#191E24] hover:bg-[#2A303C] border border-[#384252] hover:border-[#70E1F8]/50 text-[#70E1F8] transition-colors shrink-0"
+            class="p-2.5 rounded-xl bg-black/20 hover:bg-white/[0.055] border border-white/10 hover:border-[#70E1F8]/50 text-[#70E1F8] transition-colors shrink-0"
           >
             <RefreshCw class={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
           </button>
@@ -142,8 +142,8 @@
         <!-- Lagliste -->
         <div class="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar pr-1">
           {#if availableTeams.length === 0}
-            <div class="p-4 rounded-xl bg-[#191E24] border border-[#384252] text-center space-y-3">
-              <p class="text-xs text-[#94A3B8]">
+            <div class="p-4 rounded-xl bg-black/20 border border-white/10 text-center space-y-3">
+              <p class="text-xs text-[#AEB9CC]">
                 {fplTeams.length === 0 ? "Ingen lag er synkronisert fra FPL ennå." : "Ingen ledige lag matcher søket ditt."}
               </p>
               <button
@@ -165,14 +165,14 @@
                 class={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between ${
                   isSelected
                     ? "bg-[#9FE88D]/15 border-[#9FE88D] text-white shadow-sm"
-                    : "bg-[#191E24] border-[#384252] text-[#94A3B8] hover:border-[#94A3B8]/60 hover:text-white"
+                    : "bg-black/20 border-white/10 text-[#AEB9CC] hover:border-[#AEB9CC]/60 hover:text-white"
                 }`}
               >
                 <div>
                   <span class={`text-xs font-bold block ${isSelected ? "text-[#9FE88D]" : "text-white"}`}>
                     {team.teamName}
                   </span>
-                  <span class="text-[11px] text-[#94A3B8]">
+                  <span class="text-[11px] text-[#AEB9CC]">
                     Manager: {team.managerName}
                   </span>
                 </div>
@@ -186,11 +186,11 @@
       </div>
 
       <!-- Footer -->
-      <div class="p-4 border-t border-[#384252] bg-[#191E24] flex items-center justify-between gap-3">
+      <div class="p-4 border-t border-white/10 bg-black/20 flex items-center justify-between gap-3">
         <button
           type="button"
           onclick={onClose}
-          class="px-4 py-2 rounded-xl bg-[#2A303C] hover:bg-[#384252] text-xs font-semibold text-[#94A3B8] hover:text-white transition-colors"
+          class="px-4 py-2 rounded-xl bg-white/[0.055] backdrop-blur-sm hover:bg-white/10 text-xs font-semibold text-[#AEB9CC] hover:text-white transition-colors"
         >
           Avbryt
         </button>

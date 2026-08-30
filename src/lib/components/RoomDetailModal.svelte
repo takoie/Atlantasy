@@ -56,10 +56,10 @@
 {#if isOpen && room}
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 text-[#E2E8F0] font-sans">
     <div
-      class="w-full max-w-2xl bg-[#2A303C] border border-[#384252] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150"
+      class="w-full max-w-2xl bg-white/[0.055] backdrop-blur-sm border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150"
     >
       <!-- Modal Header -->
-      <div class="p-5 border-b border-[#384252] bg-[#191E24] flex items-center justify-between">
+      <div class="p-5 border-b border-white/10 bg-black/20 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <span
             class="w-3.5 h-3.5 rounded-full shrink-0"
@@ -73,7 +73,7 @@
                   <button
                     onclick={() => (isEditingName = true)}
                     title="Endre rommets kallenavn"
-                    class="p-1 rounded hover:bg-[#242B35] text-[#94A3B8] hover:text-[#9FE88D] transition-colors"
+                    class="p-1 rounded hover:bg-white/[0.04] text-[#AEB9CC] hover:text-[#9FE88D] transition-colors"
                   >
                     <Edit2 class="w-3.5 h-3.5" />
                   </button>
@@ -87,7 +87,7 @@
                   bind:value={nicknameInput}
                   onkeydown={(e) => e.key === "Enter" && handleSaveNickname()}
                   placeholder="Skriv kallenavn for rommet..."
-                  class="px-2.5 py-1 text-xs rounded-lg bg-[#191E24] border border-[#9FE88D] text-white focus:outline-none w-48 font-semibold"
+                  class="px-2.5 py-1 text-xs rounded-lg bg-black/20 border border-[#9FE88D] text-white focus:outline-none w-48 font-semibold"
                 />
                 <button
                   onclick={handleSaveNickname}
@@ -98,10 +98,10 @@
               </div>
             {/if}
 
-            <p class="text-xs text-[#94A3B8] mt-0.5">
+            <p class="text-xs text-[#AEB9CC] mt-0.5">
               A{room.roomNumber} • {room.description || "Offisielt liga-rom"}
               {#if !canEditRoom}
-                <span class="text-[10px] text-[#94A3B8]/70 ml-1.5 inline-flex items-center gap-1">
+                <span class="text-[10px] text-[#AEB9CC]/70 ml-1.5 inline-flex items-center gap-1">
                   <Lock class="w-2.5 h-2.5" /> Kun rom-medlemmer med lag kan endre navn
                 </span>
               {/if}
@@ -111,7 +111,7 @@
 
         <button
           onclick={onClose}
-          class="p-1.5 rounded-lg bg-[#242B35] hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors"
+          class="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/10 text-[#AEB9CC] hover:text-white transition-colors"
         >
           <X class="w-4 h-4" />
         </button>
@@ -121,26 +121,26 @@
       <div class="p-5 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
         <!-- Statistikk-bannere -->
         <div class="grid grid-cols-3 gap-3">
-          <div class="p-3 rounded-xl bg-[#242B35] border border-[#384252] text-center">
-            <span class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-wider block mb-1">
+          <div class="p-3 rounded-xl bg-white/[0.04] border border-white/10 text-center">
+            <span class="text-[10px] text-[#AEB9CC] font-medium uppercase tracking-wider block mb-1">
               Live romsnitt
             </span>
             <span class="text-xl font-bold text-[#9FE88D] font-mono">
-              {room.liveAverage ?? "--"} <span class="text-xs text-[#94A3B8]">pts</span>
+              {room.liveAverage ?? "--"} <span class="text-xs text-[#AEB9CC]">pts</span>
             </span>
           </div>
 
-          <div class="p-3 rounded-xl bg-[#242B35] border border-[#384252] text-center">
-            <span class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-wider block mb-1">
+          <div class="p-3 rounded-xl bg-white/[0.04] border border-white/10 text-center">
+            <span class="text-[10px] text-[#AEB9CC] font-medium uppercase tracking-wider block mb-1">
               Sesong totalt
             </span>
             <span class="text-xl font-bold text-[#F4C152] font-mono">
-              {room.seasonTotal ?? "--"} <span class="text-xs text-[#94A3B8]">pts</span>
+              {room.seasonTotal ?? "--"} <span class="text-xs text-[#AEB9CC]">pts</span>
             </span>
           </div>
 
-          <div class="p-3 rounded-xl bg-[#242B35] border border-[#384252] text-center">
-            <span class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-wider block mb-1">
+          <div class="p-3 rounded-xl bg-white/[0.04] border border-white/10 text-center">
+            <span class="text-[10px] text-[#AEB9CC] font-medium uppercase tracking-wider block mb-1">
               Antall spillere
             </span>
             <span class="text-xl font-bold text-[#E2E8F0] font-mono">
@@ -156,13 +156,13 @@
               <Users class="w-3.5 h-3.5 text-[#9FE88D]" />
               <span>Spillere i dette rommet ({room.teams?.length || 0})</span>
             </h3>
-            <span class="text-[11px] text-[#94A3B8]">
+            <span class="text-[11px] text-[#AEB9CC]">
               Topp 2 spillere danner romsnittet
             </span>
           </div>
 
           {#if !room.teams || room.teams.length === 0}
-            <div class="p-6 text-center bg-[#242B35] rounded-xl border border-[#384252] text-[#94A3B8] text-xs">
+            <div class="p-6 text-center bg-white/[0.04] rounded-xl border border-white/10 text-[#AEB9CC] text-xs">
               Ingen spillere er registrert i dette rommet enda.
             </div>
           {:else}
@@ -173,20 +173,20 @@
                   tabindex="0"
                   onclick={() => onOpenProfile(team.entryId)}
                   onkeydown={(e) => (e.key === "Enter" || e.key === " ") && onOpenProfile(team.entryId)}
-                  class={`p-3 rounded-xl bg-[#242B35] border transition-all cursor-pointer group shadow-sm flex items-center justify-between gap-3 ${
+                  class={`p-3 rounded-xl bg-white/[0.04] border transition-all cursor-pointer group shadow-sm flex items-center justify-between gap-3 ${
                     idx < 2
-                      ? "border-[#9FE88D]/40 hover:border-[#9FE88D] bg-[#242B35]"
-                      : "border-[#384252] hover:border-[#4B5563]"
+                      ? "border-[#9FE88D]/40 hover:border-[#9FE88D] bg-white/[0.04]"
+                      : "border-white/10 hover:border-[#4B5563]"
                   }`}
                 >
                   <div class="flex items-center gap-3 min-w-0">
-                    <div class="w-7 h-7 rounded-lg bg-[#191E24] border border-[#384252] flex items-center justify-center text-xs font-bold font-mono shrink-0">
+                    <div class="w-7 h-7 rounded-lg bg-black/20 border border-white/10 flex items-center justify-center text-xs font-bold font-mono shrink-0">
                       {#if idx === 0}
                         <span>🥇</span>
                       {:else if idx === 1}
                         <span>🥈</span>
                       {:else}
-                        <span class="text-[#94A3B8]">#{idx + 1}</span>
+                        <span class="text-[#AEB9CC]">#{idx + 1}</span>
                       {/if}
                     </div>
 
@@ -199,7 +199,7 @@
                           </span>
                         {/if}
                       </div>
-                      <p class="text-[11px] text-[#94A3B8] truncate mt-0.5">{team.teamName}</p>
+                      <p class="text-[11px] text-[#AEB9CC] truncate mt-0.5">{team.teamName}</p>
                     </div>
                   </div>
 
@@ -208,7 +208,7 @@
                       <div class="text-sm font-bold text-[#9FE88D] font-mono leading-tight">
                         {team.effectivePoints ?? team.currentGwPoints ?? 0} pts
                       </div>
-                      <div class="text-[10px] text-[#94A3B8] font-mono leading-tight mt-0.5">
+                      <div class="text-[10px] text-[#AEB9CC] font-mono leading-tight mt-0.5">
                         Totalt: {team.totalPoints ?? team.total ?? "--"}p
                       </div>
                     </div>

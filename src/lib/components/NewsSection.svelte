@@ -504,9 +504,9 @@
   }
 </script>
 
-<div class="flex-1 flex flex-col h-full bg-[#2A303C] rounded-2xl border border-[#384252] shadow-sm overflow-hidden text-[#E2E8F0] font-sans">
+<div class="flex-1 flex flex-col h-full bg-white/[0.055] backdrop-blur-sm rounded-2xl border border-white/10 shadow-sm overflow-hidden text-[#E2E8F0] font-sans">
   <!-- Toppheader med faner og Opprett-knapp -->
-  <div class="p-4 border-b border-[#384252] bg-[#191E24] flex flex-wrap items-center justify-between gap-3 shrink-0">
+  <div class="p-4 border-b border-white/10 bg-black/20 flex flex-wrap items-center justify-between gap-3 shrink-0">
     <div class="flex items-center gap-3">
       <div class="p-2 rounded-xl bg-[#F471B5]/15 border border-[#F471B5]/30 text-[#F471B5]">
         <Newspaper class="w-5 h-5" />
@@ -514,24 +514,24 @@
       <div>
         <h2 class="text-base font-bold text-white flex items-center gap-2">
           <span>Nyheter</span>
-          <span class="text-xs px-2.5 py-0.5 rounded-full bg-[#2A303C] text-[#F471B5] font-bold border border-[#384252]">
+          <span class="text-xs px-2.5 py-0.5 rounded-full bg-white/[0.055] backdrop-blur-sm text-[#F471B5] font-bold border border-white/10">
             {activeCount} artikler
           </span>
         </h2>
-        <p class="text-xs text-[#94A3B8]">Runderapporter, taktikkspalter, overgangsrykter og analyser</p>
+        <p class="text-xs text-[#AEB9CC]">Runderapporter, taktikkspalter, overgangsrykter og analyser</p>
       </div>
     </div>
 
     <!-- Høyre: Filterfaner & Opprett Nyhet (for Admin) -->
     <div class="flex items-center gap-2">
       <!-- Faner: Aktive / Arkiv -->
-      <div class="flex items-center gap-1 p-1 bg-[#242B35] rounded-xl border border-[#384252] text-xs">
+      <div class="flex items-center gap-1 p-1 bg-white/[0.04] rounded-xl border border-white/10 text-xs">
         <button
           onclick={() => (activeFilterTab = "active")}
           class={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
             activeFilterTab === "active"
               ? "bg-[#F471B5] text-black shadow-sm"
-              : "text-[#94A3B8] hover:text-white"
+              : "text-[#AEB9CC] hover:text-white"
           }`}
         >
           Aktive ({activeCount})
@@ -541,7 +541,7 @@
           class={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
             activeFilterTab === "archived"
               ? "bg-[#F471B5] text-black shadow-sm"
-              : "text-[#94A3B8] hover:text-white"
+              : "text-[#AEB9CC] hover:text-white"
           }`}
         >
           Arkiv ({archivedCount})
@@ -563,12 +563,12 @@
   <!-- Artikkelstrøm (Nettavis Grid) -->
   <div class="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
     {#if displayedArticles.length === 0}
-      <div class="h-full flex flex-col items-center justify-center text-center p-8 space-y-3 text-[#94A3B8]">
-        <div class="w-14 h-14 rounded-2xl bg-[#242B35] border border-[#384252] flex items-center justify-center text-[#F471B5] mb-1">
+      <div class="h-full flex flex-col items-center justify-center text-center p-8 space-y-3 text-[#AEB9CC]">
+        <div class="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-[#F471B5] mb-1">
           <Newspaper class="w-7 h-7" />
         </div>
         <p class="text-base font-bold text-white">Ingen nyheter publisert her enda</p>
-        <p class="text-xs text-[#94A3B8] max-w-sm">
+        <p class="text-xs text-[#AEB9CC] max-w-sm">
           {currentUser?.role === "admin"
             ? "Trykk på 'Skriv nyhet' øverst for å publisere den første runderapporten med bilder og sitater!"
             : "Ligaledelsen vil publisere runderapporter og nyheter her etter hvert som runden spilles."}
@@ -583,15 +583,15 @@
             tabindex="0"
             onclick={() => (selectedArticle = article)}
             onkeydown={(e) => (e.key === "Enter" || e.key === " ") && (selectedArticle = article)}
-            class={`rounded-2xl bg-[#242B35] border transition-all cursor-pointer flex flex-col overflow-hidden group shadow-sm hover:shadow-xl hover:-translate-y-0.5 ${
+            class={`rounded-2xl bg-white/[0.04] border transition-all cursor-pointer flex flex-col overflow-hidden group shadow-sm hover:shadow-xl hover:-translate-y-0.5 ${
               article.isPinned
                 ? "border-[#F4C152]/70 ring-1 ring-[#F4C152]/20"
-                : "border-[#384252] hover:border-[#F471B5]/60"
+                : "border-white/10 hover:border-[#F471B5]/60"
             }`}
           >
             <!-- Toppbilde / Cover hvis finnes -->
             {#if article.imageUrl}
-              <div class="relative h-44 w-full bg-[#191E24] overflow-hidden shrink-0 border-b border-[#384252]">
+              <div class="relative h-44 w-full bg-black/20 overflow-hidden shrink-0 border-b border-white/10">
                 <img
                   src={article.imageUrl}
                   alt={article.title}
@@ -613,7 +613,7 @@
                   <span class="text-[10px] uppercase font-bold text-[#F471B5] bg-[#F471B5]/15 px-2 py-0.5 rounded-md border border-[#F471B5]/30">
                     {article.tag || "Nyhet"}
                   </span>
-                  <span class="text-[11px] text-[#94A3B8] font-mono">
+                  <span class="text-[11px] text-[#AEB9CC] font-mono">
                     {new Date(article.createdAt).toLocaleDateString("no-NO", { month: "short", day: "numeric" })}
                   </span>
                 </div>
@@ -623,19 +623,19 @@
                 </h3>
 
                 {#if article.lead}
-                  <p class="text-xs text-[#94A3B8] line-clamp-2 leading-relaxed">
+                  <p class="text-xs text-[#AEB9CC] line-clamp-2 leading-relaxed">
                     {article.lead}
                   </p>
                 {/if}
               </div>
 
               <!-- Footer med forfatter og handlinger -->
-              <div class="pt-3 border-t border-[#384252] flex items-center justify-between text-xs text-[#94A3B8]">
+              <div class="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-[#AEB9CC]">
                 <div class="flex items-center gap-2 truncate">
                   <img
                     src={article.authorAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${article.authorName}`}
                     alt="Avatar"
-                    class="w-5 h-5 rounded-full bg-[#191E24] border border-[#384252] object-cover"
+                    class="w-5 h-5 rounded-full bg-black/20 border border-white/10 object-cover"
                   />
                   <span class="font-medium text-white truncate text-[11px]">{article.authorName}</span>
                 </div>
@@ -645,7 +645,7 @@
                     <!-- Rediger-knapp (Forfatter eller Admin) -->
                     <button
                       onclick={(e) => openEditModal(article, e)}
-                      class="p-1 rounded text-[#94A3B8] hover:text-[#9FE88D] transition-colors"
+                      class="p-1 rounded text-[#AEB9CC] hover:text-[#9FE88D] transition-colors"
                       title="Rediger artikkel"
                     >
                       <Edit3 class="w-3.5 h-3.5" />
@@ -660,7 +660,7 @@
                         onTogglePin(article._id);
                       }}
                       class={`p-1 rounded transition-colors ${
-                        article.isPinned ? "text-[#F4C152]" : "text-[#94A3B8] hover:text-[#F4C152]"
+                        article.isPinned ? "text-[#F4C152]" : "text-[#AEB9CC] hover:text-[#F4C152]"
                       }`}
                       title={article.isPinned ? "Avfest fra toppen" : "Fest til toppen"}
                     >
@@ -677,7 +677,7 @@
                     class={`flex items-center gap-1 transition-colors font-mono text-xs px-2 py-0.5 rounded-lg border ${
                       liked
                         ? "bg-[#FB6F84]/20 text-[#FB6F84] border-[#FB6F84]/40 font-bold"
-                        : "text-[#94A3B8] hover:text-[#FB6F84] border-transparent hover:border-[#384252]"
+                        : "text-[#AEB9CC] hover:text-[#FB6F84] border-transparent hover:border-white/10"
                     }`}
                     title={liked ? "Fjern likerklikk" : "Lik denne artikkelen (1 per bruker)"}
                   >
@@ -711,10 +711,10 @@
       role="dialog"
       aria-modal="true"
       tabindex="-1"
-      class="relative z-10 bg-[#2A303C] border border-[#384252] rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-[#E2E8F0] font-sans"
+      class="relative z-10 bg-white/[0.055] backdrop-blur-sm border border-white/10 rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-[#E2E8F0] font-sans"
     >
       <!-- Toppheader -->
-      <div class="p-4 bg-[#191E24] border-b border-[#384252] flex items-center justify-between shrink-0">
+      <div class="p-4 bg-black/20 border-b border-white/10 flex items-center justify-between shrink-0">
         <div class="flex items-center gap-2">
           <span class="text-xs uppercase font-bold text-[#F471B5] bg-[#F471B5]/15 px-3 py-1 rounded-lg border border-[#F471B5]/30">
             {selectedArticle.tag || "Nyhet"}
@@ -731,7 +731,7 @@
           {#if canManageArticle(selectedArticle)}
             <button
               onclick={() => openEditModal(selectedArticle)}
-              class="px-3 py-1.5 rounded-xl bg-[#242B35] hover:bg-[#384252] text-white text-xs font-bold border border-[#384252] flex items-center gap-1.5 transition-colors"
+              class="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/10 text-white text-xs font-bold border border-white/10 flex items-center gap-1.5 transition-colors"
             >
               <Edit3 class="w-3.5 h-3.5 text-[#9FE88D]" />
               <span>Rediger</span>
@@ -753,7 +753,7 @@
 
           <button
             onclick={() => (selectedArticle = null)}
-            class="p-2 rounded-xl text-[#94A3B8] hover:text-white hover:bg-[#242B35] transition-colors"
+            class="p-2 rounded-xl text-[#AEB9CC] hover:text-white hover:bg-white/[0.04] transition-colors"
           >
             <X class="w-5 h-5" />
           </button>
@@ -764,7 +764,7 @@
       <div class="flex-1 overflow-y-auto p-5 sm:p-8 space-y-6 custom-scrollbar">
         <!-- Toppbilde med fokuspunktjustering -->
         {#if selectedArticle.imageUrl}
-          <div class={`rounded-2xl overflow-hidden bg-[#191E24] border border-[#384252] shadow-lg relative group ${getCoverHeightClass(selectedArticle.imageHeight)}`}>
+          <div class={`rounded-2xl overflow-hidden bg-black/20 border border-white/10 shadow-lg relative group ${getCoverHeightClass(selectedArticle.imageHeight)}`}>
             <button
               type="button"
               onclick={() => (zoomedImageUrl = selectedArticle.imageUrl)}
@@ -794,16 +794,16 @@
         </h1>
 
         <!-- Forfatter og Dato rad -->
-        <div class="flex items-center justify-between pb-4 border-b border-[#384252] text-xs text-[#94A3B8]">
+        <div class="flex items-center justify-between pb-4 border-b border-white/10 text-xs text-[#AEB9CC]">
           <div class="flex items-center gap-2.5">
             <img
               src={selectedArticle.authorAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${selectedArticle.authorName}`}
               alt="Avatar"
-              class="w-8 h-8 rounded-full bg-[#191E24] border border-[#384252] object-cover"
+              class="w-8 h-8 rounded-full bg-black/20 border border-white/10 object-cover"
             />
             <div>
               <span class="font-bold text-white block text-sm">{selectedArticle.authorName}</span>
-              <span class="text-[11px] text-[#94A3B8]">{new Date(selectedArticle.createdAt).toLocaleString("no-NO", { dateStyle: "long", timeStyle: "short" })}</span>
+              <span class="text-[11px] text-[#AEB9CC]">{new Date(selectedArticle.createdAt).toLocaleString("no-NO", { dateStyle: "long", timeStyle: "short" })}</span>
             </div>
           </div>
 
@@ -812,7 +812,7 @@
             class={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border transition-colors shadow-sm ${
               modalLiked
                 ? "bg-[#FB6F84]/20 text-[#FB6F84] border-[#FB6F84]/40 font-bold"
-                : "bg-[#242B35] hover:bg-[#384252] text-white border-[#384252]"
+                : "bg-white/[0.04] hover:bg-white/10 text-white border-white/10"
             }`}
             title={modalLiked ? "Fjern likerklikk" : "Lik denne artikkelen (1 per bruker)"}
           >
@@ -822,7 +822,7 @@
         </div>
 
         {#if selectedArticle.lead}
-          <div class="p-4 rounded-xl bg-[#242B35] border-l-4 border-[#F471B5] text-base sm:text-lg font-semibold text-white leading-relaxed italic shadow-sm">
+          <div class="p-4 rounded-xl bg-white/[0.04] border-l-4 border-[#F471B5] text-base sm:text-lg font-semibold text-white leading-relaxed italic shadow-sm">
             {selectedArticle.lead}
           </div>
         {/if}
@@ -831,12 +831,12 @@
         <div class="space-y-4 text-[#E2E8F0] leading-relaxed text-sm sm:text-base">
           {#each renderFormattedArticle(selectedArticle.content) as block}
             {#if block.type === "heading"}
-              <h2 class="text-xl font-bold text-white pt-3 pb-1 border-b border-[#384252]/60 flex items-center gap-2">
+              <h2 class="text-xl font-bold text-white pt-3 pb-1 border-b border-white/10/60 flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-[#F471B5]"></span>
                 <span>{block.text}</span>
               </h2>
             {:else if block.type === "quote"}
-              <blockquote class="p-4 rounded-xl bg-[#191E24] border-l-4 border-[#F4C152] italic text-[#E2E8F0] font-serif text-base sm:text-lg my-3 shadow-inner">
+              <blockquote class="p-4 rounded-xl bg-black/20 border-l-4 border-[#F4C152] italic text-[#E2E8F0] font-serif text-base sm:text-lg my-3 shadow-inner">
                 "{block.text}"
               </blockquote>
             {:else if block.type === "callout"}
@@ -864,7 +864,7 @@
                   ? "max-w-md mx-auto"
                   : "w-full"
               }`}>
-                <div class="rounded-2xl overflow-hidden bg-[#191E24] border border-[#384252] shadow-md group relative">
+                <div class="rounded-2xl overflow-hidden bg-black/20 border border-white/10 shadow-md group relative">
                   <button
                     type="button"
                     onclick={() => (zoomedImageUrl = block.src || null)}
@@ -887,7 +887,7 @@
                   </button>
                 </div>
                 {#if block.caption}
-                  <p class="text-xs text-[#94A3B8] italic mt-1.5 text-center">
+                  <p class="text-xs text-[#AEB9CC] italic mt-1.5 text-center">
                     📸 {block.caption}
                   </p>
                 {/if}
@@ -939,9 +939,9 @@
 <!-- ============================================================== -->
 {#if isCreateModalOpen}
   <div class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
-    <div class="bg-[#2A303C] border border-[#384252] rounded-2xl w-full max-w-4xl max-h-[94vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-[#E2E8F0] font-sans">
+    <div class="bg-white/[0.055] backdrop-blur-sm border border-white/10 rounded-2xl w-full max-w-4xl max-h-[94vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-[#E2E8F0] font-sans">
       <!-- Toppbar -->
-      <div class="p-4 bg-[#191E24] border-b border-[#384252] flex items-center justify-between shrink-0">
+      <div class="p-4 bg-black/20 border-b border-white/10 flex items-center justify-between shrink-0">
         <div class="flex items-center gap-2.5">
           <div class="p-2 rounded-xl bg-[#F471B5]/20 text-[#F471B5]">
             <Edit3 class="w-5 h-5" />
@@ -950,18 +950,18 @@
             <h3 class="text-base font-bold text-white">
               {editingArticleId ? "Rediger Artikkel" : "Nyhetsstudio & Runderapport"}
             </h3>
-            <p class="text-xs text-[#94A3B8]">Bygg opp en artikkel med tilpasset toppbilde, avsnitt og medier</p>
+            <p class="text-xs text-[#AEB9CC]">Bygg opp en artikkel med tilpasset toppbilde, avsnitt og medier</p>
           </div>
         </div>
 
         <div class="flex items-center gap-2">
           <!-- Skriv / Forhåndsvisning toggle -->
-          <div class="flex items-center gap-1 p-1 bg-[#242B35] rounded-xl border border-[#384252] text-xs">
+          <div class="flex items-center gap-1 p-1 bg-white/[0.04] rounded-xl border border-white/10 text-xs">
             <button
               type="button"
               onclick={() => (editorTab = "write")}
               class={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
-                editorTab === "write" ? "bg-[#F471B5] text-black" : "text-[#94A3B8] hover:text-white"
+                editorTab === "write" ? "bg-[#F471B5] text-black" : "text-[#AEB9CC] hover:text-white"
               }`}
             >
               Rediger
@@ -970,7 +970,7 @@
               type="button"
               onclick={() => (editorTab = "preview")}
               class={`px-3 py-1.5 rounded-lg font-bold transition-colors flex items-center gap-1 ${
-                editorTab === "preview" ? "bg-[#F471B5] text-black" : "text-[#94A3B8] hover:text-white"
+                editorTab === "preview" ? "bg-[#F471B5] text-black" : "text-[#AEB9CC] hover:text-white"
               }`}
             >
               <Eye class="w-3.5 h-3.5" />
@@ -981,7 +981,7 @@
           <button
             type="button"
             onclick={() => (isCreateModalOpen = false)}
-            class="p-2 rounded-xl text-[#94A3B8] hover:text-white hover:bg-[#242B35]"
+            class="p-2 rounded-xl text-[#AEB9CC] hover:text-white hover:bg-white/[0.04]"
           >
             <X class="w-5 h-5" />
           </button>
@@ -1003,7 +1003,7 @@
                   type="text"
                   bind:value={articleTitle}
                   placeholder="f.eks. Ellevill målfest og overraskende seier for Rom 3!"
-                  class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#F471B5] focus:outline-none text-sm font-bold placeholder-[#94A3B8]"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#F471B5] focus:outline-none text-sm font-bold placeholder-[#AEB9CC]"
                 />
               </div>
 
@@ -1014,12 +1014,12 @@
                 <select
                   id="art-tag"
                   bind:value={articleTag}
-                  class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#F471B5] focus:outline-none text-sm font-semibold"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#F471B5] focus:outline-none text-sm font-semibold"
                 >
                   <option value="Runderapport">Runderapport</option>
                   <option value="Taktikk">Taktikk & Overganger</option>
                   <option value="Banter">Banter & Drama</option>
-                  <option value="Cup">Cup / Sluttspill</option>
+                  <option value="Cup">Cup / Playoffs</option>
                   <option value="Nyhet">Offisiell Nyhet</option>
                 </select>
               </div>
@@ -1035,14 +1035,14 @@
                 bind:value={articleLead}
                 rows="2"
                 placeholder="Kort sammendrag som vises i fet kursiv øverst i artikkelen..."
-                class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#F471B5] focus:outline-none text-xs leading-relaxed"
+                class="w-full px-3.5 py-2 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#F471B5] focus:outline-none text-xs leading-relaxed"
               ></textarea>
             </div>
 
             <!-- ============================================== -->
             <!-- TOPPBILDE / COVER SECTION MED JUSTERING        -->
             <!-- ============================================== -->
-            <div class="p-4 rounded-2xl bg-[#191E24] border border-[#384252] space-y-3">
+            <div class="p-4 rounded-2xl bg-black/20 border border-white/10 space-y-3">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <ImageIcon class="w-4 h-4 text-[#F471B5]" />
@@ -1074,7 +1074,7 @@
                     type="button"
                     onclick={() => coverFileInputRef?.click()}
                     disabled={isUploadingCover}
-                    class="p-3 rounded-xl bg-[#242B35] hover:bg-[#2A303C] border border-dashed border-[#384252] hover:border-[#F471B5] text-xs font-bold transition-all flex items-center justify-center gap-2 text-white"
+                    class="p-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.055] border border-dashed border-white/10 hover:border-[#F471B5] text-xs font-bold transition-all flex items-center justify-center gap-2 text-white"
                   >
                     <Upload class={`w-4 h-4 text-[#F471B5] ${isUploadingCover ? "animate-bounce" : ""}`} />
                     <span>{isUploadingCover ? "Laster opp til Convex..." : "Last opp toppbilde fra maskinen"}</span>
@@ -1084,19 +1084,19 @@
                     type="text"
                     bind:value={articleCoverUrl}
                     placeholder="Eller lim inn bilde-URL (https://...)"
-                    class="px-3 py-2 rounded-xl bg-[#242B35] border border-[#384252] text-xs text-white focus:border-[#F471B5] focus:outline-none"
+                    class="px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-xs text-white focus:border-[#F471B5] focus:outline-none"
                   />
                 </div>
 
                 <!-- Hurtigvalg / Standardbilder -->
                 <div class="space-y-1.5 pt-1">
-                  <span class="text-[11px] text-[#94A3B8] font-semibold block">Eller velg et ferdig FPL-toppbilde:</span>
+                  <span class="text-[11px] text-[#AEB9CC] font-semibold block">Eller velg et ferdig FPL-toppbilde:</span>
                   <div class="flex items-center flex-wrap gap-1.5">
                     {#each presetCovers as preset}
                       <button
                         type="button"
                         onclick={() => (articleCoverUrl = preset.url)}
-                        class="px-2.5 py-1 rounded-lg bg-[#242B35] hover:bg-[#384252] border border-[#384252] hover:border-[#F471B5] text-[11px] font-semibold text-[#E2E8F0] transition-colors flex items-center gap-1.5"
+                        class="px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/10 border border-white/10 hover:border-[#F471B5] text-[11px] font-semibold text-[#E2E8F0] transition-colors flex items-center gap-1.5"
                       >
                         <ImageIcon class="w-3 h-3 text-[#F471B5]" />
                         <span>{preset.name}</span>
@@ -1108,7 +1108,7 @@
                 <!-- Justeringskontroller for toppbilde -->
                 <div class="space-y-3 pt-1">
                   <!-- Live Forhåndsvisningsramme med justert posisjon -->
-                  <div class={`rounded-xl overflow-hidden bg-[#242B35] border border-[#384252] relative group ${getCoverHeightClass(articleImageHeight)}`}>
+                  <div class={`rounded-xl overflow-hidden bg-white/[0.04] border border-white/10 relative group ${getCoverHeightClass(articleImageHeight)}`}>
                     <img
                       src={articleCoverUrl}
                       alt="Toppbilde forhåndsvisning"
@@ -1121,7 +1121,7 @@
                   </div>
 
                   <!-- Kontroll-sliders og valg -->
-                  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3 rounded-xl bg-[#242B35] border border-[#384252] text-xs">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3 rounded-xl bg-white/[0.04] border border-white/10 text-xs">
                     <!-- Vertikal justering slider -->
                     <div class="space-y-1">
                       <div class="flex items-center justify-between">
@@ -1129,7 +1129,7 @@
                           <Sliders class="w-3.5 h-3.5" />
                           <span>Vertikal justering:</span>
                         </span>
-                        <span class="font-mono text-[#94A3B8]">{articleImagePosition}%</span>
+                        <span class="font-mono text-[#AEB9CC]">{articleImagePosition}%</span>
                       </div>
                       <input
                         type="range"
@@ -1138,7 +1138,7 @@
                         bind:value={articleImagePosition}
                         class="w-full accent-[#F471B5] cursor-pointer"
                       />
-                      <div class="flex justify-between text-[9px] text-[#94A3B8]">
+                      <div class="flex justify-between text-[9px] text-[#AEB9CC]">
                         <button type="button" onclick={() => (articleImagePosition = 0)} class="hover:text-white">Topp (0%)</button>
                         <button type="button" onclick={() => (articleImagePosition = 50)} class="hover:text-white">Midten (50%)</button>
                         <button type="button" onclick={() => (articleImagePosition = 100)} class="hover:text-white">Bunn (100%)</button>
@@ -1153,7 +1153,7 @@
                           type="button"
                           onclick={() => (articleImageHeight = "banner")}
                           class={`py-1 px-2 rounded-lg text-[11px] font-bold border transition-colors ${
-                            articleImageHeight === "banner" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+                            articleImageHeight === "banner" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-black/20 text-[#AEB9CC] border-white/10"
                           }`}
                         >
                           Slank (180px)
@@ -1162,7 +1162,7 @@
                           type="button"
                           onclick={() => (articleImageHeight = "standard")}
                           class={`py-1 px-2 rounded-lg text-[11px] font-bold border transition-colors ${
-                            articleImageHeight === "standard" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+                            articleImageHeight === "standard" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-black/20 text-[#AEB9CC] border-white/10"
                           }`}
                         >
                           Standard (260px)
@@ -1171,7 +1171,7 @@
                           type="button"
                           onclick={() => (articleImageHeight = "large")}
                           class={`py-1 px-2 rounded-lg text-[11px] font-bold border transition-colors ${
-                            articleImageHeight === "large" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+                            articleImageHeight === "large" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-black/20 text-[#AEB9CC] border-white/10"
                           }`}
                         >
                           Stor (360px)
@@ -1180,7 +1180,7 @@
                           type="button"
                           onclick={() => (articleImageHeight = "natural")}
                           class={`py-1 px-2 rounded-lg text-[11px] font-bold border transition-colors ${
-                            articleImageHeight === "natural" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+                            articleImageHeight === "natural" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-black/20 text-[#AEB9CC] border-white/10"
                           }`}
                         >
                           Full / Auto
@@ -1196,7 +1196,7 @@
                           type="button"
                           onclick={() => (articleImageFit = "cover")}
                           class={`flex-1 py-1.5 rounded-lg text-[11px] font-bold border transition-colors ${
-                            articleImageFit === "cover" ? "bg-[#9FE88D] text-black border-[#9FE88D]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+                            articleImageFit === "cover" ? "bg-[#9FE88D] text-black border-[#9FE88D]" : "bg-black/20 text-[#AEB9CC] border-white/10"
                           }`}
                         >
                           Fyll ut (Cover)
@@ -1205,7 +1205,7 @@
                           type="button"
                           onclick={() => (articleImageFit = "contain")}
                           class={`flex-1 py-1.5 rounded-lg text-[11px] font-bold border transition-colors ${
-                            articleImageFit === "contain" ? "bg-[#9FE88D] text-black border-[#9FE88D]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+                            articleImageFit === "contain" ? "bg-[#9FE88D] text-black border-[#9FE88D]" : "bg-black/20 text-[#AEB9CC] border-white/10"
                           }`}
                         >
                           Hele bildet (Contain)
@@ -1224,7 +1224,7 @@
               <div class="flex items-center justify-between pb-1.5">
                 <label for="art-content" class="text-xs font-bold text-white flex items-center gap-1.5">
                   <span>Hovedtekst & Medier:</span>
-                  <span class="text-[10px] text-[#94A3B8] font-normal">(Du kan lime inn bilder direkte med Ctrl+V)</span>
+                  <span class="text-[10px] text-[#AEB9CC] font-normal">(Du kan lime inn bilder direkte med Ctrl+V)</span>
                 </label>
 
                 <!-- Hurtigknapp for bildeopplasting -->
@@ -1239,11 +1239,11 @@
               </div>
 
               <!-- Formaterings-verktøylinje -->
-              <div class="flex items-center flex-wrap gap-1 p-1.5 bg-[#191E24] border border-[#384252] rounded-t-xl text-xs">
+              <div class="flex items-center flex-wrap gap-1 p-1.5 bg-black/20 border border-white/10 rounded-t-xl text-xs">
                 <button
                   type="button"
                   onclick={() => insertFormat("h2")}
-                  class="px-2.5 py-1 rounded hover:bg-[#2A303C] text-[#E2E8F0] flex items-center gap-1 font-bold"
+                  class="px-2.5 py-1 rounded hover:bg-white/[0.055] text-[#E2E8F0] flex items-center gap-1 font-bold"
                   title="Sett inn Underoverskrift (H2)"
                 >
                   <Heading2 class="w-3.5 h-3.5 text-[#F471B5]" />
@@ -1253,7 +1253,7 @@
                 <button
                   type="button"
                   onclick={() => insertFormat("bold")}
-                  class="px-2 py-1 rounded hover:bg-[#2A303C] text-[#E2E8F0] font-bold"
+                  class="px-2 py-1 rounded hover:bg-white/[0.055] text-[#E2E8F0] font-bold"
                   title="Fet tekst"
                 >
                   <Bold class="w-3.5 h-3.5" />
@@ -1262,18 +1262,18 @@
                 <button
                   type="button"
                   onclick={() => insertFormat("italic")}
-                  class="px-2 py-1 rounded hover:bg-[#2A303C] text-[#E2E8F0] italic"
+                  class="px-2 py-1 rounded hover:bg-white/[0.055] text-[#E2E8F0] italic"
                   title="Kursiv tekst"
                 >
                   <Italic class="w-3.5 h-3.5" />
                 </button>
 
-                <div class="h-4 w-px bg-[#384252] mx-1"></div>
+                <div class="h-4 w-px bg-white/10 mx-1"></div>
 
                 <button
                   type="button"
                   onclick={() => insertFormat("quote")}
-                  class="px-2.5 py-1 rounded hover:bg-[#2A303C] text-[#E2E8F0] flex items-center gap-1"
+                  class="px-2.5 py-1 rounded hover:bg-white/[0.055] text-[#E2E8F0] flex items-center gap-1"
                   title="Sitatboks"
                 >
                   <Quote class="w-3.5 h-3.5 text-[#F4C152]" />
@@ -1283,7 +1283,7 @@
                 <button
                   type="button"
                   onclick={() => insertFormat("list")}
-                  class="px-2.5 py-1 rounded hover:bg-[#2A303C] text-[#E2E8F0] flex items-center gap-1"
+                  class="px-2.5 py-1 rounded hover:bg-white/[0.055] text-[#E2E8F0] flex items-center gap-1"
                   title="Punktliste"
                 >
                   <List class="w-3.5 h-3.5 text-[#70E1F8]" />
@@ -1293,7 +1293,7 @@
                 <button
                   type="button"
                   onclick={() => insertFormat("callout")}
-                  class="px-2.5 py-1 rounded hover:bg-[#2A303C] text-[#E2E8F0] flex items-center gap-1"
+                  class="px-2.5 py-1 rounded hover:bg-white/[0.055] text-[#E2E8F0] flex items-center gap-1"
                   title="Uthevet Infoboks"
                 >
                   <Info class="w-3.5 h-3.5 text-[#9FE88D]" />
@@ -1303,7 +1303,7 @@
                 <button
                   type="button"
                   onclick={() => insertFormat("matchbox")}
-                  class="px-2.5 py-1 rounded hover:bg-[#2A303C] text-[#E2E8F0] flex items-center gap-1"
+                  class="px-2.5 py-1 rounded hover:bg-white/[0.055] text-[#E2E8F0] flex items-center gap-1"
                   title="Ukens Kampboks"
                 >
                   <Flame class="w-3.5 h-3.5 text-[#FB6F84]" />
@@ -1319,15 +1319,15 @@
                 onpaste={handleTextareaPaste}
                 rows="10"
                 placeholder="Skriv artikkelen din her... Du kan sette inn bilder hvor du vil, bruke avsnitt, lister og sitater."
-                class="w-full p-4 rounded-b-xl bg-[#191E24] border-x border-b border-[#384252] text-white focus:border-[#F471B5] focus:outline-none text-sm font-sans leading-relaxed custom-scrollbar font-mono"
+                class="w-full p-4 rounded-b-xl bg-black/20 border-x border-b border-white/10 text-white focus:border-[#F471B5] focus:outline-none text-sm font-sans leading-relaxed custom-scrollbar font-mono"
               ></textarea>
             </div>
           </div>
         {:else}
           <!-- FORHÅNDSVISNINGSFANE -->
-          <div class="space-y-5 bg-[#191E24] p-6 rounded-2xl border border-[#384252]">
+          <div class="space-y-5 bg-black/20 p-6 rounded-2xl border border-white/10">
             {#if articleCoverUrl}
-              <div class={`rounded-xl overflow-hidden bg-[#242B35] border border-[#384252] ${getCoverHeightClass(articleImageHeight)}`}>
+              <div class={`rounded-xl overflow-hidden bg-white/[0.04] border border-white/10 ${getCoverHeightClass(articleImageHeight)}`}>
                 <img
                   src={articleCoverUrl}
                   alt={articleTitle}
@@ -1342,7 +1342,7 @@
             </h1>
 
             {#if articleLead}
-              <div class="p-3.5 rounded-xl bg-[#242B35] border-l-4 border-[#F471B5] text-base font-semibold text-white italic">
+              <div class="p-3.5 rounded-xl bg-white/[0.04] border-l-4 border-[#F471B5] text-base font-semibold text-white italic">
                 {articleLead}
               </div>
             {/if}
@@ -1350,9 +1350,9 @@
             <div class="space-y-4 text-sm leading-relaxed">
               {#each renderFormattedArticle(articleContent) as block}
                 {#if block.type === "heading"}
-                  <h2 class="text-lg font-bold text-white pt-2 border-b border-[#384252]/60">{block.text}</h2>
+                  <h2 class="text-lg font-bold text-white pt-2 border-b border-white/10/60">{block.text}</h2>
                 {:else if block.type === "quote"}
-                  <blockquote class="p-3.5 rounded-xl bg-[#242B35] border-l-4 border-[#F4C152] italic font-serif">"{block.text}"</blockquote>
+                  <blockquote class="p-3.5 rounded-xl bg-white/[0.04] border-l-4 border-[#F4C152] italic font-serif">"{block.text}"</blockquote>
                 {:else if block.type === "callout"}
                   <div class="p-3.5 rounded-xl bg-[#70E1F8]/10 border border-[#70E1F8]/30 flex items-start gap-2.5 text-xs">
                     <Info class="w-4 h-4 text-[#70E1F8] shrink-0 mt-0.5" />
@@ -1360,9 +1360,9 @@
                   </div>
                 {:else if block.type === "image"}
                   <div class={`my-3 ${block.align === "left" ? "float-left w-1/2 mr-3" : block.align === "right" ? "float-right w-1/2 ml-3" : "w-full"}`}>
-                    <img src={block.src} alt={block.caption || ""} class="rounded-xl border border-[#384252] max-h-72 w-full object-cover" />
+                    <img src={block.src} alt={block.caption || ""} class="rounded-xl border border-white/10 max-h-72 w-full object-cover" />
                     {#if block.caption}
-                      <p class="text-xs text-[#94A3B8] italic mt-1 text-center">📸 {block.caption}</p>
+                      <p class="text-xs text-[#AEB9CC] italic mt-1 text-center">📸 {block.caption}</p>
                     {/if}
                   </div>
                 {:else if block.type === "list"}
@@ -1384,11 +1384,11 @@
       </div>
 
       <!-- Bunnknapper -->
-      <div class="p-4 bg-[#191E24] border-t border-[#384252] flex items-center justify-end gap-3 shrink-0">
+      <div class="p-4 bg-black/20 border-t border-white/10 flex items-center justify-end gap-3 shrink-0">
         <button
           type="button"
           onclick={() => (isCreateModalOpen = false)}
-          class="px-4 py-2 rounded-xl bg-[#242B35] hover:bg-[#384252] text-xs font-semibold text-[#94A3B8] hover:text-white transition-colors"
+          class="px-4 py-2 rounded-xl bg-white/[0.04] hover:bg-white/10 text-xs font-semibold text-[#AEB9CC] hover:text-white transition-colors"
         >
           Avbryt
         </button>
@@ -1412,8 +1412,8 @@
 <!-- ============================================================== -->
 {#if isImageModalOpen}
   <div class="fixed inset-0 bg-black/90 backdrop-blur-md z-[70] flex items-center justify-center p-4">
-    <div class="bg-[#2A303C] border border-[#384252] rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 text-[#E2E8F0] font-sans">
-      <div class="flex items-center justify-between pb-2 border-b border-[#384252]">
+    <div class="bg-white/[0.055] backdrop-blur-sm border border-white/10 rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 text-[#E2E8F0] font-sans">
+      <div class="flex items-center justify-between pb-2 border-b border-white/10">
         <div class="flex items-center gap-2">
           <ImageIcon class="w-5 h-5 text-[#F471B5]" />
           <h4 class="font-bold text-white text-sm sm:text-base">Sett inn bilde i artikkelen</h4>
@@ -1421,7 +1421,7 @@
         <button
           type="button"
           onclick={() => (isImageModalOpen = false)}
-          class="text-[#94A3B8] hover:text-white"
+          class="text-[#AEB9CC] hover:text-white"
         >
           <X class="w-5 h-5" />
         </button>
@@ -1451,18 +1451,18 @@
             onpaste={handleModalPaste}
             onclick={() => inlineFileInputRef?.click()}
             onkeydown={(e) => (e.key === "Enter" || e.key === " ") && inlineFileInputRef?.click()}
-            class="p-4 rounded-xl border-2 border-dashed border-[#384252] hover:border-[#F471B5] text-center bg-[#191E24] cursor-pointer transition-colors space-y-1.5"
+            class="p-4 rounded-xl border-2 border-dashed border-white/10 hover:border-[#F471B5] text-center bg-black/20 cursor-pointer transition-colors space-y-1.5"
           >
             {#if isUploadingInline}
               <Upload class="w-6 h-6 text-[#F471B5] mx-auto animate-bounce" />
               <p class="font-bold text-white">Laster opp til Convex...</p>
             {:else if inlineImageUrl}
-              <img src={inlineImageUrl} alt="Forhåndsvisning" class="max-h-36 mx-auto rounded-lg object-contain border border-[#384252]" />
+              <img src={inlineImageUrl} alt="Forhåndsvisning" class="max-h-36 mx-auto rounded-lg object-contain border border-white/10" />
               <p class="text-[11px] text-[#9FE88D] font-semibold">✓ Bilde lastet opp og klart</p>
             {:else}
-              <Upload class="w-6 h-6 text-[#94A3B8] mx-auto" />
+              <Upload class="w-6 h-6 text-[#AEB9CC] mx-auto" />
               <p class="font-bold text-white">Klikk for å velge fil, eller lim inn bilde (Ctrl+V)</p>
-              <p class="text-[11px] text-[#94A3B8]">PNG, JPG, SVG eller WebP (maks 10 MB)</p>
+              <p class="text-[11px] text-[#AEB9CC]">PNG, JPG, SVG eller WebP (maks 10 MB)</p>
             {/if}
           </div>
         </div>
@@ -1474,7 +1474,7 @@
             type="text"
             bind:value={inlineImageUrl}
             placeholder="https://images.unsplash.com/..."
-            class="w-full px-3 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#F471B5] focus:outline-none"
+            class="w-full px-3 py-2 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#F471B5] focus:outline-none"
           />
         </div>
 
@@ -1485,7 +1485,7 @@
             type="text"
             bind:value={inlineImageCaption}
             placeholder="f.eks. Jublende managere etter scoring på overtid..."
-            class="w-full px-3 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#F471B5] focus:outline-none"
+            class="w-full px-3 py-2 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#F471B5] focus:outline-none"
           />
         </div>
 
@@ -1497,7 +1497,7 @@
               type="button"
               onclick={() => (inlineImageAlign = "full")}
               class={`py-2 rounded-xl border text-[11px] font-bold transition-all flex flex-col items-center gap-1 ${
-                inlineImageAlign === "full" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+                inlineImageAlign === "full" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-black/20 text-[#AEB9CC] border-white/10"
               }`}
             >
               <Maximize2 class="w-3.5 h-3.5" />
@@ -1507,7 +1507,7 @@
               type="button"
               onclick={() => (inlineImageAlign = "left")}
               class={`py-2 rounded-xl border text-[11px] font-bold transition-all flex flex-col items-center gap-1 ${
-                inlineImageAlign === "left" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+                inlineImageAlign === "left" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-black/20 text-[#AEB9CC] border-white/10"
               }`}
             >
               <AlignLeft class="w-3.5 h-3.5" />
@@ -1517,7 +1517,7 @@
               type="button"
               onclick={() => (inlineImageAlign = "right")}
               class={`py-2 rounded-xl border text-[11px] font-bold transition-all flex flex-col items-center gap-1 ${
-                inlineImageAlign === "right" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+                inlineImageAlign === "right" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-black/20 text-[#AEB9CC] border-white/10"
               }`}
             >
               <AlignRight class="w-3.5 h-3.5" />
@@ -1527,7 +1527,7 @@
               type="button"
               onclick={() => (inlineImageAlign = "center")}
               class={`py-2 rounded-xl border text-[11px] font-bold transition-all flex flex-col items-center gap-1 ${
-                inlineImageAlign === "center" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+                inlineImageAlign === "center" ? "bg-[#F471B5] text-black border-[#F471B5]" : "bg-black/20 text-[#AEB9CC] border-white/10"
               }`}
             >
               <AlignCenter class="w-3.5 h-3.5" />
@@ -1538,11 +1538,11 @@
       </div>
 
       <!-- Knapper -->
-      <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-[#384252]">
+      <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-white/10">
         <button
           type="button"
           onclick={() => (isImageModalOpen = false)}
-          class="px-4 py-2 rounded-xl bg-[#242B35] text-[#94A3B8] hover:text-white text-xs border border-[#384252]"
+          class="px-4 py-2 rounded-xl bg-white/[0.04] text-[#AEB9CC] hover:text-white text-xs border border-white/10"
         >
           Avbryt
         </button>

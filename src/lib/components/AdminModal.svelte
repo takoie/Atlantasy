@@ -59,7 +59,7 @@
     onClearAllAssignments = () => {},
     onCreateRoom = (_params: any) => {},
     onDeleteRoom = (_roomId: string) => {},
-    onUpdateRoomName = (_roomId: string, _newName: string) => {},
+    onUpdateRoomName = (_roomId: string, _newName: string, _newTag?: string) => {},
     onUpdateTeamName = (_entryId: number, _newName: string) => {},
     onStartNewSeason = (_params: any) => {},
     onSetUserRole = (_userId: string, _role: string) => {},
@@ -97,7 +97,7 @@
     onClearAllAssignments?: () => void;
     onCreateRoom?: (params: any) => void;
     onDeleteRoom?: (roomId: string) => void;
-    onUpdateRoomName?: (roomId: string, newName: string) => void;
+    onUpdateRoomName?: (roomId: string, newName: string, newTag?: string) => void;
     onUpdateTeamName?: (entryId: number, newName: string) => void;
     onStartNewSeason?: (params: any) => void;
     onSetUserRole?: (userId: string, role: string) => void;
@@ -301,11 +301,11 @@
   // Opprett nytt rom state
   let showCreateRoomModal = $state(false);
   let newRoomName = $state("");
-  let newRoomAccent = $state("#1eb854");
 
   // Rediger romnavn state
   let editingRoomId = $state<string | null>(null);
   let editingRoomNewName = $state("");
+  let editingRoomNewTag = $state("");
 
   // Rediger lagnavn state
   let editingTeamEntryId = $state<number | null>(null);
@@ -341,11 +341,13 @@
   let newCupName = $state("Atlantasy Vintercup 2025/2026");
   let newCupStartGw = $state(20);
   let newCupFormat = $state<
-    | "lucky_loser_12"
-    | "double_elimination_12"
-    | "top8_single"
-    | "group_stage_12"
-  >("lucky_loser_12");
+    | "single_elimination"
+    | "double_elimination"
+    | "round_robin"
+    | "group_stage"
+    | "lucky_loser"
+  >("single_elimination");
+  let newCupGroupCount = $state(2);
   let newCupSeedMethod = $state<"leaderboard" | "manual" | "random">(
     "leaderboard",
   );
@@ -877,16 +879,19 @@
     if (e) e.stopPropagation();
     editingRoomId = room._id;
     editingRoomNewName = room.name || "";
+    editingRoomNewTag = room.tag || "";
   }
 
   function saveEditingRoom(room: any, e?: MouseEvent) {
     if (e) e.stopPropagation();
     if (!editingRoomNewName.trim()) return;
     const newName = editingRoomNewName.trim();
+    const newTag = editingRoomNewTag.trim();
     room.name = newName;
-    onUpdateRoomName(room._id, newName);
+    room.tag = newTag || undefined;
+    onUpdateRoomName(room._id, newName, newTag);
     editingRoomId = null;
-    showSuccess(`Romnavn oppdatert til "${newName}"!`);
+    showSuccess(`Rom oppdatert: "${newTag || "–"}" · ${newName}`);
   }
 
   function cancelEditingRoom(e?: MouseEvent) {
@@ -938,7 +943,6 @@
     }
     onCreateRoom({
       name: newRoomName.trim(),
-      accentColor: newRoomAccent,
     });
     newRoomName = "";
     showCreateRoomModal = false;
@@ -1164,7 +1168,7 @@
     );
   }
 
-  // --- Cup / Sluttspill Handlers ---
+  // --- Cup / Playoffs Handlers ---
   async function handleCreateCupSubmit() {
     if (!newCupName.trim()) {
       alert("Vennligst oppgi et navn på cupen.");
@@ -1177,6 +1181,7 @@
         name: newCupName.trim(),
         startGameweek: Number(newCupStartGw),
         format: newCupFormat,
+        groupCount: Number(newCupGroupCount) || 2,
         seedMethod: newCupSeedMethod,
       });
       showSuccess(`Cup "${newCupName.trim()}" opprettet!`);
@@ -1270,6 +1275,11 @@
     }, 4000);
   }
 
+  // Feilmeldinger vises som en enkel alert (samme mønster som resten av filen).
+  function showError(msg: string) {
+    alert(msg || "Noe gikk galt.");
+  }
+
   let filteredPool = $derived(
     unassignedPool.filter(
       (t) =>
@@ -1289,11 +1299,11 @@
     <div
       role="dialog"
       aria-modal="true"
-      class="w-[96vw] max-w-7xl h-[92vh] bg-[#2A303C] border border-[#384252] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150"
+      class="w-[96vw] max-w-7xl h-[92vh] bg-white/[0.055] backdrop-blur-sm border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150"
     >
       <!-- Modal Header -->
       <div
-        class="px-5 py-4 border-b border-[#384252] bg-[#191E24] flex items-center justify-between shrink-0"
+        class="px-5 py-4 border-b border-white/10 bg-black/20 flex items-center justify-between shrink-0"
       >
         <div class="flex items-center gap-3">
           <div
@@ -1310,7 +1320,7 @@
                 Admin
               </span>
             </h2>
-            <p class="text-xs text-[#94A3B8]">
+            <p class="text-xs text-[#AEB9CC]">
               Administrer FPL-integrasjon, fordel lag i rom og kår månedsvinnere
             </p>
           </div>
@@ -1318,7 +1328,7 @@
 
         <button
           onclick={onClose}
-          class="p-2 rounded-xl bg-[#242B35] hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors"
+          class="p-2 rounded-xl bg-white/[0.04] hover:bg-white/10 text-[#AEB9CC] hover:text-white transition-colors"
         >
           <X class="w-5 h-5" />
         </button>
@@ -1337,7 +1347,7 @@
 
           <div class="text-center space-y-1">
             <h3 class="text-lg font-bold text-white">Administrator-tilgang</h3>
-            <p class="text-xs text-[#94A3B8] max-w-sm">
+            <p class="text-xs text-[#AEB9CC] max-w-sm">
               {#if currentUser}
                 Bekreft passordet for <strong>{currentUser.username}</strong> for å åpne administrasjonspanelet.
               {:else}
@@ -1367,7 +1377,7 @@
                 type="password"
                 bind:value={adminPasswordInput}
                 placeholder="Ditt passord"
-                class="w-56 px-4 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-sm text-white focus:border-[#9FE88D] focus:outline-none"
+                class="w-56 px-4 py-2.5 rounded-xl bg-black/20 border border-white/10 text-sm text-white focus:border-[#9FE88D] focus:outline-none"
               />
               <button
                 type="submit"
@@ -1382,14 +1392,14 @@
       {:else}
         <!-- Tab Meny (DaisyUI Dim Style) -->
         <div
-          class="flex items-center gap-2 px-5 border-b border-[#384252] bg-[#191E24] shrink-0 overflow-x-auto whitespace-nowrap"
+          class="flex items-center gap-2 px-5 border-b border-white/10 bg-black/20 shrink-0 overflow-x-auto whitespace-nowrap"
         >
           <button
             onclick={() => (activeTab = "matching")}
             class={`px-4 py-3 border-b-2 text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 ${
               activeTab === "matching"
                 ? "border-[#9FE88D] text-[#9FE88D] font-bold"
-                : "border-transparent text-[#94A3B8] hover:text-white"
+                : "border-transparent text-[#AEB9CC] hover:text-white"
             }`}
           >
             <Layers class="w-4 h-4" />
@@ -1401,7 +1411,7 @@
             class={`px-4 py-3 border-b-2 text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 ${
               activeTab === "settings"
                 ? "border-[#9FE88D] text-[#9FE88D] font-bold"
-                : "border-transparent text-[#94A3B8] hover:text-white"
+                : "border-transparent text-[#AEB9CC] hover:text-white"
             }`}
           >
             <span>⚙️</span>
@@ -1413,7 +1423,7 @@
             class={`px-4 py-3 border-b-2 text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 ${
               activeTab === "winner"
                 ? "border-[#F4C152] text-[#F4C152] font-bold"
-                : "border-transparent text-[#94A3B8] hover:text-white"
+                : "border-transparent text-[#AEB9CC] hover:text-white"
             }`}
           >
             <span>🏆</span>
@@ -1431,7 +1441,7 @@
             class={`px-4 py-3 border-b-2 text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 ${
               activeTab === "users"
                 ? "border-[#9FE88D] text-[#9FE88D] font-bold"
-                : "border-transparent text-[#94A3B8] hover:text-white"
+                : "border-transparent text-[#AEB9CC] hover:text-white"
             }`}
           >
             <span>👥</span>
@@ -1443,7 +1453,7 @@
             class={`px-4 py-3 border-b-2 text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 ${
               activeTab === "invites"
                 ? "border-[#9FE88D] text-[#9FE88D] font-bold"
-                : "border-transparent text-[#94A3B8] hover:text-white"
+                : "border-transparent text-[#AEB9CC] hover:text-white"
             }`}
           >
             <span>🎟️</span>
@@ -1455,7 +1465,7 @@
             class={`px-4 py-3 border-b-2 text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 ${
               activeTab === "chat"
                 ? "border-[#FB6F84] text-[#FB6F84] font-bold"
-                : "border-transparent text-[#94A3B8] hover:text-white"
+                : "border-transparent text-[#AEB9CC] hover:text-white"
             }`}
           >
             <MessageSquareX class="w-4 h-4" />
@@ -1467,7 +1477,7 @@
             class={`px-4 py-3 border-b-2 text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 ${
               activeTab === "cup"
                 ? "border-[#F4C152] text-[#F4C152] font-bold"
-                : "border-transparent text-[#94A3B8] hover:text-white"
+                : "border-transparent text-[#AEB9CC] hover:text-white"
             }`}
           >
             <Swords class="w-4 h-4 text-[#F4C152]" />
@@ -1492,13 +1502,13 @@
           >
             <!-- FPL Import & Kontrollinje -->
             <div
-              class="p-3.5 rounded-xl bg-[#242B35] border border-[#384252] flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-sm"
+              class="p-3.5 rounded-xl bg-white/[0.04] border border-white/10 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-sm"
             >
               <div class="flex flex-wrap items-center gap-3">
                 <div>
                   <label
                     for="admin-fpl-league-id"
-                    class="text-xs font-bold text-[#94A3B8] block mb-1"
+                    class="text-xs font-bold text-[#AEB9CC] block mb-1"
                   >
                     FPL Classic League ID:
                   </label>
@@ -1508,12 +1518,12 @@
                       type="number"
                       bind:value={fplImportLeagueId}
                       placeholder="464734"
-                      class="px-3.5 py-1.5 rounded-lg bg-[#191E24] border border-[#384252] text-sm text-white focus:border-[#9FE88D] focus:outline-none w-36 font-mono font-bold"
+                      class="px-3.5 py-1.5 rounded-lg bg-black/20 border border-white/10 text-sm text-white focus:border-[#9FE88D] focus:outline-none w-36 font-mono font-bold"
                     />
                     <button
                       onclick={handleFetchFplLeague}
                       disabled={isFetchingFpl}
-                      class="px-3.5 py-1.5 rounded-lg bg-[#242B35] hover:bg-[#384252] text-[#E2E8F0] border border-[#384252] text-xs font-bold transition-all flex items-center gap-2"
+                      class="px-3.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/10 text-[#E2E8F0] border border-white/10 text-xs font-bold transition-all flex items-center gap-2"
                     >
                       <Download class="w-3.5 h-3.5 text-[#9FE88D]" />
                       <span>{isFetchingFpl ? "Henter..." : "Hent lag"}</span>
@@ -1527,7 +1537,7 @@
                 <button
                   type="button"
                   onclick={() => (showCreateRoomModal = true)}
-                  class="px-3.5 py-1.5 rounded-lg bg-[#242B35] hover:bg-[#384252] text-[#E2E8F0] border border-[#384252] text-xs font-bold transition-colors flex items-center gap-1.5"
+                  class="px-3.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/10 text-[#E2E8F0] border border-white/10 text-xs font-bold transition-colors flex items-center gap-1.5"
                   title="Opprett et nytt rom i ligaen"
                 >
                   <Plus class="w-3.5 h-3.5 text-[#9FE88D]" />
@@ -1575,7 +1585,7 @@
                 <button
                   type="button"
                   onclick={() => (selectedPlayerForMove = null)}
-                  class="px-3 py-1 rounded-lg bg-[#242B35] text-white hover:bg-[#384252] text-xs font-semibold border border-[#384252]"
+                  class="px-3 py-1 rounded-lg bg-white/[0.04] text-white hover:bg-white/10 text-xs font-semibold border border-white/10"
                 >
                   Avbryt
                 </button>
@@ -1601,18 +1611,18 @@
                 ondragover={(e) => onDragOverHandler("pool", e)}
                 ondragleave={onDragLeaveHandler}
                 ondrop={onDropOnPoolHandler}
-                class={`col-span-12 lg:col-span-4 rounded-xl bg-[#242B35] border p-3.5 flex flex-col min-h-0 transition-colors shadow-sm cursor-pointer ${
+                class={`col-span-12 lg:col-span-4 rounded-xl bg-white/[0.04] border p-3.5 flex flex-col min-h-0 transition-colors shadow-sm cursor-pointer ${
                   dragHoverTarget === "pool" || hoveredTargetId === "pool"
                     ? "border-[#9FE88D] bg-[#9FE88D]/15 ring-2 ring-[#9FE88D]/40"
                     : selectedPlayerForMove &&
                         selectedPlayerForMove.sourceRoomId
                       ? "border-[#9FE88D]/60 bg-[#9FE88D]/5 ring-1 ring-[#9FE88D]/30"
-                      : "border-[#384252]"
+                      : "border-white/10"
                 }`}
               >
                 <!-- Header med søk -->
                 <div
-                  class="space-y-2 pb-2.5 border-b border-[#384252] shrink-0"
+                  class="space-y-2 pb-2.5 border-b border-white/10 shrink-0"
                   onclick={(e) => e.stopPropagation()}
                   role="presentation"
                 >
@@ -1624,7 +1634,7 @@
                       <span>Spillerpool</span>
                     </h4>
                     <span
-                      class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#191E24] border border-[#384252] text-[#9FE88D]"
+                      class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-black/20 border border-white/10 text-[#9FE88D]"
                     >
                       {unassignedPool.length} lag
                     </span>
@@ -1632,13 +1642,13 @@
 
                   <div class="relative">
                     <Search
-                      class="w-3.5 h-3.5 text-[#94A3B8] absolute left-3 top-2.5"
+                      class="w-3.5 h-3.5 text-[#AEB9CC] absolute left-3 top-2.5"
                     />
                     <input
                       type="text"
                       bind:value={searchPoolQuery}
                       placeholder="Søk etter manager eller lagnavn..."
-                      class="w-full pl-9 pr-3 py-1.5 rounded-lg bg-[#191E24] border border-[#384252] text-xs text-white placeholder-[#94A3B8] focus:border-[#9FE88D] focus:outline-none"
+                      class="w-full pl-9 pr-3 py-1.5 rounded-lg bg-black/20 border border-white/10 text-xs text-white placeholder-[#AEB9CC] focus:border-[#9FE88D] focus:outline-none"
                     />
                   </div>
                 </div>
@@ -1649,11 +1659,11 @@
                 >
                   {#if filteredPool.length === 0}
                     <div
-                      class="h-full flex flex-col items-center justify-center text-center p-6 text-[#94A3B8] text-xs"
+                      class="h-full flex flex-col items-center justify-center text-center p-6 text-[#AEB9CC] text-xs"
                     >
-                      <Users class="w-8 h-8 text-[#384252] mb-2" />
+                      <Users class="w-8 h-8 text-[#2c3850] mb-2" />
                       <p class="font-medium">Ingen ufordelte spillere.</p>
-                      <p class="text-[11px] text-[#94A3B8]/70 mt-1">
+                      <p class="text-[11px] text-[#AEB9CC]/70 mt-1">
                         Trykk "Hent lag" for å importere påmeldte.
                       </p>
                     </div>
@@ -1676,7 +1686,7 @@
                       class={`p-2.5 rounded-lg border text-xs transition-all space-y-1.5 shadow-sm group select-none ${
                         isSelected
                           ? "bg-[#9FE88D]/20 border-[#9FE88D] ring-2 ring-[#9FE88D]"
-                          : "bg-[#191E24] border-[#384252] hover:border-[#9FE88D]"
+                          : "bg-black/20 border-white/10 hover:border-[#9FE88D]"
                       } ${
                         editingTeamEntryId === team.entryId
                           ? "cursor-default"
@@ -1695,7 +1705,7 @@
                                   if (e.key === "Enter") saveEditingTeam(team);
                                   if (e.key === "Escape") cancelEditingTeam();
                                 }}
-                                class="w-full px-2 py-0.5 rounded bg-[#191E24] border border-[#9FE88D] text-xs text-white focus:outline-none font-semibold"
+                                class="w-full px-2 py-0.5 rounded bg-black/20 border border-[#9FE88D] text-xs text-white focus:outline-none font-semibold"
                               />
                               <button
                                 type="button"
@@ -1708,7 +1718,7 @@
                               <button
                                 type="button"
                                 onclick={(e) => cancelEditingTeam(e)}
-                                class="p-1 rounded bg-[#242B35] text-[#94A3B8] hover:text-white"
+                                class="p-1 rounded bg-white/[0.04] text-[#AEB9CC] hover:text-white"
                                 title="Avbryt"
                               >
                                 <X class="w-3 h-3" />
@@ -1724,7 +1734,7 @@
                               <button
                                 type="button"
                                 onclick={(e) => startEditingTeam(team, e)}
-                                class="opacity-0 group-hover:opacity-100 p-0.5 text-[#94A3B8] hover:text-white transition-opacity"
+                                class="opacity-0 group-hover:opacity-100 p-0.5 text-[#AEB9CC] hover:text-white transition-opacity"
                                 title="Endre lagnavn"
                               >
                                 <Pencil class="w-3 h-3" />
@@ -1732,19 +1742,19 @@
                             </div>
                           {/if}
 
-                          <p class="text-[11px] text-[#94A3B8] truncate">
+                          <p class="text-[11px] text-[#AEB9CC] truncate">
                             {team.managerName}
                           </p>
                         </div>
 
                         <div class="flex items-center gap-1 shrink-0">
                           <span
-                            class="text-[10px] font-mono text-[#94A3B8] bg-[#191E24] px-1.5 py-0.5 rounded border border-[#384252]"
+                            class="text-[10px] font-mono text-[#AEB9CC] bg-black/20 px-1.5 py-0.5 rounded border border-white/10"
                           >
                             #{team.entryId}
                           </span>
                           <GripVertical
-                            class="w-3.5 h-3.5 text-[#94A3B8]/50 group-hover:text-[#9FE88D]"
+                            class="w-3.5 h-3.5 text-[#AEB9CC]/50 group-hover:text-[#9FE88D]"
                           />
                         </div>
                       </div>
@@ -1755,10 +1765,10 @@
 
               <!-- Høyre: Vertikale Rom-drawers -->
               <div
-                class="col-span-12 lg:col-span-8 rounded-xl bg-[#242B35] border border-[#384252] p-3.5 flex flex-col min-h-0 shadow-sm"
+                class="col-span-12 lg:col-span-8 rounded-xl bg-white/[0.04] border border-white/10 p-3.5 flex flex-col min-h-0 shadow-sm"
               >
                 <div
-                  class="flex items-center justify-between pb-2.5 border-b border-[#384252] shrink-0"
+                  class="flex items-center justify-between pb-2.5 border-b border-white/10 shrink-0"
                 >
                   <div class="flex items-center gap-2">
                     <h4
@@ -1767,7 +1777,7 @@
                       <Layers class="w-4 h-4 text-[#9FE88D]" />
                       <span>Rom-drawers ({rooms.length} Rom)</span>
                     </h4>
-                    <span class="text-xs text-[#94A3B8]"
+                    <span class="text-xs text-[#AEB9CC]"
                       >• Dra, klikk eller velg rom for å fordele</span
                     >
                   </div>
@@ -1798,17 +1808,17 @@
                       ondragover={(e) => onDragOverHandler(room._id, e)}
                       ondragleave={onDragLeaveHandler}
                       ondrop={(e) => onDropOnRoomHandler(room._id, e)}
-                      class={`rounded-xl bg-[#191E24] border p-3 flex flex-col min-h-[180px] transition-all shadow-sm cursor-pointer select-none ${
+                      class={`rounded-xl bg-black/20 border p-3 flex flex-col min-h-[180px] transition-all shadow-sm cursor-pointer select-none ${
                         isHovered
                           ? "border-[#9FE88D] ring-2 ring-[#9FE88D]/40 bg-[#9FE88D]/15"
                           : selectedPlayerForMove
                             ? "border-[#9FE88D]/50 bg-[#9FE88D]/5 hover:bg-[#9FE88D]/10 hover:border-[#9FE88D]"
-                            : "border-[#384252] hover:border-[#4b5563]"
+                            : "border-white/10 hover:border-[#4b5563]"
                       }`}
                     >
                       <!-- Drawer Header (med inline redigering av romnavn) -->
                       <div
-                        class="flex items-center justify-between pb-2 border-b border-[#384252] shrink-0"
+                        class="flex items-center justify-between pb-2 border-b border-white/10 shrink-0"
                       >
                         <div class="flex items-center gap-2 min-w-0 flex-1">
                           <span
@@ -1820,12 +1830,23 @@
                             <div class="flex items-center gap-1 flex-1 min-w-0">
                               <input
                                 type="text"
-                                bind:value={editingRoomNewName}
+                                bind:value={editingRoomNewTag}
+                                placeholder="Nick"
                                 onkeydown={(e) => {
                                   if (e.key === "Enter") saveEditingRoom(room);
                                   if (e.key === "Escape") cancelEditingRoom();
                                 }}
-                                class="w-full px-1.5 py-0.5 rounded bg-[#191E24] border border-[#9FE88D] text-xs text-white focus:outline-none"
+                                class="w-14 px-1.5 py-0.5 rounded bg-black/20 border border-[#70E1F8] text-xs text-white font-mono uppercase text-center focus:outline-none shrink-0"
+                              />
+                              <input
+                                type="text"
+                                bind:value={editingRoomNewName}
+                                placeholder="Romnavn"
+                                onkeydown={(e) => {
+                                  if (e.key === "Enter") saveEditingRoom(room);
+                                  if (e.key === "Escape") cancelEditingRoom();
+                                }}
+                                class="w-full min-w-0 px-1.5 py-0.5 rounded bg-black/20 border border-[#9FE88D] text-xs text-white focus:outline-none"
                               />
                               <button
                                 type="button"
@@ -1837,7 +1858,7 @@
                               <button
                                 type="button"
                                 onclick={(e) => cancelEditingRoom(e)}
-                                class="p-0.5 rounded bg-[#242B35] text-[#94A3B8]"
+                                class="p-0.5 rounded bg-white/[0.04] text-[#AEB9CC]"
                               >
                                 <X class="w-3 h-3" />
                               </button>
@@ -1845,14 +1866,20 @@
                           {:else}
                             <div class="flex items-center gap-1.5 truncate">
                               <span
+                                class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 uppercase"
+                                style={`border-color: ${room.accentColor || "#9FE88D"}40; color: ${room.accentColor || "#9FE88D"}; background-color: ${room.accentColor || "#9FE88D"}15;`}
+                              >
+                                {room.tag ?? `A${room.roomNumber}`}
+                              </span>
+                              <span
                                 class="font-bold text-xs text-white truncate"
                                 >{room.name}</span
                               >
                               <button
                                 type="button"
                                 onclick={(e) => startEditingRoom(room, e)}
-                                class="p-0.5 text-[#94A3B8] hover:text-white transition-colors"
-                                title="Endre romnavn"
+                                class="p-0.5 text-[#AEB9CC] hover:text-white transition-colors"
+                                title="Endre nick og romnavn"
                               >
                                 <Pencil class="w-3 h-3" />
                               </button>
@@ -1865,7 +1892,7 @@
                             class={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
                               teamsInRoom.length >= 2
                                 ? "bg-[#9FE88D]/15 text-[#9FE88D] border-[#9FE88D]/30"
-                                : "bg-[#191E24] text-[#94A3B8] border-[#384252]"
+                                : "bg-black/20 text-[#AEB9CC] border-white/10"
                             }`}
                           >
                             {teamsInRoom.length} lag
@@ -1875,7 +1902,7 @@
                             type="button"
                             onclick={() => promptDeleteRoom(room)}
                             title={`Slett ${room.name}`}
-                            class="p-1 rounded text-[#94A3B8] hover:text-[#FB6F84] hover:bg-[#3b2222] transition-colors"
+                            class="p-1 rounded text-[#AEB9CC] hover:text-[#FB6F84] hover:bg-[#3b2222] transition-colors"
                           >
                             <Trash2 class="w-3.5 h-3.5" />
                           </button>
@@ -1888,7 +1915,7 @@
                       >
                         {#if teamsInRoom.length === 0}
                           <div
-                            class="h-full flex flex-col items-center justify-center text-xs text-[#94A3B8]/70 border border-dashed border-[#384252] rounded-lg p-3 text-center"
+                            class="h-full flex flex-col items-center justify-center text-xs text-[#AEB9CC]/70 border border-dashed border-white/10 rounded-lg p-3 text-center"
                           >
                             <span
                               >Slipp spillere her eller klikk for å plassere</span
@@ -1916,7 +1943,7 @@
                             class={`p-2 rounded-lg border text-xs flex items-center justify-between gap-2 transition-all shadow-sm group select-none ${
                               isSelectedTeam
                                 ? "bg-[#9FE88D]/20 border-[#9FE88D] ring-2 ring-[#9FE88D]"
-                                : "bg-[#191E24] border-[#384252] hover:border-[#9FE88D]"
+                                : "bg-black/20 border-white/10 hover:border-[#9FE88D]"
                             } ${
                               editingTeamEntryId === team.entryId
                                 ? "cursor-default"
@@ -1936,7 +1963,7 @@
                                       if (e.key === "Escape")
                                         cancelEditingTeam();
                                     }}
-                                    class="w-full px-1.5 py-0.5 rounded bg-[#191E24] border border-[#9FE88D] text-xs text-white focus:outline-none font-semibold"
+                                    class="w-full px-1.5 py-0.5 rounded bg-black/20 border border-[#9FE88D] text-xs text-white focus:outline-none font-semibold"
                                   />
                                   <button
                                     type="button"
@@ -1949,7 +1976,7 @@
                                   <button
                                     type="button"
                                     onclick={(e) => cancelEditingTeam(e)}
-                                    class="p-0.5 rounded bg-[#242B35] text-[#94A3B8]"
+                                    class="p-0.5 rounded bg-white/[0.04] text-[#AEB9CC]"
                                     title="Avbryt"
                                   >
                                     <X class="w-3 h-3" />
@@ -1964,14 +1991,14 @@
                                   <button
                                     type="button"
                                     onclick={(e) => startEditingTeam(team, e)}
-                                    class="opacity-0 group-hover:opacity-100 p-0.5 text-[#94A3B8] hover:text-white transition-opacity"
+                                    class="opacity-0 group-hover:opacity-100 p-0.5 text-[#AEB9CC] hover:text-white transition-opacity"
                                     title="Endre lagnavn"
                                   >
                                     <Pencil class="w-3 h-3" />
                                   </button>
                                 </div>
                               {/if}
-                              <p class="text-[11px] text-[#94A3B8] truncate">
+                              <p class="text-[11px] text-[#AEB9CC] truncate">
                                 {team.managerName}
                               </p>
                             </div>
@@ -1982,14 +2009,14 @@
                               role="presentation"
                             >
                               <GripVertical
-                                class="w-3.5 h-3.5 text-[#94A3B8]/40 group-hover:text-[#9FE88D]"
+                                class="w-3.5 h-3.5 text-[#AEB9CC]/40 group-hover:text-[#9FE88D]"
                               />
                               <button
                                 type="button"
                                 onclick={() =>
                                   removeTeamFromRoomLocally(team, room._id)}
                                 title="Flytt tilbake til spillerpool"
-                                class="p-1 rounded text-[#94A3B8] hover:text-[#FB6F84] hover:bg-[#3b2222] transition-colors"
+                                class="p-1 rounded text-[#AEB9CC] hover:text-[#FB6F84] hover:bg-[#3b2222] transition-colors"
                               >
                                 <X class="w-3.5 h-3.5" />
                               </button>
@@ -2006,7 +2033,7 @@
                           class={`mt-1.5 py-2 px-2.5 rounded-lg border-2 border-dashed text-center text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
                             isHovered
                               ? "border-[#9FE88D] bg-[#9FE88D]/20 text-[#9FE88D] ring-2 ring-[#9FE88D]/40"
-                              : "border-[#384252] text-[#94A3B8]/70 hover:border-[#4b5563] hover:text-[#E2E8F0]"
+                              : "border-white/10 text-[#AEB9CC]/70 hover:border-[#4b5563] hover:text-[#E2E8F0]"
                           }`}
                         >
                           <Plus class="w-3 h-3 text-[#9FE88D]" />
@@ -2028,7 +2055,7 @@
           >
             <!-- Direkte FPL-synkronisering av lag og tabell -->
             <div
-              class="p-4 rounded-xl bg-[#242B35] border border-[#70E1F8]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm"
+              class="p-4 rounded-xl bg-white/[0.04] border border-[#70E1F8]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm"
             >
               <div>
                 <h4
@@ -2037,7 +2064,7 @@
                   <RefreshCw class="w-4 h-4 text-[#70E1F8]" />
                   <span>Hent inn & synkroniser alle lag fra FPL</span>
                 </h4>
-                <p class="text-[11px] text-[#94A3B8] mt-0.5">
+                <p class="text-[11px] text-[#AEB9CC] mt-0.5">
                   Henter alle registrerte lag i Classic League #{leagueId} fra det
                   offisielle FPL API-et og oppdaterer laglisten.
                 </p>
@@ -2085,7 +2112,7 @@
                   id="admin-sett-league-id"
                   type="number"
                   bind:value={leagueId}
-                  class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
+                  class="w-full px-3.5 py-2 rounded-xl bg-black/20 border border-white/10 text-white text-xs focus:border-[#9FE88D] focus:outline-none"
                 />
               </div>
 
@@ -2100,12 +2127,12 @@
                   id="admin-sett-league-name"
                   type="text"
                   bind:value={leagueName}
-                  class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
+                  class="w-full px-3.5 py-2 rounded-xl bg-black/20 border border-white/10 text-white text-xs focus:border-[#9FE88D] focus:outline-none"
                 />
               </div>
 
               <!-- Gjeldende gameweek (Automatisk styrt fra FPL) -->
-              <div class="p-4 rounded-xl bg-[#242B35] border border-[#384252] space-y-2.5">
+              <div class="p-4 rounded-xl bg-white/[0.04] border border-white/10 space-y-2.5">
                 <div class="flex items-center justify-between">
                   <span class="text-xs font-bold text-white block">
                     Gjeldende gameweek
@@ -2116,7 +2143,7 @@
                   </span>
                 </div>
 
-                <div class="flex items-center justify-between p-3 rounded-xl bg-[#191E24] border border-[#384252]">
+                <div class="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/10">
                   <div>
                     <div class="text-sm sm:text-base font-black text-white font-mono flex items-center gap-2">
                       <span class="text-[#9FE88D]">GW {currentGameweek}</span>
@@ -2124,7 +2151,7 @@
                         <span class="text-[11px] font-normal text-[#F4C152] font-sans">(sesongstart om en uke)</span>
                       {/if}
                     </div>
-                    <p class="text-[11px] text-[#94A3B8] mt-0.5">
+                    <p class="text-[11px] text-[#AEB9CC] mt-0.5">
                       Følger inneværende runde automatisk. Du trenger ikke å endre denne manuelt.
                     </p>
                   </div>
@@ -2132,14 +2159,14 @@
                   <button
                     type="button"
                     onclick={() => (showManualGwOverride = !showManualGwOverride)}
-                    class="text-[11px] text-[#94A3B8] hover:text-white underline font-semibold px-2 py-1 shrink-0"
+                    class="text-[11px] text-[#AEB9CC] hover:text-white underline font-semibold px-2 py-1 shrink-0"
                   >
                     {showManualGwOverride ? "Skjul overstyring" : "Overstyr"}
                   </button>
                 </div>
 
                 {#if showManualGwOverride}
-                  <div class="pt-2 border-t border-[#384252]/60 space-y-1.5 animate-in fade-in duration-150">
+                  <div class="pt-2 border-t border-white/10/60 space-y-1.5 animate-in fade-in duration-150">
                     <label for="admin-sett-gw" class="block text-[11px] font-bold text-[#F4C152]">
                       Manuell overstyring av gameweek (kun ved spesielle behov):
                     </label>
@@ -2149,7 +2176,7 @@
                       min="1"
                       max="38"
                       bind:value={currentGameweek}
-                      class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#F4C152]/40 text-white text-xs focus:border-[#F4C152] focus:outline-none font-mono"
+                      class="w-full px-3.5 py-2 rounded-xl bg-black/20 border border-[#F4C152]/40 text-white text-xs focus:border-[#F4C152] focus:outline-none font-mono"
                     />
                   </div>
                 {/if}
@@ -2157,13 +2184,13 @@
 
               <!-- Trekk fra transfer hits switch -->
               <div
-                class="p-4 rounded-xl bg-[#242B35] border border-[#384252] flex items-center justify-between"
+                class="p-4 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between"
               >
                 <div>
                   <h4 class="text-xs font-bold text-white">
                     Trekk fra transfer hits i rom-score
                   </h4>
-                  <p class="text-[11px] text-[#94A3B8]">
+                  <p class="text-[11px] text-[#AEB9CC]">
                     Når aktivert, trekkes -4p per ekstra overgang fra hver
                     spillers score før romsnittet beregnes.
                   </p>
@@ -2177,7 +2204,7 @@
                   {#if deductTransferHits}
                     <ToggleRight class="w-8 h-8 text-[#9FE88D]" />
                   {:else}
-                    <ToggleLeft class="w-8 h-8 text-[#94A3B8]" />
+                    <ToggleLeft class="w-8 h-8 text-[#AEB9CC]" />
                   {/if}
                 </button>
               </div>
@@ -2194,7 +2221,7 @@
 
               <!-- Chat-administrasjon og rensing -->
               <div
-                class="mt-8 pt-6 border-t border-[#384252] space-y-4"
+                class="mt-8 pt-6 border-t border-white/10 space-y-4"
               >
                 <div class="flex items-center gap-2">
                   <div
@@ -2206,7 +2233,7 @@
                     <h4 class="text-xs font-bold text-white uppercase tracking-wider">
                       Chat-administrasjon og rensing
                     </h4>
-                    <p class="text-[11px] text-[#94A3B8]">
+                    <p class="text-[11px] text-[#AEB9CC]">
                       Slett meldinger i banter felleskanal, rom-chatter eller tøm hele chathistorikken.
                     </p>
                   </div>
@@ -2215,11 +2242,11 @@
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <!-- Tøm Banter -->
                   <div
-                    class="p-3.5 rounded-xl bg-[#191E24] border border-[#384252] flex flex-col justify-between gap-3"
+                    class="p-3.5 rounded-xl bg-black/20 border border-white/10 flex flex-col justify-between gap-3"
                   >
                     <div>
                       <span class="text-xs font-bold text-white block">Felleskanal (banter)</span>
-                      <p class="text-[10px] text-[#94A3B8] mt-0.5 leading-relaxed">
+                      <p class="text-[10px] text-[#AEB9CC] mt-0.5 leading-relaxed">
                         Sletter alle meldinger og GIF-er i felleskanalen for alle brukere.
                       </p>
                     </div>
@@ -2235,11 +2262,11 @@
 
                   <!-- Tøm Romchatter -->
                   <div
-                    class="p-3.5 rounded-xl bg-[#191E24] border border-[#384252] flex flex-col justify-between gap-3"
+                    class="p-3.5 rounded-xl bg-black/20 border border-white/10 flex flex-col justify-between gap-3"
                   >
                     <div>
                       <span class="text-xs font-bold text-white block">Interne rom-chatter</span>
-                      <p class="text-[10px] text-[#94A3B8] mt-0.5 leading-relaxed">
+                      <p class="text-[10px] text-[#AEB9CC] mt-0.5 leading-relaxed">
                         Sletter meldinger i alle de 12 interne romchattene.
                       </p>
                     </div>
@@ -2255,11 +2282,11 @@
 
                   <!-- Tøm Alt -->
                   <div
-                    class="p-3.5 rounded-xl bg-[#191E24] border border-[#FB6F84]/40 flex flex-col justify-between gap-3"
+                    class="p-3.5 rounded-xl bg-black/20 border border-[#FB6F84]/40 flex flex-col justify-between gap-3"
                   >
                     <div>
                       <span class="text-xs font-bold text-[#FB6F84] block">Tøm all chat</span>
-                      <p class="text-[10px] text-[#94A3B8] mt-0.5 leading-relaxed">
+                      <p class="text-[10px] text-[#AEB9CC] mt-0.5 leading-relaxed">
                         Nullstiller all chat-historikk fullstendig i hele databasen.
                       </p>
                     </div>
@@ -2285,9 +2312,9 @@
           >
             <!-- 1. LIVE RUNDEVINNER (GAMEWEEK) -->
             <div
-              class="p-5 rounded-2xl bg-gradient-to-br from-[#F59E0B]/15 via-[#242B35] to-[#191E24] border border-[#F59E0B]/40 space-y-4 shadow-md"
+              class="p-5 rounded-2xl bg-gradient-to-br from-[#F59E0B]/15 via-white/[0.04] to-black/20 border border-[#F59E0B]/40 space-y-4 shadow-md"
             >
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#384252]">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/10">
                 <div class="flex items-center gap-2.5">
                   <div
                     class="p-2 rounded-xl bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/40"
@@ -2307,7 +2334,7 @@
                         </span>
                       {/if}
                     </h3>
-                    <p class="text-[11px] text-[#94A3B8]">
+                    <p class="text-[11px] text-[#AEB9CC]">
                       Nåværende leder/vinner av runden basert på FPL-poeng {winnersStatus?.deductTransferHits ? "(fratrukket transfer hits)" : ""}.
                     </p>
                   </div>
@@ -2329,38 +2356,38 @@
               <!-- Vinner-kort med egen fremhevet farge -->
               {#if winnersStatus?.activeRoundWinner}
                 <div
-                  class="p-4 rounded-xl bg-[#191E24]/90 border-2 border-[#F59E0B] shadow-[0_0_20px_rgba(245,158,11,0.15)] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  class="p-4 rounded-xl bg-black/20/90 border-2 border-[#F59E0B] shadow-[0_0_20px_rgba(245,158,11,0.15)] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div class="flex items-center gap-3">
                     <img
                       src={winnersStatus.activeRoundWinner.userAvatar ||
                         `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(winnersStatus.activeRoundWinner.managerName)}`}
                       alt="Avatar"
-                      class="w-12 h-12 rounded-xl bg-[#242B35] border-2 border-[#F59E0B] object-cover shrink-0"
+                      class="w-12 h-12 rounded-xl bg-white/[0.04] border-2 border-[#F59E0B] object-cover shrink-0"
                     />
                     <div>
                       <div class="flex items-center gap-2">
                         <span class="text-xs font-bold uppercase tracking-wider text-[#F59E0B]">
                           Gjeldende rundevinner
                         </span>
-                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#384252] text-[#E2E8F0] font-semibold">
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-[#E2E8F0] font-semibold">
                           {winnersStatus.activeRoundWinner.roomName}
                         </span>
                       </div>
                       <h4 class="text-base font-extrabold text-white">
                         {winnersStatus.activeRoundWinner.managerName}
                       </h4>
-                      <p class="text-xs text-[#94A3B8]">
+                      <p class="text-xs text-[#AEB9CC]">
                         {winnersStatus.activeRoundWinner.teamName}
                       </p>
                     </div>
                   </div>
 
-                  <div class="flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-[#384252]/50">
+                  <div class="flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-white/10/50">
                     <div class="text-2xl font-black text-[#F59E0B]">
                       {winnersStatus.activeRoundWinner.points}<span class="text-sm font-bold ml-0.5 text-white/80">p</span>
                     </div>
-                    <span class="text-[10px] text-[#94A3B8]">
+                    <span class="text-[10px] text-[#AEB9CC]">
                       {#if winnersStatus.activeRoundWinner.hits > 0}
                         ({winnersStatus.activeRoundWinner.grossPoints}p brutto – {winnersStatus.activeRoundWinner.hits}p hits)
                       {:else}
@@ -2370,13 +2397,13 @@
                   </div>
                 </div>
               {:else}
-                <div class="p-4 rounded-xl bg-[#191E24] border border-[#384252] text-xs text-[#94A3B8] text-center">
+                <div class="p-4 rounded-xl bg-black/20 border border-white/10 text-xs text-[#AEB9CC] text-center">
                   Ingen lag funnet for å beregne rundevinner. Synkroniser lag i ligainnstillinger.
                 </div>
               {/if}
 
               <!-- Overstyrings-kontroller for rundevinner -->
-              <div class="pt-2 border-t border-[#384252]/60 space-y-2">
+              <div class="pt-2 border-t border-white/10/60 space-y-2">
                 <span class="text-[11px] font-bold text-[#E2E8F0] uppercase tracking-wider block">
                   Overstyr rundevinner (hvis automatisk beregning må korrigeres):
                 </span>
@@ -2384,7 +2411,7 @@
                   <div class="sm:col-span-7">
                     <select
                       bind:value={overrideWinnerEntryId}
-                      class="w-full px-3 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#F59E0B] focus:outline-none"
+                      class="w-full px-3 py-2 rounded-xl bg-black/20 border border-white/10 text-white text-xs focus:border-[#F59E0B] focus:outline-none"
                     >
                       <option value={null}>-- Velg manager eller lag --</option>
                       {#each winnersStatus?.allTeamsCandidates || [] as team}
@@ -2399,7 +2426,7 @@
                       type="number"
                       bind:value={overrideWinnerScoreInput}
                       placeholder="Poeng"
-                      class="w-full px-3 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#F59E0B] focus:outline-none"
+                      class="w-full px-3 py-2 rounded-xl bg-black/20 border border-white/10 text-white text-xs focus:border-[#F59E0B] focus:outline-none"
                     />
                   </div>
                   <div class="sm:col-span-3">
@@ -2419,9 +2446,9 @@
 
             <!-- 2. LIVE LEDENDE ROM (ROMLEDER) -->
             <div
-              class="p-5 rounded-2xl bg-gradient-to-br from-[#10B981]/15 via-[#242B35] to-[#191E24] border border-[#10B981]/40 space-y-4 shadow-md"
+              class="p-5 rounded-2xl bg-gradient-to-br from-[#10B981]/15 via-white/[0.04] to-black/20 border border-[#10B981]/40 space-y-4 shadow-md"
             >
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#384252]">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/10">
                 <div class="flex items-center gap-2.5">
                   <div
                     class="p-2 rounded-xl bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40"
@@ -2441,7 +2468,7 @@
                         </span>
                       {/if}
                     </h3>
-                    <p class="text-[11px] text-[#94A3B8]">
+                    <p class="text-[11px] text-[#AEB9CC]">
                       Nåværende lederrom basert på snittet av de to beste spillernes nettoscore.
                     </p>
                   </div>
@@ -2463,7 +2490,7 @@
               <!-- Romleder Kort -->
               {#if winnersStatus?.activeTopRoom}
                 <div
-                  class="p-4 rounded-xl bg-[#191E24]/90 border-2 border-[#10B981] shadow-[0_0_20px_rgba(16,185,129,0.15)] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  class="p-4 rounded-xl bg-black/20/90 border-2 border-[#10B981] shadow-[0_0_20px_rgba(16,185,129,0.15)] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div class="flex items-center gap-3">
                     <div
@@ -2481,7 +2508,7 @@
                       <h4 class="text-base font-extrabold text-white">
                         {winnersStatus.activeTopRoom.name}
                       </h4>
-                      <p class="text-xs text-[#94A3B8]">
+                      <p class="text-xs text-[#AEB9CC]">
                         {#if winnersStatus.activeTopRoom.topPlayers && winnersStatus.activeTopRoom.topPlayers.length > 0}
                           Toppspillere: {winnersStatus.activeTopRoom.topPlayers.map((p: any) => `${p.managerName} (${p.points}p)`).join(", ")}
                         {:else}
@@ -2491,23 +2518,23 @@
                     </div>
                   </div>
 
-                  <div class="flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-[#384252]/50">
+                  <div class="flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-white/10/50">
                     <div class="text-2xl font-black text-[#10B981]">
                       {winnersStatus.activeTopRoom.score}<span class="text-sm font-bold ml-0.5 text-white/80">p</span>
                     </div>
-                    <span class="text-[10px] text-[#94A3B8]">
+                    <span class="text-[10px] text-[#AEB9CC]">
                       (Romsnitt topp 2)
                     </span>
                   </div>
                 </div>
               {:else}
-                <div class="p-4 rounded-xl bg-[#191E24] border border-[#384252] text-xs text-[#94A3B8] text-center">
+                <div class="p-4 rounded-xl bg-black/20 border border-white/10 text-xs text-[#AEB9CC] text-center">
                   Ingen romdata tilgjengelig for gjeldende runde.
                 </div>
               {/if}
 
               <!-- Overstyrings-kontroller for lederrom -->
-              <div class="pt-2 border-t border-[#384252]/60 space-y-2">
+              <div class="pt-2 border-t border-white/10/60 space-y-2">
                 <span class="text-[11px] font-bold text-[#E2E8F0] uppercase tracking-wider block">
                   Overstyr ledende rom (hvis automatisk beregning må korrigeres):
                 </span>
@@ -2515,7 +2542,7 @@
                   <div class="sm:col-span-7">
                     <select
                       bind:value={overrideRoomId}
-                      class="w-full px-3 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#10B981] focus:outline-none"
+                      class="w-full px-3 py-2 rounded-xl bg-black/20 border border-white/10 text-white text-xs focus:border-[#10B981] focus:outline-none"
                     >
                       <option value="">-- Velg ledende rom --</option>
                       {#each winnersStatus?.allRoomsCandidates || [] as room}
@@ -2531,7 +2558,7 @@
                       step="0.5"
                       bind:value={overrideRoomScoreInput}
                       placeholder="Snitt"
-                      class="w-full px-3 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#10B981] focus:outline-none"
+                      class="w-full px-3 py-2 rounded-xl bg-black/20 border border-white/10 text-white text-xs focus:border-[#10B981] focus:outline-none"
                     />
                   </div>
                   <div class="sm:col-span-3">
@@ -2550,7 +2577,7 @@
             </div>
 
             <!-- 3. MÅNEDSKÅRING & SKRYTEVEGG (WALL OF FAME) -->
-            <div class="pt-2 border-t border-[#384252] space-y-4">
+            <div class="pt-2 border-t border-white/10 space-y-4">
               <div class="flex items-center gap-2">
                 <div class="p-2 rounded-xl bg-[#F4C152]/15 text-[#F4C152] border border-[#F4C152]/30">
                   <Award class="w-5 h-5" />
@@ -2559,7 +2586,7 @@
                   <h3 class="text-sm font-bold text-white">
                     Månedskåring og skrytevegg
                   </h3>
-                  <p class="text-[11px] text-[#94A3B8]">
+                  <p class="text-[11px] text-[#AEB9CC]">
                     Publiser offisielle månedsvinnere med heder og ære til skryteveggen.
                   </p>
                 </div>
@@ -2568,7 +2595,7 @@
               <!-- Aktiv Skrytevegg Status -->
               {#if monthWinnersData?.roomWinner || monthWinnersData?.soloWinner}
                 <div
-                  class="p-4 rounded-xl bg-[#242B35] border border-[#F4C152]/40 space-y-3"
+                  class="p-4 rounded-xl bg-white/[0.04] border border-[#F4C152]/40 space-y-3"
                 >
                   <div class="flex items-center justify-between">
                     <h4
@@ -2582,7 +2609,7 @@
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     {#if monthWinnersData?.roomWinner}
                       <div
-                        class="p-3 rounded-lg bg-[#191E24] border border-[#384252] flex items-center justify-between"
+                        class="p-3 rounded-lg bg-black/20 border border-white/10 flex items-center justify-between"
                       >
                         <div>
                           <span
@@ -2593,7 +2620,7 @@
                             >{monthWinnersData.roomWinner.winningRoom?.name ||
                               monthWinnersData.roomWinner.winnerName}</strong
                           >
-                          <span class="text-[#94A3B8] block text-[11px]"
+                          <span class="text-[#AEB9CC] block text-[11px]"
                             >({monthWinnersData.roomWinner.winningScore}p snitt)</span
                           >
                         </div>
@@ -2610,7 +2637,7 @@
 
                     {#if monthWinnersData?.soloWinner}
                       <div
-                        class="p-3 rounded-lg bg-[#191E24] border border-[#384252] flex items-center justify-between"
+                        class="p-3 rounded-lg bg-black/20 border border-white/10 flex items-center justify-between"
                       >
                         <div>
                           <span
@@ -2620,7 +2647,7 @@
                           <strong class="text-white text-sm"
                             >{monthWinnersData.soloWinner.winnerName}</strong
                           >
-                          <span class="text-[#94A3B8] block text-[11px]"
+                          <span class="text-[#AEB9CC] block text-[11px]"
                             >({monthWinnersData.soloWinner.winningScore}p score)</span
                           >
                         </div>
@@ -2668,7 +2695,7 @@
                     class={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                       winnerCategory === "room"
                         ? "bg-[#F4C152]/15 border-[#F4C152] text-[#F4C152]"
-                        : "bg-[#191E24] border-[#384252] text-[#94A3B8]"
+                        : "bg-black/20 border-white/10 text-[#AEB9CC]"
                     }`}
                   >
                     <span>🏆</span>
@@ -2684,7 +2711,7 @@
                     class={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                       winnerCategory === "individual"
                         ? "bg-[#9FE88D]/15 border-[#9FE88D] text-[#9FE88D]"
-                        : "bg-[#191E24] border-[#384252] text-[#94A3B8]"
+                        : "bg-black/20 border-white/10 text-[#AEB9CC]"
                     }`}
                   >
                     <span>👑</span>
@@ -2702,7 +2729,7 @@
                     <select
                       id="admin-win-room"
                       bind:value={selectedWinnerRoomId}
-                      class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
+                      class="w-full px-3.5 py-2 rounded-xl bg-black/20 border border-white/10 text-white text-xs focus:border-[#9FE88D] focus:outline-none"
                     >
                       <option value="">Velg vinnerrom...</option>
                       {#each rooms as r}
@@ -2730,7 +2757,7 @@
                         type="text"
                         bind:value={winnerManagerName}
                         placeholder="f.eks. Trond Hjelle"
-                        class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
+                        class="w-full px-3.5 py-2 rounded-xl bg-black/20 border border-white/10 text-white text-xs focus:border-[#9FE88D] focus:outline-none"
                       />
                     </div>
                     <div>
@@ -2744,7 +2771,7 @@
                         type="text"
                         bind:value={winnerTeamName}
                         placeholder="f.eks. Hjelle FC"
-                        class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
+                        class="w-full px-3.5 py-2 rounded-xl bg-black/20 border border-white/10 text-white text-xs focus:border-[#9FE88D] focus:outline-none"
                       />
                     </div>
                   </div>
@@ -2759,7 +2786,7 @@
                     <select
                       id="admin-win-month"
                       bind:value={winningMonthName}
-                      class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
+                      class="w-full px-3.5 py-2 rounded-xl bg-black/20 border border-white/10 text-white text-xs focus:border-[#9FE88D] focus:outline-none"
                     >
                       {#each ["August", "September", "Oktober", "November", "Desember", "Januar", "Februar", "Mars", "April", "Mai"] as m}
                         <option value={m}>{m}</option>
@@ -2778,7 +2805,7 @@
                       type="number"
                       step="0.1"
                       bind:value={winningScore}
-                      class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none font-mono"
+                      class="w-full px-3.5 py-2 rounded-xl bg-black/20 border border-white/10 text-white text-xs focus:border-[#9FE88D] focus:outline-none font-mono"
                     />
                   </div>
                 </div>
@@ -2794,7 +2821,7 @@
                     rows="3"
                     bind:value={customWinnerMessage}
                     placeholder="Skriv en personlig gratulasjon som vises på skryteveggen..."
-                    class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
+                    class="w-full px-3.5 py-2 rounded-xl bg-black/20 border border-white/10 text-white text-xs focus:border-[#9FE88D] focus:outline-none"
                   ></textarea>
                 </div>
 
@@ -2813,13 +2840,13 @@
         {#if activeTab === "users"}
           <div class="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
             <div
-              class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#384252]"
+              class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10"
             >
               <div>
                 <h3 class="text-sm font-bold text-white">
                   Registrerte brukere ({users.length})
                 </h3>
-                <p class="text-xs text-[#94A3B8]">
+                <p class="text-xs text-[#AEB9CC]">
                   Oversikt over registrerte spillere og admin-roller
                 </p>
               </div>
@@ -2869,13 +2896,13 @@
 
             {#if users.length === 0}
               <div
-                class="p-8 rounded-xl bg-[#242B35] border border-[#384252] text-center space-y-2"
+                class="p-8 rounded-xl bg-white/[0.04] border border-white/10 text-center space-y-2"
               >
-                <Users class="w-8 h-8 text-[#94A3B8] mx-auto opacity-50" />
+                <Users class="w-8 h-8 text-[#AEB9CC] mx-auto opacity-50" />
                 <p class="text-sm font-bold text-white">
                   Ingen registrerte brukere
                 </p>
-                <p class="text-xs text-[#94A3B8]">
+                <p class="text-xs text-[#AEB9CC]">
                   Brukere opprettes når nye spillere logger inn eller fullfører
                   onboarding.
                 </p>
@@ -2885,7 +2912,7 @@
             <div class="space-y-2">
               {#each users as u}
                 <div
-                  class="p-3 rounded-xl bg-[#242B35] border border-[#384252] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs"
+                  class="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs"
                 >
                   <div class="flex items-center gap-3 min-w-0">
                     <img
@@ -2893,7 +2920,7 @@
                         "https://api.dicebear.com/7.x/bottts/svg?seed=" +
                           u.username}
                       alt=""
-                      class="w-8 h-8 rounded-full bg-[#191E24] shrink-0"
+                      class="w-8 h-8 rounded-full bg-black/20 shrink-0"
                     />
                     <div class="min-w-0">
                       <div class="flex items-center gap-2">
@@ -2904,21 +2931,21 @@
                           class={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                             u.role === "admin"
                               ? "bg-[#9FE88D]/15 text-[#9FE88D] border border-[#9FE88D]/30"
-                              : "bg-[#191E24] text-[#94A3B8]"
+                              : "bg-black/20 text-[#AEB9CC]"
                           }`}
                         >
                           {u.role}
                         </span>
                       </div>
                       <div
-                        class="text-[11px] text-[#94A3B8] flex items-center gap-1.5 mt-0.5 truncate"
+                        class="text-[11px] text-[#AEB9CC] flex items-center gap-1.5 mt-0.5 truncate"
                       >
                         <Shirt class="w-3 h-3 text-[#70E1F8] shrink-0" />
                         {#if u.fplTeamName}
                           <span class="text-[#E2E8F0] font-semibold"
                             >{u.fplTeamName}</span
                           >
-                          <span class="text-[#94A3B8]"
+                          <span class="text-[#AEB9CC]"
                             >({u.fplManagerName || "Manager"})</span
                           >
                         {:else}
@@ -2939,7 +2966,7 @@
                           selectedEntryId: u.fplEntryId ?? null,
                         };
                       }}
-                      class="px-2.5 py-1 rounded-lg bg-[#191E24] hover:bg-[#2A303C] text-[11px] text-[#70E1F8] hover:text-white border border-[#384252] flex items-center gap-1 font-semibold transition-colors"
+                      class="px-2.5 py-1 rounded-lg bg-black/20 hover:bg-white/[0.055] text-[11px] text-[#70E1F8] hover:text-white border border-white/10 flex items-center gap-1 font-semibold transition-colors"
                       title="Koble eller endre FPL-lag for denne brukeren"
                     >
                       <Shirt class="w-3 h-3" />
@@ -2977,7 +3004,7 @@
                           u._id,
                           u.role === "admin" ? "user" : "admin",
                         )}
-                      class="px-2.5 py-1 rounded-lg bg-[#242B35] hover:bg-[#384252] text-[11px] text-[#E2E8F0] border border-[#384252]"
+                      class="px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/10 text-[11px] text-[#E2E8F0] border border-white/10"
                     >
                       {u.role === "admin"
                         ? "Gjør til bruker"
@@ -2997,7 +3024,7 @@
                         };
                       }}
                       title="Slett bruker"
-                      class="p-1 rounded-lg text-[#94A3B8] hover:text-[#FB6F84] hover:bg-[#361c1c] transition-colors"
+                      class="p-1 rounded-lg text-[#AEB9CC] hover:text-[#FB6F84] hover:bg-[#361c1c] transition-colors"
                     >
                       <Trash2 class="w-3.5 h-3.5" />
                     </button>
@@ -3014,7 +3041,7 @@
             class="p-6 space-y-5 overflow-y-auto flex-1 max-w-2xl custom-scrollbar"
           >
             <div
-              class="p-4 rounded-xl bg-[#242B35] border border-[#384252] space-y-3 shadow-sm"
+              class="p-4 rounded-xl bg-white/[0.04] border border-white/10 space-y-3 shadow-sm"
             >
               <h3
                 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5"
@@ -3027,18 +3054,18 @@
                   type="text"
                   bind:value={newCodeCustom}
                   placeholder="Valgfri kode (f.eks. OPPSTART)"
-                  class="px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none uppercase font-mono font-bold"
+                  class="px-3.5 py-2 rounded-xl bg-black/20 border border-white/10 text-white text-xs focus:border-[#9FE88D] focus:outline-none uppercase font-mono font-bold"
                 />
                 <select
                   bind:value={newCodeRole}
-                  class="px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
+                  class="px-3.5 py-2 rounded-xl bg-black/20 border border-white/10 text-white text-xs focus:border-[#9FE88D] focus:outline-none"
                 >
                   <option value="user">Bruker-tilgang</option>
                   <option value="admin">Admin-tilgang</option>
                 </select>
                 <select
                   bind:value={newCodeValidDays}
-                  class="px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white text-xs focus:border-[#9FE88D] focus:outline-none"
+                  class="px-3.5 py-2 rounded-xl bg-black/20 border border-white/10 text-white text-xs focus:border-[#9FE88D] focus:outline-none"
                 >
                   <option value={1}>Gyldig i 1 dag</option>
                   <option value={3}>Gyldig i 3 dager</option>
@@ -3062,32 +3089,32 @@
             </div>
 
             <div class="space-y-2">
-              <h4 class="text-xs font-bold text-[#94A3B8] uppercase">
+              <h4 class="text-xs font-bold text-[#AEB9CC] uppercase">
                 Aktive Koder ({inviteCodes.length})
               </h4>
               {#if inviteCodes.length === 0}
                 <div
-                  class="p-4 rounded-xl bg-[#242B35] border border-[#384252] text-center text-xs text-[#94A3B8]"
+                  class="p-4 rounded-xl bg-white/[0.04] border border-white/10 text-center text-xs text-[#AEB9CC]"
                 >
                   Ingen aktive invitasjonskoder opprettet ennå.
                 </div>
               {:else}
                 {#each inviteCodes as inv}
                   <div
-                    class="p-3 rounded-xl bg-[#242B35] border border-[#384252] flex items-center justify-between text-xs font-mono"
+                    class="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between text-xs font-mono"
                   >
                     <div>
                       <span class="font-bold text-[#9FE88D] text-sm block"
                         >{inv.code}</span
                       >
-                      <span class="text-[#94A3B8] text-[11px] font-sans">
+                      <span class="text-[#AEB9CC] text-[11px] font-sans">
                         Rolle: <strong class="text-white">{inv.role}</strong> •
                         Brukt: {inv.usedCount ?? inv.usesCount ?? 0} ganger
                       </span>
                     </div>
                     <div class="flex items-center gap-3">
                       <div
-                        class="text-right font-sans text-[11px] text-[#94A3B8]"
+                        class="text-right font-sans text-[11px] text-[#AEB9CC]"
                       >
                         {#if inv.expiresAt}
                           {@const daysLeft = Math.ceil(
@@ -3126,7 +3153,7 @@
                           };
                         }}
                         title="Slett invitasjonskode"
-                        class="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#FB6F84] hover:bg-[#361c1c] transition-colors"
+                        class="p-1.5 rounded-lg text-[#AEB9CC] hover:text-[#FB6F84] hover:bg-[#361c1c] transition-colors"
                       >
                         <Trash2 class="w-3.5 h-3.5" />
                       </button>
@@ -3143,9 +3170,9 @@
             class="p-6 space-y-6 overflow-y-auto flex-1 max-w-3xl custom-scrollbar"
           >
             <div
-              class="p-5 rounded-2xl bg-[#242B35] border border-[#FB6F84]/30 space-y-5 shadow-lg"
+              class="p-5 rounded-2xl bg-white/[0.04] border border-[#FB6F84]/30 space-y-5 shadow-lg"
             >
-              <div class="flex items-center gap-3 pb-3 border-b border-[#384252]">
+              <div class="flex items-center gap-3 pb-3 border-b border-white/10">
                 <div
                   class="p-2.5 rounded-xl bg-[#FB6F84]/15 text-[#FB6F84] border border-[#FB6F84]/30"
                 >
@@ -3155,7 +3182,7 @@
                   <h3 class="text-base font-bold text-white">
                     Chat-administrasjon og rensing
                   </h3>
-                  <p class="text-xs text-[#94A3B8]">
+                  <p class="text-xs text-[#AEB9CC]">
                     Her kan du slette eller tømme samtalehistorikk i felleskanalen, romchattene eller hele systemet.
                   </p>
                 </div>
@@ -3164,14 +3191,14 @@
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <!-- 1. Tøm Banter -->
                 <div
-                  class="p-4 rounded-xl bg-[#191E24] border border-[#384252] flex flex-col justify-between gap-4"
+                  class="p-4 rounded-xl bg-black/20 border border-white/10 flex flex-col justify-between gap-4"
                 >
                   <div>
                     <div class="flex items-center gap-1.5 text-white font-bold text-sm mb-1">
                       <span>💬</span>
                       <span>Felleskanal (banter)</span>
                     </div>
-                    <p class="text-xs text-[#94A3B8] leading-relaxed">
+                    <p class="text-xs text-[#AEB9CC] leading-relaxed">
                       Sletter alle meldinger, reaksjoner og GIF-er som er sendt i den åpne banter-kanalen.
                     </p>
                   </div>
@@ -3187,14 +3214,14 @@
 
                 <!-- 2. Tøm Rom-chatter -->
                 <div
-                  class="p-4 rounded-xl bg-[#191E24] border border-[#384252] flex flex-col justify-between gap-4"
+                  class="p-4 rounded-xl bg-black/20 border border-white/10 flex flex-col justify-between gap-4"
                 >
                   <div>
                     <div class="flex items-center gap-1.5 text-white font-bold text-sm mb-1">
                       <span>🏠</span>
                       <span>Interne rom-chatter</span>
                     </div>
-                    <p class="text-xs text-[#94A3B8] leading-relaxed">
+                    <p class="text-xs text-[#AEB9CC] leading-relaxed">
                       Sletter alle meldinger i de 12 interne romchattene (Rom A1 til A12).
                     </p>
                   </div>
@@ -3210,14 +3237,14 @@
 
                 <!-- 3. Tøm Alt -->
                 <div
-                  class="p-4 rounded-xl bg-[#191E24] border border-[#FB6F84]/40 flex flex-col justify-between gap-4"
+                  class="p-4 rounded-xl bg-black/20 border border-[#FB6F84]/40 flex flex-col justify-between gap-4"
                 >
                   <div>
                     <div class="flex items-center gap-1.5 text-[#FB6F84] font-bold text-sm mb-1">
                       <span>💣</span>
                       <span>Tøm all chat</span>
                     </div>
-                    <p class="text-xs text-[#94A3B8] leading-relaxed">
+                    <p class="text-xs text-[#AEB9CC] leading-relaxed">
                       Permanent sletting av all chat-historikk i hele databasen (både felles og alle rom).
                     </p>
                   </div>
@@ -3234,7 +3261,7 @@
             </div>
           </div>
 
-          <!-- Tab 6: Cup & Sluttspill Styring (Double Elimination) -->
+          <!-- Tab 6: Cup & Playoffs Styring (Double Elimination) -->
         {:else if activeTab === "cup"}
           <div
             class="p-4 sm:p-5 space-y-5 overflow-y-auto flex-1 custom-scrollbar"
@@ -3242,10 +3269,10 @@
             {#if !activeCup}
               <!-- Ingen aktiv cup: Opprettelsesskjema -->
               <div
-                class="max-w-2xl mx-auto p-6 rounded-2xl bg-[#242B35] border border-[#384252] space-y-5 shadow-lg"
+                class="max-w-2xl mx-auto p-6 rounded-2xl bg-white/[0.04] border border-white/10 space-y-5 shadow-lg"
               >
                 <div
-                  class="flex items-center gap-3 pb-3 border-b border-[#384252]"
+                  class="flex items-center gap-3 pb-3 border-b border-white/10"
                 >
                   <div
                     class="p-2.5 rounded-xl bg-[#F4C152]/15 text-[#F4C152] border border-[#F4C152]/30"
@@ -3254,9 +3281,9 @@
                   </div>
                   <div>
                     <h3 class="text-base font-bold text-white">
-                      Opprett Ny Cup & Sluttspill
+                      Opprett Ny Cup & Playoffs
                     </h3>
-                    <p class="text-xs text-[#94A3B8]">
+                    <p class="text-xs text-[#AEB9CC]">
                       Genererer et komplett Double Elimination turneringsformat
                       (Winners & Losers bracket)
                     </p>
@@ -3276,7 +3303,7 @@
                       type="text"
                       bind:value={newCupName}
                       placeholder="f.eks. Atlantasy Vintercup 2025/2026"
-                      class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#F4C152] focus:outline-none text-sm"
+                      class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#F4C152] focus:outline-none text-sm"
                     />
                   </div>
 
@@ -3286,31 +3313,61 @@
                       for="admin-cup-format"
                       class="block font-bold text-white mb-1.5"
                     >
-                      Velg Turneringsmodell:
+                      Velg turneringsformat:
                     </label>
                     <select
                       id="admin-cup-format"
                       bind:value={newCupFormat}
-                      class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#F4C152]/60 text-white focus:border-[#F4C152] focus:outline-none font-semibold"
+                      class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-[#F4C152]/60 text-white focus:border-[#F4C152] focus:outline-none font-semibold"
                     >
-                      <option value="lucky_loser_12">
-                        🌟 12 Lag: Alle spiller i R1 (6 kamper) + 2 Lucky Losers
-                        til Kvartfinale (4 runder)
+                      <option value="single_elimination">
+                        🏆 Enkel knockout – tap én gang og du er ute (med
+                        3rd place final)
                       </option>
-                      <option value="double_elimination_12">
-                        ⚔️ 12 Lag: Standard Double Elimination med Topp 4 Byes
-                        (Challonge-stil, 7 runder)
+                      <option value="double_elimination">
+                        ⚔️ Dobbel knockout – vinner- og taperbrakett +
+                        grand final
                       </option>
-                      <option value="top8_single">
-                        🏆 Topp 8: Rent Sluttspill (Kvartfinaler, Semifinaler,
-                        Finale - 3 runder)
+                      <option value="round_robin">
+                        🔁 Serie – alle møter alle
                       </option>
-                      <option value="group_stage_12">
-                        🌐 12 Lag: Gruppespill (2 puljer à 6) + Sluttspill (5
-                        runder)
+                      <option value="group_stage">
+                        🌐 Gruppespill + playoffs
+                      </option>
+                      <option value="lucky_loser">
+                        🌟 Lucky loser – utslag der beste taper i runde 1 får ny
+                        sjanse
                       </option>
                     </select>
+                    <p class="text-[11px] text-[#AEB9CC] mt-1.5">
+                      Alle formatene tilpasser seg antall rom automatisk – 9, 10,
+                      12, oddetall som partall. Lag som mangler motstander i
+                      første runde får walkover.
+                    </p>
                   </div>
+
+                  {#if newCupFormat === "round_robin" || newCupFormat === "group_stage"}
+                    <div>
+                      <label
+                        for="admin-cup-groups"
+                        class="block font-bold text-white mb-1.5"
+                      >
+                        Antall grupper:
+                      </label>
+                      <input
+                        id="admin-cup-groups"
+                        type="number"
+                        min="1"
+                        max="8"
+                        bind:value={newCupGroupCount}
+                        class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-[#F4C152]/60 text-white focus:border-[#F4C152] focus:outline-none font-semibold"
+                      />
+                      <p class="text-[11px] text-[#AEB9CC] mt-1.5">
+                        1 gruppe = ren serie (vinneren av tabellen tar cupen). 2+
+                        grupper spiller playoffs mellom gruppevinnerne.
+                      </p>
+                    </div>
+                  {/if}
 
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -3326,7 +3383,7 @@
                         min="1"
                         max="38"
                         bind:value={newCupStartGw}
-                        class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#F4C152] focus:outline-none"
+                        class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#F4C152] focus:outline-none"
                       />
                     </div>
 
@@ -3340,7 +3397,7 @@
                       <select
                         id="admin-cup-seeding"
                         bind:value={newCupSeedMethod}
-                        class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#F4C152] focus:outline-none"
+                        class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#F4C152] focus:outline-none"
                       >
                         <option value="leaderboard"
                           >Basert på tabell & romsnitt (Anbefalt)</option
@@ -3355,114 +3412,57 @@
 
                   <!-- Format og runder forhåndsvisning -->
                   <div
-                    class="p-3.5 rounded-xl bg-[#191E24] border border-[#384252] space-y-2"
+                    class="p-3.5 rounded-xl bg-black/20 border border-white/10 space-y-2"
                   >
-                    {#if newCupFormat === "lucky_loser_12"}
-                      <span
-                        class="text-xs font-bold text-[#9FE88D] uppercase tracking-wider block flex items-center gap-1.5"
-                      >
-                        <Sparkles class="w-3.5 h-3.5" />
-                        <span
-                          >12 Lag: 6 Kamper i R1 + 2 Lucky Losers (4 Runder)</span
-                        >
-                      </span>
-                      <ul class="space-y-1 text-xs text-[#94A3B8]">
-                        <li>
-                          • <strong>Runde 1 (GW {newCupStartGw}):</strong> Alle 12
-                          lag i ilden (6 kamper). Ingen har fri.
-                        </li>
-                        <li>
-                          • <strong
-                            >Kvartfinaler (GW {newCupStartGw + 1}):</strong
-                          > De 6 vinnerne + de 2 taperne med høyest romsnitt («Lucky
-                          Losers») avanserer til 4 kvartfinaler.
-                        </li>
-                        <li>
-                          • <strong
-                            >Semifinaler (GW {newCupStartGw + 2}):</strong
-                          > 4 lag kjemper om finaleplass.
-                        </li>
-                        <li>
-                          • <strong>Storfinale (GW {newCupStartGw + 3}):</strong
-                          > De 2 beste rommene kjemper om trofeet!
-                        </li>
-                      </ul>
-                    {:else if newCupFormat === "double_elimination_12"}
-                      <span
-                        class="text-xs font-bold text-[#F4C152] uppercase tracking-wider block flex items-center gap-1.5"
-                      >
-                        <Swords class="w-3.5 h-3.5" />
-                        <span
-                          >Challonge Standard Double Elimination (7 Runder)</span
-                        >
-                      </span>
-                      <ul class="space-y-1 text-xs text-[#94A3B8]">
-                        <li>
-                          • <strong>Topp 4 Byes:</strong> Seeds 1–4 belønnes med
-                          frirunde i GW {newCupStartGw}.
-                        </li>
-                        <li>
-                          • <strong>Innledende runde:</strong> Seeds 5–12
-                          spiller 4 kamper i GW {newCupStartGw}.
-                        </li>
-                        <li>
-                          • <strong>Taperbrakett:</strong> Taperne faller ned i Losers
-                          Bracket og får en ekstra sjanse.
-                        </li>
-                        <li>
-                          • <strong
-                            >Grand Final (GW {newCupStartGw + 6}):</strong
-                          > Vinner WB mot Vinner LB!
-                        </li>
-                      </ul>
-                    {:else if newCupFormat === "top8_single"}
-                      <span
-                        class="text-xs font-bold text-[#70E1F8] uppercase tracking-wider block flex items-center gap-1.5"
-                      >
+                    {#if newCupFormat === "single_elimination"}
+                      <span class="text-xs font-bold text-[#70E1F8] uppercase tracking-wider flex items-center gap-1.5">
                         <Trophy class="w-3.5 h-3.5" />
-                        <span>Topp 8 Sluttspill (3 Runder)</span>
+                        <span>Enkel knockout</span>
                       </span>
-                      <ul class="space-y-1 text-xs text-[#94A3B8]">
-                        <li>
-                          • <strong>Kvartfinaler (GW {newCupStartGw}):</strong> Kun
-                          de 8 beste rommene deltar (4 kamper).
-                        </li>
-                        <li>
-                          • <strong
-                            >Semifinaler (GW {newCupStartGw + 1}):</strong
-                          > De 4 vinnerne.
-                        </li>
-                        <li>
-                          • <strong>Storfinale (GW {newCupStartGw + 2}):</strong
-                          > Titteloppgjør!
-                        </li>
+                      <ul class="space-y-1 text-xs text-[#AEB9CC]">
+                        <li>• Seedet bracket. Antall runder følger antall rom – bracketen fylles opp til nærmeste toerpotens med walkover for de best seedede.</li>
+                        <li>• Tap én kamp og du er ute. Taperne i semifinalene møtes i en 3rd place final.</li>
+                        <li>• Første kamp i GW {newCupStartGw}, én runde per gameweek.</li>
                       </ul>
-                    {:else if newCupFormat === "group_stage_12"}
-                      <span
-                        class="text-xs font-bold text-[#F4C152] uppercase tracking-wider block flex items-center gap-1.5"
-                      >
-                        <Crown class="w-3.5 h-3.5" />
-                        <span
-                          >Gruppespill (2 puljer à 6) + Sluttspill (5 Runder)</span
-                        >
+                    {:else if newCupFormat === "double_elimination"}
+                      <span class="text-xs font-bold text-[#F4C152] uppercase tracking-wider flex items-center gap-1.5">
+                        <Swords class="w-3.5 h-3.5" />
+                        <span>Dobbel knockout</span>
                       </span>
-                      <ul class="space-y-1 text-xs text-[#94A3B8]">
-                        <li>
-                          • <strong
-                            >Gruppespill (GW {newCupStartGw}–{newCupStartGw +
-                              2}):</strong
-                          > Gruppe A og B spiller innledende kamper for puljepoeng.
-                        </li>
-                        <li>
-                          • <strong
-                            >Semifinaler (GW {newCupStartGw + 3}):</strong
-                          > Nr 1 i Gruppe A møter Nr 2 i Gruppe B, og Nr 1 i Gruppe
-                          B møter Nr 2 i Gruppe A.
-                        </li>
-                        <li>
-                          • <strong>Storfinale (GW {newCupStartGw + 4}):</strong
-                          > Vinnerne av semifinalene møtes til finale.
-                        </li>
+                      <ul class="space-y-1 text-xs text-[#AEB9CC]">
+                        <li>• Winners bracket + taperbrakett. Du må tape to ganger for å ryke ut.</li>
+                        <li>• Er ikke antallet en toerpotens spilles en play-in-runde først, så taperbraketten blir ren.</li>
+                        <li>• Avsluttes med en grand final mellom vinner av hver brakett.</li>
+                      </ul>
+                    {:else if newCupFormat === "round_robin"}
+                      <span class="text-xs font-bold text-[#9FE88D] uppercase tracking-wider flex items-center gap-1.5">
+                        <Crown class="w-3.5 h-3.5" />
+                        <span>Serie – alle møter alle</span>
+                      </span>
+                      <ul class="space-y-1 text-xs text-[#AEB9CC]">
+                        <li>• {newCupGroupCount === 1 ? "Én tabell – alle rom møter hverandre én gang." : `${newCupGroupCount} grupper, alle møter alle i sin gruppe.`}</li>
+                        <li>• Ved oddetall lag har ett rom fri hver runde.</li>
+                        <li>• {newCupGroupCount === 1 ? "Tabelltoppen vinner cupen." : "Playoffs mellom gruppevinnerne kårer cupmesteren."}</li>
+                      </ul>
+                    {:else if newCupFormat === "group_stage"}
+                      <span class="text-xs font-bold text-[#F4C152] uppercase tracking-wider flex items-center gap-1.5">
+                        <Crown class="w-3.5 h-3.5" />
+                        <span>Gruppespill + playoffs</span>
+                      </span>
+                      <ul class="space-y-1 text-xs text-[#AEB9CC]">
+                        <li>• Rommene fordeles jevnt på {newCupGroupCount} grupper (slange-seeding).</li>
+                        <li>• Alle møter alle i gruppa for gruppepoeng.</li>
+                        <li>• Gruppevinnerne går videre til et utslagsplayoffs.</li>
+                      </ul>
+                    {:else if newCupFormat === "lucky_loser"}
+                      <span class="text-xs font-bold text-[#9FE88D] uppercase tracking-wider flex items-center gap-1.5">
+                        <Sparkles class="w-3.5 h-3.5" />
+                        <span>Lucky loser</span>
+                      </span>
+                      <ul class="space-y-1 text-xs text-[#AEB9CC]">
+                        <li>• Enkel knockout, men taperen i runde 1 med høyest poengsum får en ny sjanse og fyller en ledig plass.</li>
+                        <li>• Er antallet allerede en toerpotens oppfører den seg som en vanlig knockout.</li>
+                        <li>• 3rd place final mellom taperne i semifinalene.</li>
                       </ul>
                     {/if}
                   </div>
@@ -3488,7 +3488,7 @@
               <div class="space-y-4">
                 <!-- Cup Oversikt Header -->
                 <div
-                  class="p-4 rounded-2xl bg-[#242B35] border border-[#384252] flex flex-wrap items-center justify-between gap-3 shadow-sm"
+                  class="p-4 rounded-2xl bg-white/[0.04] border border-white/10 flex flex-wrap items-center justify-between gap-3 shadow-sm"
                 >
                   <div class="flex items-center gap-3">
                     <div
@@ -3509,7 +3509,7 @@
                             : "Aktiv"}
                         </span>
                       </div>
-                      <p class="text-xs text-[#94A3B8]">
+                      <p class="text-xs text-[#AEB9CC]">
                         Aktiv runde: <strong class="text-white"
                           >Runde {activeCup.currentRound}</strong
                         >
@@ -3551,10 +3551,10 @@
                 <!-- Redigeringsmodal / Boks for valgt kamp -->
                 {#if selectedMatchForEdit}
                   <div
-                    class="p-4 rounded-2xl bg-[#191E24] border border-[#F4C152]/40 space-y-3 shadow-md"
+                    class="p-4 rounded-2xl bg-black/20 border border-[#F4C152]/40 space-y-3 shadow-md"
                   >
                     <div
-                      class="flex items-center justify-between pb-2 border-b border-[#384252]"
+                      class="flex items-center justify-between pb-2 border-b border-white/10"
                     >
                       <div class="flex items-center gap-2">
                         <Shield class="w-4 h-4 text-[#F4C152]" />
@@ -3564,7 +3564,7 @@
                       </div>
                       <button
                         onclick={() => (selectedMatchForEdit = null)}
-                        class="text-[#94A3B8] hover:text-white"
+                        class="text-[#AEB9CC] hover:text-white"
                       >
                         <X class="w-4 h-4" />
                       </button>
@@ -3581,7 +3581,7 @@
                         <select
                           id="edit-match-r1"
                           bind:value={editMatchRoom1Id}
-                          class="w-full px-3 py-2 rounded-xl bg-[#242B35] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+                          class="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
                         >
                           <option value="">-- Ingen / Avventer --</option>
                           {#each rooms as r}
@@ -3598,7 +3598,7 @@
                         <select
                           id="edit-match-r2"
                           bind:value={editMatchRoom2Id}
-                          class="w-full px-3 py-2 rounded-xl bg-[#242B35] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+                          class="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
                         >
                           <option value="">-- Ingen / Avventer --</option>
                           {#each rooms as r}
@@ -3616,7 +3616,7 @@
                         <select
                           id="edit-match-winner"
                           bind:value={editMatchWinnerId}
-                          class="w-full px-3 py-2 rounded-xl bg-[#242B35] border border-[#F4C152]/50 text-white focus:border-[#F4C152] focus:outline-none"
+                          class="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-[#F4C152]/50 text-white focus:border-[#F4C152] focus:outline-none"
                         >
                           <option value="">-- Ingen vinner kåret ennå --</option
                           >
@@ -3647,7 +3647,7 @@
                           step="0.1"
                           bind:value={editMatchScore1}
                           placeholder="f.eks. 68.5"
-                          class="w-full px-3 py-2 rounded-xl bg-[#242B35] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+                          class="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
                         />
                       </div>
 
@@ -3663,17 +3663,17 @@
                           step="0.1"
                           bind:value={editMatchScore2}
                           placeholder="f.eks. 72.0"
-                          class="w-full px-3 py-2 rounded-xl bg-[#242B35] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+                          class="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
                         />
                       </div>
                     </div>
 
                     <div
-                      class="flex items-center justify-end gap-2 pt-2 border-t border-[#384252]"
+                      class="flex items-center justify-end gap-2 pt-2 border-t border-white/10"
                     >
                       <button
                         onclick={() => (selectedMatchForEdit = null)}
-                        class="px-3 py-1.5 rounded-xl bg-[#242B35] text-[#94A3B8] hover:text-white text-xs border border-[#384252]"
+                        class="px-3 py-1.5 rounded-xl bg-white/[0.04] text-[#AEB9CC] hover:text-white text-xs border border-white/10"
                       >
                         Avbryt
                       </button>
@@ -3691,11 +3691,11 @@
                 <div class="space-y-2">
                   <div class="flex items-center justify-between">
                     <h4
-                      class="text-xs font-bold text-[#94A3B8] uppercase tracking-wider"
+                      class="text-xs font-bold text-[#AEB9CC] uppercase tracking-wider"
                     >
                       Alle Kamper i Cupen ({activeCup.matches?.length || 0})
                     </h4>
-                    <span class="text-[11px] text-[#94A3B8]">
+                    <span class="text-[11px] text-[#AEB9CC]">
                       Trykk "Rediger" for manuell overstyring
                     </span>
                   </div>
@@ -3705,17 +3705,17 @@
                   >
                     {#each activeCup.matches || [] as match}
                       <div
-                        class="p-3 rounded-xl bg-[#242B35] border border-[#384252] space-y-2 text-xs"
+                        class="p-3 rounded-xl bg-white/[0.04] border border-white/10 space-y-2 text-xs"
                       >
                         <div
-                          class="flex items-center justify-between pb-1.5 border-b border-[#384252]/60"
+                          class="flex items-center justify-between pb-1.5 border-b border-white/10/60"
                         >
                           <span class="font-bold text-white text-[11px]">
                             {match.roundTitle} (Runde {match.roundNumber})
                           </span>
                           <div class="flex items-center gap-2">
                             <span
-                              class="font-mono text-[10px] text-[#F4C152] bg-[#191E24] px-1.5 py-0.5 rounded border border-[#384252]"
+                              class="font-mono text-[10px] text-[#F4C152] bg-black/20 px-1.5 py-0.5 rounded border border-white/10"
                             >
                               GW {match.gameweek}
                             </span>
@@ -3723,7 +3723,7 @@
                               class={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                                 match.status === "completed"
                                   ? "text-[#9FE88D] bg-[#9FE88D]/15"
-                                  : "text-[#94A3B8] bg-[#191E24]"
+                                  : "text-[#AEB9CC] bg-black/20"
                               }`}
                             >
                               {match.status === "completed"
@@ -3745,7 +3745,7 @@
                               <span>{match.room1?.name || "TBD"}</span>
                               {#if match.room1Score !== undefined}
                                 <span
-                                  class="font-mono text-[11px] text-[#94A3B8]"
+                                  class="font-mono text-[11px] text-[#AEB9CC]"
                                   >({match.room1Score}p)</span
                                 >
                               {/if}
@@ -3761,7 +3761,7 @@
                               <span>{match.room2?.name || "TBD"}</span>
                               {#if match.room2Score !== undefined}
                                 <span
-                                  class="font-mono text-[11px] text-[#94A3B8]"
+                                  class="font-mono text-[11px] text-[#AEB9CC]"
                                   >({match.room2Score}p)</span
                                 >
                               {/if}
@@ -3770,7 +3770,7 @@
 
                           <button
                             onclick={() => startEditingMatch(match)}
-                            class="px-2.5 py-1 rounded-lg bg-[#191E24] hover:bg-[#384252] text-[#F4C152] border border-[#384252] text-[11px] font-bold transition-colors shrink-0"
+                            class="px-2.5 py-1 rounded-lg bg-black/20 hover:bg-white/10 text-[#F4C152] border border-white/10 text-[11px] font-bold transition-colors shrink-0"
                           >
                             Rediger
                           </button>
@@ -3794,15 +3794,15 @@
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 text-[#E2E8F0]"
   >
     <div
-      class="bg-[#2A303C] border border-[#384252] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl"
+      class="bg-white/[0.055] backdrop-blur-sm border border-white/10 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl"
     >
       <div
-        class="flex items-center justify-between pb-2 border-b border-[#384252]"
+        class="flex items-center justify-between pb-2 border-b border-white/10"
       >
         <h3 class="font-bold text-white text-sm">Opprett Nytt Rom</h3>
         <button
           onclick={() => (showCreateRoomModal = false)}
-          class="text-[#94A3B8] hover:text-white"
+          class="text-[#AEB9CC] hover:text-white"
         >
           <X class="w-4 h-4" />
         </button>
@@ -3819,30 +3819,21 @@
             type="text"
             bind:value={newRoomName}
             placeholder="f.eks. A13"
-            class="w-full px-3 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+            class="w-full px-3 py-2 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
           />
         </div>
 
-        <div>
-          <label
-            for="admin-create-room-color"
-            class="block font-bold text-white mb-1">Farge</label
-          >
-          <input
-            id="admin-create-room-color"
-            type="color"
-            bind:value={newRoomAccent}
-            class="w-full h-10 rounded-xl bg-[#191E24] border border-[#384252] cursor-pointer"
-          />
-        </div>
+        <p class="text-[11px] text-[#AEB9CC] leading-relaxed">
+          Farge tildeles automatisk, og hvert rom får en egen distinkt farge.
+        </p>
       </div>
 
       <div
-        class="flex items-center justify-end gap-2 pt-2 border-t border-[#384252]"
+        class="flex items-center justify-end gap-2 pt-2 border-t border-white/10"
       >
         <button
           onclick={() => (showCreateRoomModal = false)}
-          class="px-4 py-2 rounded-xl bg-[#242B35] text-[#94A3B8] hover:text-white text-xs border border-[#384252]"
+          class="px-4 py-2 rounded-xl bg-white/[0.04] text-[#AEB9CC] hover:text-white text-xs border border-white/10"
         >
           Avbryt
         </button>
@@ -3863,23 +3854,23 @@
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 text-[#E2E8F0]"
   >
     <div
-      class="bg-[#2A303C] border border-[#384252] rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+      class="bg-white/[0.055] backdrop-blur-sm border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
     >
       <div class="flex items-center gap-3 text-[#F4C152]">
         <AlertTriangle class="w-6 h-6" />
         <h3 class="font-bold text-white text-base">{confirmDialog.title}</h3>
       </div>
 
-      <p class="text-xs text-[#94A3B8] leading-relaxed">
+      <p class="text-xs text-[#AEB9CC] leading-relaxed">
         {confirmDialog.message}
       </p>
 
       <div
-        class="flex items-center justify-end gap-2.5 pt-2 border-t border-[#384252]"
+        class="flex items-center justify-end gap-2.5 pt-2 border-t border-white/10"
       >
         <button
           onclick={() => (confirmDialog.show = false)}
-          class="px-4 py-2 rounded-xl bg-[#242B35] text-[#94A3B8] hover:text-white text-xs font-semibold border border-[#384252]"
+          class="px-4 py-2 rounded-xl bg-white/[0.04] text-[#AEB9CC] hover:text-white text-xs font-semibold border border-white/10"
         >
           Avbryt
         </button>
@@ -3901,12 +3892,12 @@
 <!-- Flytende Drag-avatar ved Pointer Dragging -->
 {#if isPointerDragging && pointerDragTeam}
   <div
-    class="fixed z-[99999] pointer-events-none px-4 py-2.5 rounded-xl bg-[#242B35] border-2 border-[#9FE88D] text-white text-xs font-bold shadow-2xl flex items-center gap-2 transform -translate-x-1/2 -translate-y-1/2 select-none ring-4 ring-[#9FE88D]/20 animate-in zoom-in-95"
+    class="fixed z-[99999] pointer-events-none px-4 py-2.5 rounded-xl bg-white/[0.04] border-2 border-[#9FE88D] text-white text-xs font-bold shadow-2xl flex items-center gap-2 transform -translate-x-1/2 -translate-y-1/2 select-none ring-4 ring-[#9FE88D]/20 animate-in zoom-in-95"
     style={`left: ${pointerPos.x}px; top: ${pointerPos.y}px;`}
   >
     <span class="w-2.5 h-2.5 rounded-full bg-[#9FE88D] animate-pulse"></span>
     <span class="truncate">{pointerDragTeam.managerName}</span>
-    <span class="text-[11px] text-[#94A3B8] font-normal"
+    <span class="text-[11px] text-[#AEB9CC] font-normal"
       >({pointerDragTeam.teamName})</span
     >
   </div>
@@ -3918,10 +3909,10 @@
     class="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 select-none"
   >
     <div
-      class="relative w-full max-w-md bg-[#242B35] border border-[#384252] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+      class="relative w-full max-w-md bg-white/[0.04] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
     >
       <div
-        class="flex items-center justify-between p-4 px-5 border-b border-[#384252] bg-[#191E24]"
+        class="flex items-center justify-between p-4 px-5 border-b border-white/10 bg-black/20"
       >
         <div class="flex items-center gap-2.5">
           <div
@@ -3933,14 +3924,14 @@
             <h3 class="text-sm font-bold text-white">
               Koble lag for {linkingUserModal.user.username}
             </h3>
-            <p class="text-[11px] text-[#94A3B8]">
+            <p class="text-[11px] text-[#AEB9CC]">
               Administrator overstyring av FPL-lag
             </p>
           </div>
         </div>
         <button
           onclick={() => (linkingUserModal.show = false)}
-          class="p-1.5 rounded-lg text-[#94A3B8] hover:text-white hover:bg-[#2A303C] transition-colors"
+          class="p-1.5 rounded-lg text-[#AEB9CC] hover:text-white hover:bg-white/[0.055] transition-colors"
         >
           <X class="w-4 h-4" />
         </button>
@@ -3957,7 +3948,7 @@
           <select
             id="admin-select-user-team"
             bind:value={linkingUserModal.selectedEntryId}
-            class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none text-xs"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none text-xs"
           >
             <option value={null}
               >-- Ingen lag tilknyttet (Fjern tilknytning) --</option
@@ -3977,7 +3968,7 @@
           </select>
         </div>
 
-        <p class="text-[11px] text-[#94A3B8] leading-relaxed">
+        <p class="text-[11px] text-[#AEB9CC] leading-relaxed">
           Dersom du velger et lag som allerede er knyttet til en annen bruker,
           vil laget bli flyttet til <strong class="text-white"
             >{linkingUserModal.user.username}</strong
@@ -3986,13 +3977,13 @@
       </div>
 
       <div
-        class="p-4 border-t border-[#384252] bg-[#191E24] flex items-center justify-between gap-3 flex-wrap"
+        class="p-4 border-t border-white/10 bg-black/20 flex items-center justify-between gap-3 flex-wrap"
       >
         <div class="flex items-center gap-2">
           <button
             type="button"
             onclick={() => (linkingUserModal.show = false)}
-            class="px-4 py-2 rounded-xl bg-[#2A303C] hover:bg-[#384252] text-xs font-semibold text-[#94A3B8] hover:text-white transition-colors"
+            class="px-4 py-2 rounded-xl bg-white/[0.055] backdrop-blur-sm hover:bg-white/10 text-xs font-semibold text-[#AEB9CC] hover:text-white transition-colors"
           >
             Avbryt
           </button>
@@ -4059,10 +4050,10 @@
     class="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 select-none"
   >
     <div
-      class="relative w-full max-w-lg bg-[#242B35] border border-[#384252] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150"
+      class="relative w-full max-w-lg bg-white/[0.04] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150"
     >
       <div
-        class="flex items-center justify-between p-4 px-5 border-b border-[#384252] bg-[#191E24]"
+        class="flex items-center justify-between p-4 px-5 border-b border-white/10 bg-black/20"
       >
         <div class="flex items-center gap-2.5">
           <div
@@ -4074,14 +4065,14 @@
             <h3 class="text-sm font-bold text-white">
               Opprett manuell bruker
             </h3>
-            <p class="text-[11px] text-[#94A3B8]">
+            <p class="text-[11px] text-[#AEB9CC]">
               Opprett brukerkonto direkte uten invitasjonskode
             </p>
           </div>
         </div>
         <button
           onclick={() => (showCreateUserModal = false)}
-          class="p-1.5 rounded-lg text-[#94A3B8] hover:text-white hover:bg-[#2A303C] transition-colors"
+          class="p-1.5 rounded-lg text-[#AEB9CC] hover:text-white hover:bg-white/[0.055] transition-colors"
         >
           <X class="w-4 h-4" />
         </button>
@@ -4110,7 +4101,7 @@
               type="text"
               bind:value={newUsername}
               placeholder="F.eks. ola.nordmann"
-              class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-xs sm:text-sm text-white placeholder-[#94A3B8] focus:border-[#9FE88D] focus:outline-none"
+              class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-white/10 text-xs sm:text-sm text-white placeholder-[#AEB9CC] focus:border-[#9FE88D] focus:outline-none"
             />
           </div>
 
@@ -4126,7 +4117,7 @@
               type="text"
               bind:value={newPassword}
               placeholder="Minst 4 tegn"
-              class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-xs sm:text-sm text-white placeholder-[#94A3B8] focus:border-[#9FE88D] focus:outline-none font-mono"
+              class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-white/10 text-xs sm:text-sm text-white placeholder-[#AEB9CC] focus:border-[#9FE88D] focus:outline-none font-mono"
             />
           </div>
         </div>
@@ -4145,7 +4136,7 @@
               class={`p-3 rounded-xl border text-left transition-all ${
                 newRole === "user"
                   ? "bg-[#9FE88D]/15 border-[#9FE88D] text-white"
-                  : "bg-[#191E24] border-[#384252] text-[#94A3B8] hover:border-[#4B5563]"
+                  : "bg-black/20 border-white/10 text-[#AEB9CC] hover:border-[#4B5563]"
               }`}
             >
               <div class="font-bold text-xs">Vanlig spiller</div>
@@ -4158,7 +4149,7 @@
               class={`p-3 rounded-xl border text-left transition-all ${
                 newRole === "admin"
                   ? "bg-[#9FE88D]/15 border-[#9FE88D] text-white"
-                  : "bg-[#191E24] border-[#384252] text-[#94A3B8] hover:border-[#4B5563]"
+                  : "bg-black/20 border-white/10 text-[#AEB9CC] hover:border-[#4B5563]"
               }`}
             >
               <div class="font-bold text-xs text-[#9FE88D]">Administrator</div>
@@ -4177,7 +4168,7 @@
           <select
             id="manual-room"
             bind:value={newRoomId}
-            class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-xs sm:text-sm text-white focus:border-[#9FE88D] focus:outline-none"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-white/10 text-xs sm:text-sm text-white focus:border-[#9FE88D] focus:outline-none"
           >
             <option value="">Ingen (ufordelt / velges senere)</option>
             {#each rooms as r}
@@ -4198,7 +4189,7 @@
           <select
             id="manual-team"
             bind:value={newFplEntryId}
-            class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-xs sm:text-sm text-white focus:border-[#9FE88D] focus:outline-none"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-white/10 text-xs sm:text-sm text-white focus:border-[#9FE88D] focus:outline-none"
           >
             <option value={null}>Ingen (kobles opp senere av spilleren)</option>
             {#each fplTeams as t}
@@ -4211,12 +4202,12 @@
       </div>
 
       <div
-        class="p-4 border-t border-[#384252] bg-[#191E24] flex items-center justify-between gap-3"
+        class="p-4 border-t border-white/10 bg-black/20 flex items-center justify-between gap-3"
       >
         <button
           type="button"
           onclick={() => (showCreateUserModal = false)}
-          class="px-4 py-2 rounded-xl bg-[#2A303C] hover:bg-[#384252] text-xs font-semibold text-[#94A3B8] hover:text-white transition-colors"
+          class="px-4 py-2 rounded-xl bg-white/[0.055] backdrop-blur-sm hover:bg-white/10 text-xs font-semibold text-[#AEB9CC] hover:text-white transition-colors"
         >
           Avbryt
         </button>

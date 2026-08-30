@@ -19,7 +19,7 @@
 
   let {
     isOpen = $bindable(false),
-    currentVersion = "0.9.2",
+    currentVersion = "1.0.0",
     autoCheck = true,
   }: {
     isOpen?: boolean;
@@ -233,10 +233,10 @@
 {#if isOpen}
   <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
     <div
-      class="bg-[#242B35] border border-[#384252] rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150 font-sans text-[#E2E8F0] flex flex-col"
+      class="bg-white/[0.04] border border-white/10 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150 font-sans text-[#E2E8F0] flex flex-col"
     >
       <!-- Header -->
-      <div class="p-6 bg-[#191E24] border-b border-[#384252] flex items-start justify-between gap-4">
+      <div class="p-6 bg-black/20 border-b border-white/10 flex items-start justify-between gap-4">
         <div class="flex items-center gap-3.5">
           <div class="w-12 h-12 rounded-2xl bg-[#9FE88D]/20 border border-[#9FE88D]/40 text-[#9FE88D] flex items-center justify-center shadow-inner shrink-0">
             {#if status === "ready"}
@@ -268,7 +268,7 @@
                 Ny versjon tilgjengelig!
               {/if}
             </h3>
-            <p class="text-xs text-[#94A3B8] mt-0.5">
+            <p class="text-xs text-[#AEB9CC] mt-0.5">
               {#if status === "available" && updateObj}
                 Versjon {formattedTargetVersion} er nå tilgjengelig på GitHub
               {:else if status === "downloading" || status === "installing"}
@@ -285,7 +285,7 @@
         {#if status !== "downloading" && status !== "installing"}
           <button
             onclick={closeModal}
-            class="p-2 rounded-xl text-[#94A3B8] hover:text-white hover:bg-[#2A303C] transition-colors"
+            class="p-2 rounded-xl text-[#AEB9CC] hover:text-white hover:bg-white/[0.055] transition-colors"
             title="Lukk"
           >
             <X class="w-5 h-5" />
@@ -297,13 +297,13 @@
       <div class="p-6 space-y-5 flex-1 overflow-y-auto custom-scrollbar">
         {#if status === "available" && updateObj}
           <!-- Versjonssammenligning -->
-          <div class="flex items-center justify-between p-3.5 rounded-2xl bg-[#191E24] border border-[#384252]">
+          <div class="flex items-center justify-between p-3.5 rounded-2xl bg-black/20 border border-white/10">
             <div>
-              <span class="text-[11px] text-[#94A3B8] font-bold uppercase block">Nåværende</span>
-              <span class="text-sm font-mono font-bold text-[#94A3B8]">{formattedCurrentVersion}</span>
+              <span class="text-[11px] text-[#AEB9CC] font-bold uppercase block">Nåværende</span>
+              <span class="text-sm font-mono font-bold text-[#AEB9CC]">{formattedCurrentVersion}</span>
             </div>
 
-            <div class="w-8 h-8 rounded-full bg-[#2A303C] flex items-center justify-center text-[#9FE88D]">
+            <div class="w-8 h-8 rounded-full bg-white/[0.055] backdrop-blur-sm flex items-center justify-center text-[#9FE88D]">
               <ArrowUpRight class="w-4 h-4" />
             </div>
 
@@ -320,18 +320,18 @@
             <div class="flex items-center justify-between text-xs font-bold text-white">
               <span>Hva er nytt i denne oppdateringen:</span>
               {#if updateObj.date}
-                <span class="text-[11px] text-[#94A3B8] flex items-center gap-1 font-normal">
+                <span class="text-[11px] text-[#AEB9CC] flex items-center gap-1 font-normal">
                   <Clock class="w-3 h-3" />
                   <span>{new Date(updateObj.date).toLocaleDateString("no-NO")}</span>
                 </span>
               {/if}
             </div>
 
-            <div class="p-4 rounded-2xl bg-[#191E24] border border-[#384252] text-xs text-[#E2E8F0] leading-relaxed max-h-48 overflow-y-auto custom-scrollbar space-y-2 font-sans">
+            <div class="p-4 rounded-2xl bg-black/20 border border-white/10 text-xs text-[#E2E8F0] leading-relaxed max-h-48 overflow-y-auto custom-scrollbar space-y-2 font-sans">
               {#if updateObj.body}
                 <div class="whitespace-pre-wrap">{updateObj.body}</div>
               {:else}
-                <p class="text-[#94A3B8] italic">Mindre feilrettinger, sikkerhetsoptimaliseringer og ytelsesforbedringer.</p>
+                <p class="text-[#AEB9CC] italic">Mindre feilrettinger, sikkerhetsoptimaliseringer og ytelsesforbedringer.</p>
               {/if}
             </div>
           </div>
@@ -347,7 +347,7 @@
               </div>
 
               <!-- Fremdriftslinje -->
-              <div class="w-full h-3.5 rounded-full bg-[#191E24] border border-[#384252] overflow-hidden p-0.5 shadow-inner">
+              <div class="w-full h-3.5 rounded-full bg-black/20 border border-white/10 overflow-hidden p-0.5 shadow-inner">
                 <div
                   class="h-full rounded-full bg-gradient-to-r from-[#70E1F8] to-[#9FE88D] transition-all duration-200"
                   style={`width: ${progressPercent || (totalBytes > 0 ? 0 : 100)}%;`}
@@ -355,22 +355,22 @@
               </div>
             </div>
 
-            <p class="text-xs text-[#94A3B8]">
+            <p class="text-xs text-[#AEB9CC]">
               Installatøren vil starte automatisk når filen er ferdig nedlastet.
             </p>
           </div>
         {:else if status === "ready"}
           <div class="p-4 rounded-2xl bg-[#9FE88D]/10 border border-[#9FE88D]/30 text-center space-y-2">
             <p class="text-sm font-bold text-white">Oppdateringen er installert og klar!</p>
-            <p class="text-xs text-[#94A3B8]">
+            <p class="text-xs text-[#AEB9CC]">
               Trykk på knappen under for å starte Atlantasy på nytt med den nye versjonen.
             </p>
           </div>
         {:else if status === "up_to_date"}
-          <div class="p-6 rounded-2xl bg-[#191E24] border border-[#384252] text-center space-y-2">
+          <div class="p-6 rounded-2xl bg-black/20 border border-white/10 text-center space-y-2">
             <CheckCircle2 class="w-8 h-8 text-[#9FE88D] mx-auto" />
             <p class="text-base font-bold text-white">Alt er oppdatert!</p>
-            <p class="text-xs text-[#94A3B8]">
+            <p class="text-xs text-[#AEB9CC]">
               Du kjører allerede den nyeste tilgjengelige versjonen av Atlantasy ({formattedCurrentVersion}).
             </p>
           </div>
@@ -388,12 +388,12 @@
       </div>
 
       <!-- Footer / Handlinger -->
-      <div class="p-4 bg-[#191E24] border-t border-[#384252] flex items-center justify-end gap-3 shrink-0">
+      <div class="p-4 bg-black/20 border-t border-white/10 flex items-center justify-end gap-3 shrink-0">
         {#if status === "available"}
           <button
             type="button"
             onclick={closeModal}
-            class="px-4 py-2.5 rounded-xl bg-[#2A303C] hover:bg-[#384252] text-xs font-semibold text-[#94A3B8] hover:text-white transition-colors"
+            class="px-4 py-2.5 rounded-xl bg-white/[0.055] backdrop-blur-sm hover:bg-white/10 text-xs font-semibold text-[#AEB9CC] hover:text-white transition-colors"
           >
             Minn meg på det senere
           </button>
@@ -419,7 +419,7 @@
           <button
             type="button"
             onclick={() => checkForUpdates(true)}
-            class="px-4 py-2.5 rounded-xl bg-[#2A303C] hover:bg-[#384252] text-xs font-bold text-white transition-colors flex items-center gap-1.5"
+            class="px-4 py-2.5 rounded-xl bg-white/[0.055] backdrop-blur-sm hover:bg-white/10 text-xs font-bold text-white transition-colors flex items-center gap-1.5"
           >
             <RefreshCw class="w-4 h-4" />
             <span>Prøv igjen</span>

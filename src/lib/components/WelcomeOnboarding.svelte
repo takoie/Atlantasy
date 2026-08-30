@@ -173,7 +173,7 @@
   class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 select-none overflow-y-auto"
 >
   <div
-    class="relative w-full max-w-md bg-[#2A303C] border border-[#384252] rounded-2xl shadow-2xl p-5 md:p-6 space-y-4 my-auto text-[#E2E8F0] font-sans"
+    class="relative w-full max-w-md bg-white/[0.055] backdrop-blur-sm border border-white/10 rounded-2xl shadow-2xl p-5 md:p-6 space-y-4 my-auto text-[#E2E8F0] font-sans"
   >
     <!-- Tittel -->
     <div class="text-center pt-1">
@@ -183,7 +183,7 @@
     </div>
 
     <!-- Modusvelger (Ny spiller / Logg inn) -->
-    <div class="grid grid-cols-2 gap-1 p-1 bg-[#191E24] rounded-xl border border-[#384252] text-xs font-semibold">
+    <div class="grid grid-cols-2 gap-1 p-1 bg-black/20 rounded-xl border border-white/10 text-xs font-semibold">
       <button
         type="button"
         onclick={() => {
@@ -194,7 +194,7 @@
         class={`py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
           mode === "register"
             ? "bg-[#9FE88D] text-[#16380c] font-bold shadow-sm"
-            : "text-[#94A3B8] hover:text-white"
+            : "text-[#AEB9CC] hover:text-white"
         }`}
       >
         <span>Ny spiller (registrer)</span>
@@ -209,7 +209,7 @@
         class={`py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
           mode === "login"
             ? "bg-[#9FE88D] text-[#16380c] font-bold shadow-sm"
-            : "text-[#94A3B8] hover:text-white"
+            : "text-[#AEB9CC] hover:text-white"
         }`}
       >
         <span>Logg inn</span>
@@ -229,24 +229,24 @@
           >
             1
           </span>
-          <span class={`text-xs font-semibold ${step === 1 ? "text-white" : "text-[#94A3B8]"}`}>
+          <span class={`text-xs font-semibold ${step === 1 ? "text-white" : "text-[#AEB9CC]"}`}>
             Konto & Invitasjon
           </span>
         </div>
 
-        <div class="w-8 h-0.5 bg-[#384252]"></div>
+        <div class="w-8 h-0.5 bg-white/10"></div>
 
         <div class="flex items-center gap-2">
           <span
             class={`w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center transition-colors ${
               step === 2
                 ? "bg-[#9FE88D] text-[#16380c]"
-                : "bg-[#191E24] text-[#94A3B8] border border-[#384252]"
+                : "bg-black/20 text-[#AEB9CC] border border-white/10"
             }`}
           >
             2
           </span>
-          <span class={`text-xs font-semibold ${step === 2 ? "text-white" : "text-[#94A3B8]"}`}>
+          <span class={`text-xs font-semibold ${step === 2 ? "text-white" : "text-[#AEB9CC]"}`}>
             FPL-lag og rom
           </span>
         </div>
@@ -279,13 +279,13 @@
                 type="text"
                 bind:value={username}
                 placeholder="Ditt navn eller kallenavn"
-                class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+                class="w-full px-3.5 py-2 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
               />
             </div>
 
             <div>
               <label for="onboard-password" class="block font-semibold text-[#E2E8F0] mb-1 flex items-center gap-1">
-                <Lock class="w-3.5 h-3.5 text-[#94A3B8]" />
+                <Lock class="w-3.5 h-3.5 text-[#AEB9CC]" />
                 <span>Velg et passord / PIN *</span>
               </label>
               <input
@@ -293,7 +293,7 @@
                 type="password"
                 bind:value={password}
                 placeholder="Enkelt passord eller PIN"
-                class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+                class="w-full px-3.5 py-2 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
               />
             </div>
 
@@ -311,9 +311,9 @@
                 bind:value={inviteCode}
                 onkeydown={(e) => e.key === "Enter" && handleProceedToStep2()}
                 placeholder="Kode får du av Stian!"
-                class="w-full px-3.5 py-2 rounded-xl bg-[#191E24] border border-[#384252] text-white font-mono uppercase focus:border-[#9FE88D] focus:outline-none"
+                class="w-full px-3.5 py-2 rounded-xl bg-black/20 border border-white/10 text-white font-mono uppercase focus:border-[#9FE88D] focus:outline-none"
               />
-              <p class="text-[11px] text-[#94A3B8] mt-1">
+              <p class="text-[11px] text-[#AEB9CC] mt-1">
                 Du må ha en gyldig kode fra administrator for å opprette konto.
               </p>
             </div>
@@ -340,7 +340,7 @@
                   Kode godkjent for <strong class="text-[#9FE88D]">{username}</strong>
                 </span>
               </div>
-              <span class="text-[10px] font-mono font-bold text-[#9FE88D] bg-[#191E24] px-2 py-0.5 rounded border border-[#9FE88D]/30">
+              <span class="text-[10px] font-mono font-bold text-[#9FE88D] bg-black/20 px-2 py-0.5 rounded border border-[#9FE88D]/30">
                 {inviteCode.toUpperCase()}
               </span>
             </div>
@@ -354,7 +354,7 @@
               <select
                 id="onboard-fpl-team"
                 bind:value={selectedFplEntryId}
-                class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
               >
                 <option value={null}>-- Jeg velger lag senere / ikke på listen ennå --</option>
                 {#each availableFplTeams as team (team.entryId)}
@@ -377,7 +377,7 @@
                 <span>Velg ditt rom (A1–A12):</span>
               </label>
               {#if validatedTargetRoomId}
-                <div class="p-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white font-semibold flex items-center justify-between">
+                <div class="p-2.5 rounded-xl bg-black/20 border border-white/10 text-white font-semibold flex items-center justify-between">
                   <span>{rooms.find((r) => r._id === validatedTargetRoomId)?.name || "Tildelt rom"}</span>
                   <span class="text-[10px] text-[#9FE88D] font-bold">Låst av invitasjonskode</span>
                 </div>
@@ -385,7 +385,7 @@
                 <select
                   id="onboard-room"
                   bind:value={selectedRoomId}
-                  class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
                 >
                   {#each rooms as room}
                     <option value={room._id}>
@@ -403,7 +403,7 @@
                   <Sparkles class="w-3.5 h-3.5" />
                   <span>Du er første person i dette rommet!</span>
                 </div>
-                <p class="text-[11px] text-[#94A3B8]">
+                <p class="text-[11px] text-[#AEB9CC]">
                   Bestem et valgfritt navn for rommet (f.eks. «Gutta Krutt»):
                 </p>
                 <div class="flex items-center gap-2">
@@ -414,7 +414,7 @@
                     type="text"
                     bind:value={customRoomNickname}
                     placeholder="Romnavn"
-                    class="flex-1 px-3 py-1.5 rounded-lg bg-[#191E24] border border-[#9FE88D]/40 text-white text-xs focus:border-[#9FE88D] focus:outline-none"
+                    class="flex-1 px-3 py-1.5 rounded-lg bg-black/20 border border-[#9FE88D]/40 text-white text-xs focus:border-[#9FE88D] focus:outline-none"
                   />
                 </div>
               </div>
@@ -424,7 +424,7 @@
               <button
                 type="button"
                 onclick={() => (step = 1)}
-                class="px-4 py-3 rounded-xl bg-[#191E24] hover:bg-[#242B35] text-[#94A3B8] hover:text-white border border-[#384252] text-xs font-bold transition-colors flex items-center gap-1.5"
+                class="px-4 py-3 rounded-xl bg-black/20 hover:bg-white/[0.04] text-[#AEB9CC] hover:text-white border border-white/10 text-xs font-bold transition-colors flex items-center gap-1.5"
               >
                 <ArrowLeft class="w-4 h-4" />
                 <span>Tilbake</span>
@@ -455,13 +455,13 @@
               type="text"
               bind:value={username}
               placeholder="F.eks. Stian eller Admin"
-              class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+              class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
             />
           </div>
 
           <div>
             <label for="login-password" class="block font-semibold text-[#E2E8F0] mb-1 flex items-center gap-1">
-              <Lock class="w-3.5 h-3.5 text-[#94A3B8]" />
+              <Lock class="w-3.5 h-3.5 text-[#AEB9CC]" />
               <span>Passord / PIN</span>
             </label>
             <input
@@ -470,7 +470,7 @@
               bind:value={password}
               onkeydown={(e) => e.key === "Enter" && handleSubmit()}
               placeholder="Skriv inn ditt passord"
-              class="w-full px-3.5 py-2.5 rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+              class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
             />
           </div>
 

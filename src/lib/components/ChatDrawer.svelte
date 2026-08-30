@@ -37,9 +37,7 @@
     currentRoom = null,
     users = [],
     rooms = [],
-    leaderboard = [],
-    monthWinners = null,
-    individualPlayers = [],
+    standingLeaders = null,
     activeChannel = "banter", // "banter" | "room"
     onClose = () => {},
     onSelectChannel = (_channel: string) => {},
@@ -54,9 +52,7 @@
     currentRoom?: any;
     users?: any[];
     rooms?: any[];
-    leaderboard?: any[];
-    monthWinners?: any;
-    individualPlayers?: any[];
+    standingLeaders?: any;
     activeChannel?: string;
     onClose?: () => void;
     onSelectChannel?: (channel: string) => void;
@@ -172,24 +168,13 @@
       : null
   );
 
-  // Finn regjerende topp-rom (#1 rom)
-  let topRoomId = $derived(
-    monthWinners?.roomWinner?.roomId ||
-      (leaderboard && leaderboard.length > 0 ? leaderboard[0]?._id : null)
-  );
+  // Ledende rom = #1 i INNEVÆRENDE kalendermåned (fast, uavhengig av UI-toggler).
+  let topRoomId = $derived(standingLeaders?.currentMonthRoomId ?? null);
+  let topRoomMonthName = $derived(standingLeaders?.currentMonthName ?? "måneden");
 
-  // Finn allaround leder i "Alle mot alle" (sesongens #1)
-  let topSoloEntryId = $derived(
-    individualPlayers && individualPlayers.length > 0
-      ? individualPlayers[0]?.entryId
-      : monthWinners?.soloWinner?.entryId || null
-  );
-
-  let topSoloManagerName = $derived(
-    individualPlayers && individualPlayers.length > 0
-      ? individualPlayers[0]?.player_name
-      : monthWinners?.soloWinner?.managerName || null
-  );
+  // Sesongleder i "Alle mot alle" = #1 i akkumulert sesongtotal (fast).
+  let topSoloEntryId = $derived(standingLeaders?.seasonLeaderEntryId ?? null);
+  let topSoloManagerName = $derived(standingLeaders?.seasonLeaderName ?? null);
 
   function getSenderStatus(msg: any) {
     const isOwn = !!(
@@ -244,7 +229,7 @@
     // 2. Kodeblokker / inline kode (`kode`)
     escaped = escaped.replace(
       /`([^`]+)`/g,
-      `<code class="px-1.5 py-0.5 rounded bg-[#191E24] text-[#9FE88D] font-mono text-[11px] border border-[#384252]">$1</code>`
+      `<code class="px-1.5 py-0.5 rounded bg-black/20 text-[#9FE88D] font-mono text-[11px] border border-white/10">$1</code>`
     );
 
     // 3. Fet tekst (**tekst**)
@@ -260,7 +245,7 @@
     // 6. Sitatlinjer (> sitat)
     escaped = escaped.replace(
       /(?:^|\n)&gt;\s*([^\n]+)/g,
-      `<blockquote class="border-l-2 border-[#9FE88D] pl-2.5 py-0.5 my-1 text-[#94A3B8] italic bg-[#191E24]/50 rounded-r-lg">$1</blockquote>`
+      `<blockquote class="border-l-2 border-[#9FE88D] pl-2.5 py-0.5 my-1 text-[#AEB9CC] italic bg-black/20/50 rounded-r-lg">$1</blockquote>`
     );
 
     // 7. Punktlister (- punkt eller * punkt)
@@ -490,7 +475,7 @@
     <button
       type="button"
       onclick={() => (lightboxImageUrl = null)}
-      class="absolute top-4 right-4 p-2.5 rounded-full bg-[#191E24]/80 text-white hover:bg-[#384252] transition-colors z-10 border border-[#384252]"
+      class="absolute top-4 right-4 p-2.5 rounded-full bg-black/20/80 text-white hover:bg-white/10 transition-colors z-10 border border-white/10"
       title="Lukk bilde (Esc)"
     >
       <X class="w-5 h-5" />
@@ -500,13 +485,13 @@
       <img
         src={lightboxImageUrl}
         alt="Fullskjerm forhåndsvisning"
-        class="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl border border-[#384252]"
+        class="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl border border-white/10"
       />
       <div class="mt-3 flex items-center gap-3">
         <a
           href={lightboxImageUrl}
           download="atlantasy-chat-image.png"
-          class="px-4 py-2 rounded-xl bg-[#242B35] hover:bg-[#384252] text-white text-xs font-bold transition-colors border border-[#384252] flex items-center gap-2"
+          class="px-4 py-2 rounded-xl bg-white/[0.04] hover:bg-white/10 text-white text-xs font-bold transition-colors border border-white/10 flex items-center gap-2"
         >
           <ExternalLink class="w-3.5 h-3.5" />
           <span>Åpne / Last ned original</span>
@@ -537,7 +522,7 @@
         src={msg.senderAvatar ||
           `https://api.dicebear.com/7.x/bottts/svg?seed=${msg.senderName}`}
         alt="Avatar"
-        class={`rounded-xl bg-[#191E24] border object-cover transition-all duration-200 ${
+        class={`rounded-xl bg-black/20 border object-cover transition-all duration-200 ${
           isDrawer ? "w-7 h-7" : "w-8 h-8"
         } ${
           isTopSolo
@@ -546,7 +531,7 @@
               ? "border-[#1eb854] ring-2 ring-[#1eb854]/50 shadow-[0_0_12px_rgba(30,184,84,0.4)]"
               : isOwn
                 ? "border-[#9FE88D]/60 ring-1 ring-[#9FE88D]/30"
-                : "border-[#384252]"
+                : "border-white/10"
         }`}
       />
       {#if isTopSolo}
@@ -559,7 +544,7 @@
       {:else if isTopRoom}
         <span
           class="absolute -top-1.5 -right-1 text-xs filter drop-shadow select-none"
-          title="Medlem av #1-rommet"
+          title={`Medlem av ledende rom i ${topRoomMonthName}`}
         >
           🏆
         </span>
@@ -604,18 +589,18 @@
         {:else if isTopRoom}
           <span
             class="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.2 rounded bg-[#1eb854]/20 text-[#70E1F8] border border-[#1eb854]/50 font-bold shadow-[0_0_8px_rgba(30,184,84,0.3)]"
-            title="Medlem av regjerende #1-rom"
+            title={`Ledende rom i ${topRoomMonthName}`}
           >
             🏆 #1-rom
           </span>
         {/if}
 
-        <span class="text-[10px] text-[#94A3B8] shrink-0">
+        <span class="text-[10px] text-[#AEB9CC] shrink-0">
           {formatTime(msg.createdAt)}
         </span>
 
         {#if msg.editedAt}
-          <span class="text-[9px] text-[#94A3B8]/80 italic">
+          <span class="text-[9px] text-[#AEB9CC]/80 italic">
             (redigert)
           </span>
         {/if}
@@ -626,11 +611,11 @@
         {#if isEditing}
           <!-- Redigeringsskjema -->
           <div
-            class="p-3 rounded-2xl bg-[#191E24] border border-[#9FE88D]/60 shadow-xl space-y-2.5 w-full min-w-[240px] sm:min-w-[320px] animate-in fade-in zoom-in-95 duration-100"
+            class="p-3 rounded-2xl bg-black/20 border border-[#9FE88D]/60 shadow-xl space-y-2.5 w-full min-w-[240px] sm:min-w-[320px] animate-in fade-in zoom-in-95 duration-100"
           >
             <div class="flex items-center justify-between text-[11px] text-[#9FE88D] font-bold">
               <span>Redigerer melding</span>
-              <span class="text-[10px] text-[#94A3B8]">Enter = lagre, Esc = avbryt</span>
+              <span class="text-[10px] text-[#AEB9CC]">Enter = lagre, Esc = avbryt</span>
             </div>
             <textarea
               bind:value={editingContent}
@@ -643,13 +628,13 @@
                 }
               }}
               rows="2"
-              class="w-full px-3 py-2 text-xs sm:text-sm rounded-xl bg-[#242B35] border border-[#384252] text-white focus:outline-none focus:border-[#9FE88D] resize-none custom-scrollbar"
+              class="w-full px-3 py-2 text-xs sm:text-sm rounded-xl bg-white/[0.04] border border-white/10 text-white focus:outline-none focus:border-[#9FE88D] resize-none custom-scrollbar"
               placeholder="Skriv inn oppdatert tekst..."
             ></textarea>
             <div class="flex items-center justify-end gap-2">
               <button
                 onclick={cancelEdit}
-                class="px-3 py-1 rounded-lg text-xs text-[#94A3B8] hover:text-white hover:bg-[#384252] transition-colors"
+                class="px-3 py-1 rounded-lg text-xs text-[#AEB9CC] hover:text-white hover:bg-white/10 transition-colors"
               >
                 Avbryt
               </button>
@@ -674,7 +659,7 @@
             <div class="flex items-center justify-end gap-2">
               <button
                 onclick={() => (deletingMessageId = null)}
-                class="px-2.5 py-1 rounded-lg text-xs text-[#94A3B8] hover:text-white hover:bg-[#384252] transition-colors"
+                class="px-2.5 py-1 rounded-lg text-xs text-[#AEB9CC] hover:text-white hover:bg-white/10 transition-colors"
               >
                 Avbryt
               </button>
@@ -694,12 +679,12 @@
               msg.type === "announcement"
                 ? "bg-[#F4C152]/15 border border-[#F4C152]/40 text-[#F4C152] shadow-md"
                 : isTopSolo
-                  ? "border border-[#F4C152]/80 text-[#FFFBEB] shadow-[0_0_18px_rgba(244,193,82,0.35)] ring-1 ring-[#F4C152]/40 bg-gradient-to-r from-[#F4C152]/20 via-[#242B35] to-[#242B35]"
+                  ? "border border-[#F4C152]/80 text-[#FFFBEB] shadow-[0_0_18px_rgba(244,193,82,0.35)] ring-1 ring-[#F4C152]/40 bg-gradient-to-r from-[#F4C152]/20 via-white/[0.04] to-white/[0.04]"
                   : isTopRoom
-                    ? "border border-[#1eb854]/80 text-[#F0FDF4] shadow-[0_0_16px_rgba(30,184,84,0.35)] ring-1 ring-[#1eb854]/40 bg-gradient-to-r from-[#1eb854]/20 via-[#242B35] to-[#242B35]"
+                    ? "border border-[#1eb854]/80 text-[#F0FDF4] shadow-[0_0_16px_rgba(30,184,84,0.35)] ring-1 ring-[#1eb854]/40 bg-gradient-to-r from-[#1eb854]/20 via-white/[0.04] to-white/[0.04]"
                     : isOwn
                       ? "bg-[#9FE88D]/15 border border-[#9FE88D]/35 text-[#F0FDF4]"
-                      : "bg-[#242B35] border border-[#384252] text-[#E2E8F0]"
+                      : "bg-white/[0.04] border border-white/10 text-[#E2E8F0]"
             }`}
           >
             <!-- Tekstinnhold med rik formatering -->
@@ -711,7 +696,7 @@
 
             <!-- Vedlagt bilde -->
             {#if msg.imageUrl}
-              <div class="mt-2 relative group/img overflow-hidden rounded-xl border border-[#384252] max-w-sm max-h-64 bg-black/40">
+              <div class="mt-2 relative group/img overflow-hidden rounded-xl border border-white/10 max-w-sm max-h-64 bg-black/40">
                 <button
                   type="button"
                   onclick={() => (lightboxImageUrl = msg.imageUrl)}
@@ -738,12 +723,12 @@
           <!-- Hurtighandlinger (Hover Toolbar: Rediger & Slett) -->
           {#if canEdit || canDelete}
             <div
-              class="absolute top-1 -right-16 sm:-right-20 opacity-0 group-hover:opacity-100 transition-all duration-150 flex items-center gap-1 p-1 bg-[#191E24]/95 border border-[#384252] rounded-xl shadow-lg backdrop-blur-sm z-10"
+              class="absolute top-1 -right-16 sm:-right-20 opacity-0 group-hover:opacity-100 transition-all duration-150 flex items-center gap-1 p-1 bg-black/20/95 border border-white/10 rounded-xl shadow-lg backdrop-blur-sm z-10"
             >
               {#if canEdit}
                 <button
                   onclick={() => startEdit(msg)}
-                  class="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#9FE88D] hover:bg-[#242B35] transition-colors"
+                  class="p-1.5 rounded-lg text-[#AEB9CC] hover:text-[#9FE88D] hover:bg-white/[0.04] transition-colors"
                   title="Rediger melding"
                 >
                   <Pencil class="w-3.5 h-3.5" />
@@ -753,7 +738,7 @@
               {#if canDelete}
                 <button
                   onclick={() => (deletingMessageId = msg._id)}
-                  class="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#FB6F84] hover:bg-[#242B35] transition-colors"
+                  class="p-1.5 rounded-lg text-[#AEB9CC] hover:text-[#FB6F84] hover:bg-white/[0.04] transition-colors"
                   title="Slett melding"
                 >
                   <Trash2 class="w-3.5 h-3.5" />
@@ -771,12 +756,12 @@
 {#snippet chatToolbarAndDrawer()}
   <!-- Bilde-forhåndsvisning dersom bilde er limt inn / valgt -->
   {#if attachedImage}
-    <div class="p-2.5 rounded-xl bg-[#191E24] border border-[#9FE88D]/50 flex items-center justify-between gap-3 animate-in fade-in zoom-in-95 duration-100 shadow-md">
+    <div class="p-2.5 rounded-xl bg-black/20 border border-[#9FE88D]/50 flex items-center justify-between gap-3 animate-in fade-in zoom-in-95 duration-100 shadow-md">
       <div class="flex items-center gap-2.5 min-w-0">
         <img
           src={attachedImage}
           alt="Forhåndsvisning"
-          class="w-12 h-12 rounded-lg object-cover bg-black/40 border border-[#384252] shrink-0"
+          class="w-12 h-12 rounded-lg object-cover bg-black/40 border border-white/10 shrink-0"
         />
         <div class="min-w-0">
           <div class="text-xs font-bold text-white flex items-center gap-1.5 truncate">
@@ -790,7 +775,7 @@
       <button
         type="button"
         onclick={removeAttachedImage}
-        class="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#FB6F84] hover:bg-[#242B35] transition-colors shrink-0"
+        class="p-1.5 rounded-lg text-[#AEB9CC] hover:text-[#FB6F84] hover:bg-white/[0.04] transition-colors shrink-0"
         title="Fjern bilde"
       >
         <X class="w-4 h-4" />
@@ -801,10 +786,10 @@
   <!-- Utvidbar Skuff (Drawer Panel) -->
   {#if activeToolTab}
     <div
-      class="p-3 rounded-2xl bg-[#191E24] border border-[#384252] shadow-xl space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-150 select-none"
+      class="p-3 rounded-2xl bg-black/20 border border-white/10 shadow-xl space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-150 select-none"
     >
       <!-- Skuff Header med fane-tittel og Lukk-knapp -->
-      <div class="flex items-center justify-between pb-2 border-b border-[#2A303C]">
+      <div class="flex items-center justify-between pb-2 border-b border-white/10">
         <div class="flex items-center gap-2 text-xs font-bold text-white">
           {#if activeToolTab === "format"}
             <span class="flex items-center gap-1.5 text-[#9FE88D]">
@@ -832,7 +817,7 @@
         <button
           type="button"
           onclick={() => (activeToolTab = null)}
-          class="p-1 rounded-md text-[#94A3B8] hover:text-white hover:bg-[#2A303C] transition-colors"
+          class="p-1 rounded-md text-[#AEB9CC] hover:text-white hover:bg-white/[0.055] transition-colors"
           title="Lukk verktøyskuff"
         >
           <X class="w-3.5 h-3.5" />
@@ -845,7 +830,7 @@
           <button
             type="button"
             onclick={() => applyFormatting("**", "**", "fet tekst")}
-            class="px-2.5 py-1.5 rounded-lg bg-[#242B35] hover:bg-[#2A303C] text-white font-bold border border-[#384252] hover:border-[#9FE88D] transition-colors flex items-center gap-1"
+            class="px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.055] text-white font-bold border border-white/10 hover:border-[#9FE88D] transition-colors flex items-center gap-1"
             title="Fet skrift (**tekst**)"
           >
             <Bold class="w-3.5 h-3.5 text-[#9FE88D]" />
@@ -855,7 +840,7 @@
           <button
             type="button"
             onclick={() => applyFormatting("*", "*", "kursiv tekst")}
-            class="px-2.5 py-1.5 rounded-lg bg-[#242B35] hover:bg-[#2A303C] text-white italic border border-[#384252] hover:border-[#9FE88D] transition-colors flex items-center gap-1"
+            class="px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.055] text-white italic border border-white/10 hover:border-[#9FE88D] transition-colors flex items-center gap-1"
             title="Kursiv (*tekst*)"
           >
             <Italic class="w-3.5 h-3.5 text-[#9FE88D]" />
@@ -865,7 +850,7 @@
           <button
             type="button"
             onclick={() => applyFormatting("~~", "~~", "gjennomstreket")}
-            class="px-2.5 py-1.5 rounded-lg bg-[#242B35] hover:bg-[#2A303C] text-white line-through border border-[#384252] hover:border-[#9FE88D] transition-colors flex items-center gap-1"
+            class="px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.055] text-white line-through border border-white/10 hover:border-[#9FE88D] transition-colors flex items-center gap-1"
             title="Gjennomstreking (~~tekst~~)"
           >
             <Strikethrough class="w-3.5 h-3.5 text-[#9FE88D]" />
@@ -875,7 +860,7 @@
           <button
             type="button"
             onclick={() => applyFormatting("`", "`", "kode/statistikk")}
-            class="px-2.5 py-1.5 rounded-lg bg-[#242B35] hover:bg-[#2A303C] text-white font-mono text-[11px] border border-[#384252] hover:border-[#9FE88D] transition-colors flex items-center gap-1"
+            class="px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.055] text-white font-mono text-[11px] border border-white/10 hover:border-[#9FE88D] transition-colors flex items-center gap-1"
             title="Inline kode (`statistikk`)"
           >
             <Code class="w-3.5 h-3.5 text-[#9FE88D]" />
@@ -885,7 +870,7 @@
           <button
             type="button"
             onclick={() => applyFormatting("> ", "", "sitat her")}
-            class="px-2.5 py-1.5 rounded-lg bg-[#242B35] hover:bg-[#2A303C] text-white border border-[#384252] hover:border-[#9FE88D] transition-colors flex items-center gap-1"
+            class="px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.055] text-white border border-white/10 hover:border-[#9FE88D] transition-colors flex items-center gap-1"
             title="Sitatblokk (> sitat)"
           >
             <Quote class="w-3.5 h-3.5 text-[#9FE88D]" />
@@ -895,7 +880,7 @@
           <button
             type="button"
             onclick={() => applyFormatting("- ", "", "punkt")}
-            class="px-2.5 py-1.5 rounded-lg bg-[#242B35] hover:bg-[#2A303C] text-white border border-[#384252] hover:border-[#9FE88D] transition-colors flex items-center gap-1"
+            class="px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.055] text-white border border-white/10 hover:border-[#9FE88D] transition-colors flex items-center gap-1"
             title="Punktliste (- punkt)"
           >
             <List class="w-3.5 h-3.5 text-[#9FE88D]" />
@@ -905,7 +890,7 @@
           <button
             type="button"
             onclick={() => applyFormatting("[lenketekst](", ")", "https://")}
-            class="px-2.5 py-1.5 rounded-lg bg-[#242B35] hover:bg-[#2A303C] text-white border border-[#384252] hover:border-[#9FE88D] transition-colors flex items-center gap-1"
+            class="px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.055] text-white border border-white/10 hover:border-[#9FE88D] transition-colors flex items-center gap-1"
             title="Lenke ([tittel](url))"
           >
             <Link2 class="w-3.5 h-3.5 text-[#9FE88D]" />
@@ -919,12 +904,12 @@
         <div class="space-y-2.5">
           <!-- Søkefelt -->
           <div class="relative">
-            <Search class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
+            <Search class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#AEB9CC]" />
             <input
               type="text"
               bind:value={emojiSearch}
               placeholder="Søk i emojier..."
-              class="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-[#242B35] border border-[#384252] text-white placeholder-[#94A3B8] focus:border-[#F4C152] focus:outline-none"
+              class="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-[#AEB9CC] focus:border-[#F4C152] focus:outline-none"
             />
           </div>
 
@@ -936,7 +921,7 @@
                   <button
                     type="button"
                     onclick={() => insertEmoji(emoji)}
-                    class="p-1.5 rounded-lg hover:bg-[#242B35] hover:scale-125 transition-all text-center"
+                    class="p-1.5 rounded-lg hover:bg-white/[0.04] hover:scale-125 transition-all text-center"
                   >
                     {emoji}
                   </button>
@@ -945,7 +930,7 @@
             {:else}
               {#each emojiCategories as cat}
                 <div class="space-y-1">
-                  <div class="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">
+                  <div class="text-[10px] font-bold text-[#AEB9CC] uppercase tracking-wider">
                     {cat.name}
                   </div>
                   <div class="grid grid-cols-8 sm:grid-cols-11 gap-1 text-lg">
@@ -953,7 +938,7 @@
                       <button
                         type="button"
                         onclick={() => insertEmoji(emoji)}
-                        class="p-1 rounded-lg hover:bg-[#242B35] hover:scale-125 transition-all text-center"
+                        class="p-1 rounded-lg hover:bg-white/[0.04] hover:scale-125 transition-all text-center"
                       >
                         {emoji}
                       </button>
@@ -971,13 +956,13 @@
         <div class="space-y-2.5">
           <!-- Søkefelt for GIFs -->
           <div class="relative flex items-center">
-            <Search class="w-3.5 h-3.5 absolute left-3 text-[#94A3B8]" />
+            <Search class="w-3.5 h-3.5 absolute left-3 text-[#AEB9CC]" />
             <input
               type="text"
               bind:value={gifSearch}
               oninput={handleGifSearchInput}
               placeholder="Søk etter GIFs (f.eks. haaland, scoring, feiring, meme, shock, ronaldo)..."
-              class="w-full pl-8 pr-8 py-1.5 text-xs rounded-xl bg-[#242B35] border border-[#384252] text-white placeholder-[#94A3B8] focus:border-[#70E1F8] focus:outline-none"
+              class="w-full pl-8 pr-8 py-1.5 text-xs rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-[#AEB9CC] focus:border-[#70E1F8] focus:outline-none"
             />
             {#if gifSearch}
               <button
@@ -986,7 +971,7 @@
                   gifSearch = "";
                   searchGifs("");
                 }}
-                class="absolute right-2.5 p-0.5 rounded-md text-[#94A3B8] hover:text-white"
+                class="absolute right-2.5 p-0.5 rounded-md text-[#AEB9CC] hover:text-white"
               >
                 <X class="w-3.5 h-3.5" />
               </button>
@@ -996,12 +981,12 @@
           <!-- GIF Galleri Resultater -->
           <div class="max-h-56 overflow-y-auto pr-1 custom-scrollbar">
             {#if isSearchingGifs}
-              <div class="py-8 text-center text-xs text-[#94A3B8] flex items-center justify-center gap-2">
+              <div class="py-8 text-center text-xs text-[#AEB9CC] flex items-center justify-center gap-2">
                 <Film class="w-4 h-4 text-[#70E1F8] animate-spin" />
                 <span>Henter GIFs...</span>
               </div>
             {:else if gifResults.length === 0}
-              <div class="py-8 text-center text-xs text-[#94A3B8]">
+              <div class="py-8 text-center text-xs text-[#AEB9CC]">
                 Ingen GIFs funnet for "{gifSearch}". Prøv et annet søkeord.
               </div>
             {:else}
@@ -1010,7 +995,7 @@
                   <button
                     type="button"
                     onclick={() => selectGif(gif.url)}
-                    class="group relative rounded-xl overflow-hidden bg-[#242B35] border border-[#384252] hover:border-[#70E1F8] transition-all aspect-video flex items-center justify-center shadow-sm hover:shadow-md"
+                    class="group relative rounded-xl overflow-hidden bg-white/[0.04] border border-white/10 hover:border-[#70E1F8] transition-all aspect-video flex items-center justify-center shadow-sm hover:shadow-md"
                     title={`Send: ${gif.title || "GIF"}`}
                   >
                     <img
@@ -1035,21 +1020,21 @@
       <!-- Tab 4: Bilde & Utklippstavle -->
       {#if activeToolTab === "image"}
         <div class="space-y-2.5">
-          <div class="p-3 rounded-xl bg-[#242B35] border border-dashed border-[#384252] text-center space-y-2">
+          <div class="p-3 rounded-xl bg-white/[0.04] border border-dashed border-white/10 text-center space-y-2">
             <div class="flex items-center justify-center gap-2 text-[#9FE88D]">
               <ImageIcon class="w-5 h-5" />
               <Paperclip class="w-4 h-4 text-[#70E1F8]" />
             </div>
             <p class="text-xs font-semibold text-white">
-              Lim inn direkte med <kbd class="px-1.5 py-0.5 rounded bg-[#191E24] border border-[#384252] font-mono text-[10px]">Ctrl + V</kbd>
+              Lim inn direkte med <kbd class="px-1.5 py-0.5 rounded bg-black/20 border border-white/10 font-mono text-[10px]">Ctrl + V</kbd>
             </p>
-            <p class="text-[11px] text-[#94A3B8]">
+            <p class="text-[11px] text-[#AEB9CC]">
               Du kan ta et skjermbilde med Snipping Tool og lime det rett inn i chatten!
             </p>
             <button
               type="button"
               onclick={() => fileInputEl?.click()}
-              class="px-4 py-1.5 rounded-lg bg-[#191E24] hover:bg-[#2A303C] text-xs font-bold text-[#E2E8F0] border border-[#384252] hover:border-[#9FE88D] transition-colors inline-flex items-center gap-1.5"
+              class="px-4 py-1.5 rounded-lg bg-black/20 hover:bg-white/[0.055] text-xs font-bold text-[#E2E8F0] border border-white/10 hover:border-[#9FE88D] transition-colors inline-flex items-center gap-1.5"
             >
               <ImageIcon class="w-3.5 h-3.5 text-[#9FE88D]" />
               <span>Eller velg bildefil fra PC</span>
@@ -1070,7 +1055,7 @@
         class={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${
           activeToolTab === "format"
             ? "bg-[#9FE88D]/20 text-[#9FE88D] border-[#9FE88D]/50 shadow-sm"
-            : "bg-[#242B35] text-[#94A3B8] border-[#384252] hover:text-white hover:border-[#4B5563]"
+            : "bg-white/[0.04] text-[#AEB9CC] border-white/10 hover:text-white hover:border-[#4B5563]"
         }`}
         title="Formater tekst (Fet, Kursiv, Kode, Sitat)"
       >
@@ -1084,7 +1069,7 @@
         class={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${
           activeToolTab === "emoji"
             ? "bg-[#F4C152]/20 text-[#F4C152] border-[#F4C152]/50 shadow-sm"
-            : "bg-[#242B35] text-[#94A3B8] border-[#384252] hover:text-white hover:border-[#4B5563]"
+            : "bg-white/[0.04] text-[#AEB9CC] border-white/10 hover:text-white hover:border-[#4B5563]"
         }`}
         title="Ikoner & Emojis"
       >
@@ -1098,7 +1083,7 @@
         class={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${
           activeToolTab === "gif"
             ? "bg-[#70E1F8]/20 text-[#70E1F8] border-[#70E1F8]/50 shadow-sm"
-            : "bg-[#242B35] text-[#94A3B8] border-[#384252] hover:text-white hover:border-[#4B5563]"
+            : "bg-white/[0.04] text-[#AEB9CC] border-white/10 hover:text-white hover:border-[#4B5563]"
         }`}
         title="Søk og send GIFs (Discord-stil)"
       >
@@ -1112,7 +1097,7 @@
         class={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${
           activeToolTab === "image" || attachedImage
             ? "bg-[#9FE88D]/20 text-[#9FE88D] border-[#9FE88D]/50 shadow-sm"
-            : "bg-[#242B35] text-[#94A3B8] border-[#384252] hover:text-white hover:border-[#4B5563]"
+            : "bg-white/[0.04] text-[#AEB9CC] border-white/10 hover:text-white hover:border-[#4B5563]"
         }`}
         title="Bilde / Skjermbilde fra utklippstavle"
       >
@@ -1126,11 +1111,11 @@
 {#if isFullPage}
   <!-- FULLSKJERM / SIDEVISNING (DaisyUI Dim Theme) -->
   <div
-    class="flex-1 flex flex-col h-full bg-[#2A303C] rounded-2xl border border-[#384252] shadow-sm overflow-hidden text-[#E2E8F0] font-sans"
+    class="flex-1 flex flex-col h-full bg-white/[0.055] backdrop-blur-sm rounded-2xl border border-white/10 shadow-sm overflow-hidden text-[#E2E8F0] font-sans"
   >
     <!-- Header -->
     <div
-      class="p-4 border-b border-[#384252] bg-[#191E24] flex flex-wrap items-center justify-between gap-3 shrink-0"
+      class="p-4 border-b border-white/10 bg-black/20 flex flex-wrap items-center justify-between gap-3 shrink-0"
     >
       <div class="flex items-center gap-3">
         <div
@@ -1142,7 +1127,7 @@
           <h2 class="text-base font-bold text-white flex items-center gap-2">
             Banter
           </h2>
-          <p class="text-xs text-[#94A3B8]">
+          <p class="text-xs text-[#AEB9CC]">
             Diskuter runden, del skjermbilder og gi oppløftende kommentarer
           </p>
         </div>
@@ -1150,14 +1135,14 @@
 
       <!-- Kanalvelger Faner -->
       <div
-        class="flex items-center gap-1.5 p-1 bg-[#242B35] rounded-xl border border-[#384252] text-xs"
+        class="flex items-center gap-1.5 p-1 bg-white/[0.04] rounded-xl border border-white/10 text-xs"
       >
         <button
           onclick={() => onSelectChannel("banter")}
           class={`py-1.5 px-4 rounded-lg font-bold transition-colors flex items-center justify-center gap-1.5 ${
             activeChannel === "banter"
               ? "bg-[#9FE88D] text-[#16380c] shadow-sm"
-              : "text-[#94A3B8] hover:text-white"
+              : "text-[#AEB9CC] hover:text-white"
           }`}
         >
           <Users class="w-3.5 h-3.5" />
@@ -1169,7 +1154,7 @@
           class={`py-1.5 px-4 rounded-lg font-bold transition-colors flex items-center justify-center gap-1.5 ${
             activeChannel === "room"
               ? "bg-[#9FE88D] text-[#16380c] shadow-sm"
-              : "text-[#94A3B8] hover:text-white"
+              : "text-[#AEB9CC] hover:text-white"
           }`}
         >
           <Lock class="w-3.5 h-3.5" />
@@ -1185,17 +1170,17 @@
     >
       {#if messages.length === 0}
         <div
-          class="h-full flex flex-col items-center justify-center text-center p-8 space-y-2 text-[#94A3B8]"
+          class="h-full flex flex-col items-center justify-center text-center p-8 space-y-2 text-[#AEB9CC]"
         >
           <div
-            class="w-12 h-12 rounded-2xl bg-[#242B35] border border-[#384252] flex items-center justify-center text-[#9FE88D] mb-1"
+            class="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-[#9FE88D] mb-1"
           >
             <MessageSquare class="w-6 h-6" />
           </div>
           <p class="text-sm font-bold text-white">
             Ingen meldinger i denne kanalen enda
           </p>
-          <p class="text-xs text-[#94A3B8] max-w-sm">
+          <p class="text-xs text-[#AEB9CC] max-w-sm">
             Start diskusjonen! Send en melding, formater tekst eller lim inn et skjermbilde nedenfor.
           </p>
         </div>
@@ -1208,7 +1193,7 @@
 
     <!-- Input Seksjon -->
     <div
-      class="p-3.5 sm:p-4 border-t border-[#384252] bg-[#191E24] space-y-2.5 shrink-0"
+      class="p-3.5 sm:p-4 border-t border-white/10 bg-black/20 space-y-2.5 shrink-0"
     >
       {@render chatToolbarAndDrawer()}
 
@@ -1222,7 +1207,7 @@
           placeholder={activeChannel === "room"
             ? `Skriv til ${currentRoom?.name || "rommet"}... (Ctrl+V for skjermbilde)`
             : "Skriv melding til alle... (Ctrl+V for skjermbilde)"}
-          class="flex-1 px-4 py-2.5 text-xs sm:text-sm rounded-xl bg-[#242B35] border border-[#384252] text-white placeholder-[#94A3B8] focus:outline-none focus:border-[#9FE88D] transition-colors"
+          class="flex-1 px-4 py-2.5 text-xs sm:text-sm rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-[#AEB9CC] focus:outline-none focus:border-[#9FE88D] transition-colors"
         />
         <button
           onclick={handleSend}
@@ -1245,10 +1230,10 @@
   ></button>
 
   <aside
-    class="fixed top-0 right-0 h-full w-full max-w-md bg-[#2A303C] border-l border-[#384252] shadow-2xl z-50 flex flex-col justify-between select-none animate-in slide-in-from-right duration-200 text-[#E2E8F0] font-sans"
+    class="fixed top-0 right-0 h-full w-full max-w-md bg-white/[0.055] backdrop-blur-sm border-l border-white/10 shadow-2xl z-50 flex flex-col justify-between select-none animate-in slide-in-from-right duration-200 text-[#E2E8F0] font-sans"
   >
     <div
-      class="p-4 border-b border-[#384252] bg-[#191E24] flex items-center justify-between shrink-0"
+      class="p-4 border-b border-white/10 bg-black/20 flex items-center justify-between shrink-0"
     >
       <div class="flex items-center gap-2.5">
         <div
@@ -1260,7 +1245,7 @@
           <h2 class="text-sm font-bold text-white flex items-center gap-2">
             Banter
           </h2>
-          <p class="text-[11px] text-[#94A3B8]">
+          <p class="text-[11px] text-[#AEB9CC]">
             Diskuter runden og hets kollegaene dine
           </p>
         </div>
@@ -1268,22 +1253,22 @@
 
       <button
         onclick={onClose}
-        class="p-1.5 rounded-lg bg-[#242B35] hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors"
+        class="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/10 text-[#AEB9CC] hover:text-white transition-colors"
       >
         <X class="w-4 h-4" />
       </button>
     </div>
 
-    <div class="p-3 border-b border-[#384252] bg-[#191E24] shrink-0">
+    <div class="p-3 border-b border-white/10 bg-black/20 shrink-0">
       <div
-        class="grid grid-cols-2 gap-1.5 p-1 bg-[#242B35] rounded-lg border border-[#384252] text-xs"
+        class="grid grid-cols-2 gap-1.5 p-1 bg-white/[0.04] rounded-lg border border-white/10 text-xs"
       >
         <button
           onclick={() => onSelectChannel("banter")}
           class={`py-1.5 px-3 rounded-md font-bold transition-colors flex items-center justify-center gap-1.5 ${
             activeChannel === "banter"
               ? "bg-[#9FE88D] text-[#16380c] shadow-sm"
-              : "text-[#94A3B8] hover:text-white"
+              : "text-[#AEB9CC] hover:text-white"
           }`}
         >
           <Users class="w-3.5 h-3.5" />
@@ -1295,7 +1280,7 @@
           class={`py-1.5 px-3 rounded-md font-bold transition-colors flex items-center justify-center gap-1.5 ${
             activeChannel === "room"
               ? "bg-[#9FE88D] text-[#16380c] shadow-sm"
-              : "text-[#94A3B8] hover:text-white"
+              : "text-[#AEB9CC] hover:text-white"
           }`}
         >
           <Lock class="w-3.5 h-3.5" />
@@ -1310,11 +1295,11 @@
     >
       {#if messages.length === 0}
         <div
-          class="h-full flex flex-col items-center justify-center text-center p-6 space-y-2 text-[#94A3B8]"
+          class="h-full flex flex-col items-center justify-center text-center p-6 space-y-2 text-[#AEB9CC]"
         >
           <MessageSquare class="w-8 h-8 opacity-30 text-[#9FE88D]" />
           <p class="text-xs font-semibold text-white">Ingen meldinger enda</p>
-          <p class="text-[11px] text-[#94A3B8]">
+          <p class="text-[11px] text-[#AEB9CC]">
             Start samtalen ved å sende en melding nedenfor!
           </p>
         </div>
@@ -1325,7 +1310,7 @@
       {/each}
     </div>
 
-    <div class="p-3 border-t border-[#384252] bg-[#191E24] space-y-2.5 shrink-0">
+    <div class="p-3 border-t border-white/10 bg-black/20 space-y-2.5 shrink-0">
       {@render chatToolbarAndDrawer()}
 
       <div class="flex items-center gap-2">
@@ -1338,7 +1323,7 @@
           placeholder={activeChannel === "room"
             ? `Skriv til ${currentRoom?.name || "rommet"}...`
             : "Skriv melding til alle..."}
-          class="flex-1 px-3.5 py-2 text-xs rounded-xl bg-[#242B35] border border-[#384252] text-white placeholder-[#94A3B8] focus:outline-none focus:border-[#9FE88D] transition-colors"
+          class="flex-1 px-3.5 py-2 text-xs rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-[#AEB9CC] focus:outline-none focus:border-[#9FE88D] transition-colors"
         />
         <button
           onclick={handleSend}

@@ -1,11 +1,34 @@
 import { action, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
+import {
+  buildGwCalendar,
+  monthsFromCalendar,
+  gwMonthMap,
+  type GwCalendarEntry,
+} from "./fplCalendar";
 
 const FPL_HEADERS = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Atlantasy Desktop FPL Client",
   Accept: "application/json",
 };
+
+/**
+ * Kjører async-arbeid i sekvensielle batcher slik at vi ikke bombarderer FPL-APIet
+ * med hundrevis av samtidige forespørsler (som gir 429-svar og delvis data).
+ */
+async function mapInBatches<T, R>(
+  items: T[],
+  batchSize: number,
+  worker: (item: T) => Promise<R>
+): Promise<R[]> {
+  const out: R[] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    out.push(...(await Promise.all(batch.map(worker))));
+  }
+  return out;
+}
 
 /**
  * Action for å hente ligatabell og managere direkte fra FPLs offisielle API
@@ -184,8 +207,16 @@ export const syncLiveFplData = action({
   },
   handler: async (ctx, args) => {
     try {
-      // 1. Hent bootstrap-static for å finne aktiv gameweek
-      let activeGw = 1;
+      // 1. Hent ligainnstillinger fra Convex (liga-ID + fallback-gameweek)
+      const settings = await ctx.runQuery(api.admin.getSettings);
+      const targetLeagueId = args.customLeagueId || settings?.leagueId || 464734;
+
+      // 2. Hent bootstrap-static ÉN gang – gir både aktiv gameweek og spillerkatalogen.
+      //    Alle feltnavn nedenfor leses fra dette live-svaret, ikke fra hardkodede antakelser.
+      //    Faller tilbake til lagret currentGameweek (ikke hardkodet 1) hvis kallet feiler.
+      let activeGw: number = settings?.currentGameweek || 1;
+      const elementsMap = new Map<number, any>();
+      let gwCalendar: GwCalendarEntry[] = [];
       try {
         const bootRes = await fetch(
           "https://fantasy.premierleague.com/api/bootstrap-static/",
@@ -200,14 +231,30 @@ export const syncLiveFplData = action({
           if (currentEvent?.id) {
             activeGw = currentEvent.id;
           }
+          for (const el of bootData.elements || []) {
+            elementsMap.set(el.id, el);
+          }
+          // Utled måned-tilhørighet per gameweek fra de offisielle fristene.
+          gwCalendar = buildGwCalendar(bootData.events || []);
+        }
+        if (elementsMap.size === 0) {
+          console.warn(
+            "bootstrap-static ga ingen elements – kaptein/benk-berikelse hoppes over i denne synkroniseringen"
+          );
         }
       } catch (e) {
         console.warn("Kunne ikke hente bootstrap-static, bruker fallback GW:", e);
       }
 
-      // 2. Hent ligainnstillinger fra Convex for å finne liga-ID
-      const settings = await ctx.runQuery(api.admin.getSettings);
-      const targetLeagueId = args.customLeagueId || settings?.leagueId || 464734;
+      const gwMonth = gwMonthMap(gwCalendar);
+      const monthRanges = monthsFromCalendar(gwCalendar).map((m) => ({
+        monthKey: m.monthKey,
+        monthName: m.monthName,
+        gameweekStart: m.gameweekStart,
+        gameweekEnd: m.gameweekEnd,
+        customGwList: m.gwList,
+        isCompleted: m.isCompleted,
+      }));
 
       // 3. Hent ligastilling og påmeldte fra FPL
       const standingsRes = await fetch(
@@ -294,23 +341,91 @@ export const syncLiveFplData = action({
 
       const allCombinedResults = Array.from(entryMap.values());
 
-      // 4. Hent transfer hits for hvert lag (picks endpoint)
-      const enrichedTeams = await Promise.all(
-        allCombinedResults.map(async (r: any) => {
+      // 4. Berik hvert lag med transfer hits, kaptein, benkpoeng og sesonghistorikk
+      //    (picks- + history-endepunktene). Kjøres i batcher for å unngå FPL rate-limiting
+      //    – hele ligaen på én gang ville vært titalls samtidige forespørsler.
+      const enrichedTeams = await mapInBatches(allCombinedResults, 5, async (r: any) => {
           let hits = 0;
-          let captainName = undefined;
+          let captainName: string | undefined;
+          let captainPoints = 0;
+          let benchPoints = 0;
+          let benchedPlayer: string | undefined;
+          let totalHitsCost = 0;
+          let activeChip: string | undefined;
+          let perGwHistory: Array<{
+            gw: number;
+            points: number;
+            transfersCost: number;
+            benchPoints: number;
+            activeChip?: string;
+          }> = [];
 
           try {
-            const picksRes = await fetch(
-              `https://fantasy.premierleague.com/api/entry/${r.entry}/event/${activeGw}/picks/`,
-              { headers: FPL_HEADERS }
-            );
+            const [picksRes, historyRes] = await Promise.all([
+              fetch(
+                `https://fantasy.premierleague.com/api/entry/${r.entry}/event/${activeGw}/picks/`,
+                { headers: FPL_HEADERS }
+              ),
+              fetch(
+                `https://fantasy.premierleague.com/api/entry/${r.entry}/history/`,
+                { headers: FPL_HEADERS }
+              ),
+            ]);
+
             if (picksRes.ok) {
               const picksData = await picksRes.json();
+              // picks kommer sortert på "position" 1–15 (1–11 = banen, 12–15 = benk),
+              // men vi sorterer defensivt i tilfelle FPL endrer rekkefølgen.
+              const picks = [...(picksData.picks || [])].sort(
+                (a: any, b: any) => (a.position || 0) - (b.position || 0)
+              );
+              const captainPick =
+                picks.find((p: any) => p.is_captain) ||
+                picks.find((p: any) => p.is_vice_captain);
+              const captainElement = captainPick
+                ? elementsMap.get(captainPick.element)
+                : undefined;
+              captainName = captainElement?.web_name || undefined;
+              captainPoints = captainElement?.event_points || 0;
+              benchPoints = picksData.entry_history?.points_on_bench || 0;
+
+              // "Benkevarmeren": den benkede spilleren som faktisk scoret mest denne runden.
+              const worstBenchMiss = picks
+                .slice(11)
+                .map((p: any) => elementsMap.get(p.element))
+                .filter(Boolean)
+                .sort((a: any, b: any) => (b.event_points || 0) - (a.event_points || 0))[0];
+              benchedPlayer = worstBenchMiss?.web_name || undefined;
+
               hits = picksData.entry_history?.event_transfers_cost || 0;
+              activeChip = picksData.active_chip || undefined;
+            }
+
+            if (historyRes.ok) {
+              const historyData = await historyRes.json();
+              const seasonHistory = Array.isArray(historyData.current) ? historyData.current : [];
+              totalHitsCost = seasonHistory.reduce((sum: number, item: any) => sum + (item.event_transfers_cost || 0), 0);
+              // Chip-bruk per runde ligger i history.chips ([{ name, event, time }]),
+              // IKKE i history.current – dette er eneste kilde til historiske chips.
+              const chipByGw = new Map<number, string>();
+              for (const c of Array.isArray(historyData.chips) ? historyData.chips : []) {
+                if (typeof c?.event === "number" && c?.name) {
+                  chipByGw.set(c.event, String(c.name));
+                }
+              }
+              // Full per-runde-historikk for backfill av gameweek_scores.
+              perGwHistory = seasonHistory
+                .filter((h: any) => typeof h.event === "number")
+                .map((h: any) => ({
+                  gw: h.event,
+                  points: h.points || 0,
+                  transfersCost: h.event_transfers_cost || 0,
+                  benchPoints: h.points_on_bench || 0,
+                  activeChip: chipByGw.get(h.event) || undefined,
+                }));
             }
           } catch {
-            // Ignorer enkelte picks-feil og fortsett med 0 hits
+            // Ignorer enkelte picks-/history-feil og fortsett med 0
           }
 
           const managerName =
@@ -326,13 +441,20 @@ export const syncLiveFplData = action({
             currentGwPoints: r.event_total || 0,
             currentGwTransfersCost: hits,
             captainName,
+            captainPoints,
+            benchPoints,
+            benchedPlayer,
+            totalHitsCost,
+            activeChip,
+            perGwHistory,
           };
-        })
-      );
+      });
 
       // 5. Lagre synkroniserte data i Convex databasen
       await ctx.runMutation(api.fpl.saveLiveFplSyncResult, {
         currentGameweek: activeGw,
+        gwMonth,
+        monthRanges,
         teamsData: enrichedTeams,
       });
 
@@ -359,7 +481,7 @@ export const fetchLiveTeamSquad = action({
     entryId: v.number(),
     gameweek: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     try {
       // 1. Hent bootstrap-static for fotballspillere og klubber
       const bootRes = await fetch(
@@ -382,6 +504,12 @@ export const fetchLiveTeamSquad = action({
         teamsMap.set(t.id, t);
       }
 
+      // Reelt rundesnitt per gameweek fra bootstrap (ikke hardkodet 60)
+      const gwAverageMap = new Map<number, number>();
+      for (const ev of bootData.events || []) {
+        gwAverageMap.set(ev.id, ev.average_entry_score || 0);
+      }
+
       // Finn aktiv GW
       let gw = args.gameweek;
       if (!gw) {
@@ -392,18 +520,62 @@ export const fetchLiveTeamSquad = action({
         gw = currentEvent?.id || 1;
       }
 
-      // 2. Hent managerens picks for gameweek
-      const picksRes = await fetch(
-        `https://fantasy.premierleague.com/api/entry/${args.entryId}/event/${gw}/picks/`,
-        { headers: FPL_HEADERS }
-      );
+      // 2. Hent managerens picks + rundens kamper (for motstander per spiller)
+      const [picksRes, fixturesRes] = await Promise.all([
+        fetch(
+          `https://fantasy.premierleague.com/api/entry/${args.entryId}/event/${gw}/picks/`,
+          { headers: FPL_HEADERS }
+        ),
+        fetch(`https://fantasy.premierleague.com/api/fixtures/?event=${gw}`, {
+          headers: FPL_HEADERS,
+        }),
+      ]);
 
       if (!picksRes.ok) {
         throw new Error(`Picks feilet med status ${picksRes.status}`);
       }
 
+      // Bygg motstander-oppslag: klubb-id -> liste med { kort, hjemme, vanskelighet }
+      const oppByTeam = new Map<
+        number,
+        Array<{ short: string; isHome: boolean; difficulty: number }>
+      >();
+      if (fixturesRes.ok) {
+        const fixtures = await fixturesRes.json();
+        for (const f of Array.isArray(fixtures) ? fixtures : []) {
+          const home = teamsMap.get(f.team_h);
+          const away = teamsMap.get(f.team_a);
+          if (home && away) {
+            const hList = oppByTeam.get(f.team_h) ?? [];
+            hList.push({
+              short: away.short_name,
+              isHome: true,
+              difficulty: f.team_h_difficulty ?? 3,
+            });
+            oppByTeam.set(f.team_h, hList);
+            const aList = oppByTeam.get(f.team_a) ?? [];
+            aList.push({
+              short: home.short_name,
+              isHome: false,
+              difficulty: f.team_a_difficulty ?? 3,
+            });
+            oppByTeam.set(f.team_a, aList);
+          }
+        }
+      }
+      const opponentLabel = (teamId: number): string => {
+        const list = oppByTeam.get(teamId);
+        if (!list || list.length === 0) return "–";
+        return list
+          .map((o) => `${o.short} (${o.isHome ? "H" : "A"})`)
+          .join(" · ");
+      };
+
       const picksData = await picksRes.json();
-      const rawPicks = picksData.picks || [];
+      // Sorter defensivt på "position" (1–15) slik at idx < 11 alltid er banen.
+      const rawPicks = [...(picksData.picks || [])].sort(
+        (a: any, b: any) => (a.position || 0) - (b.position || 0)
+      );
 
       const posLabels: Record<number, string> = {
         1: "GKP",
@@ -424,11 +596,15 @@ export const fetchLiveTeamSquad = action({
           id: p.element,
           name: el.web_name || "Spiller",
           club: teamObj.short_name || "PL",
+          crest: teamObj.code
+            ? `https://resources.premierleague.com/premierleague/badges/70/t${teamObj.code}.png`
+            : "",
           pos: posType,
           points: el.event_points || 0,
           isCaptain: p.is_captain,
           isVice: p.is_vice_captain,
           multiplier: p.multiplier,
+          opponent: el.team ? opponentLabel(el.team) : "–",
           fixture: teamObj.name || "",
         };
 
@@ -457,7 +633,7 @@ export const fetchLiveTeamSquad = action({
             gw: h.event,
             points: h.points,
             rank: h.overall_rank,
-            average: 60,
+            average: gwAverageMap.get(h.event) || 0,
           }));
 
           chipsList = (histData.chips || []).map((c: any) => ({
@@ -495,6 +671,20 @@ export const fetchLiveTeamSquad = action({
 export const saveLiveFplSyncResult = mutation({
   args: {
     currentGameweek: v.number(),
+    // gw (som streng) -> "YYYY-MM". Valgfri: eldre kallere sender den ikke.
+    gwMonth: v.optional(v.record(v.string(), v.string())),
+    monthRanges: v.optional(
+      v.array(
+        v.object({
+          monthKey: v.string(),
+          monthName: v.string(),
+          gameweekStart: v.number(),
+          gameweekEnd: v.number(),
+          customGwList: v.array(v.number()),
+          isCompleted: v.boolean(),
+        })
+      )
+    ),
     teamsData: v.array(
       v.object({
         entryId: v.number(),
@@ -504,10 +694,29 @@ export const saveLiveFplSyncResult = mutation({
         currentGwPoints: v.number(),
         currentGwTransfersCost: v.number(),
         captainName: v.optional(v.string()),
+        captainPoints: v.optional(v.number()),
+        benchPoints: v.optional(v.number()),
+        benchedPlayer: v.optional(v.string()),
+        totalHitsCost: v.optional(v.number()),
+        activeChip: v.optional(v.string()),
+        perGwHistory: v.optional(
+          v.array(
+            v.object({
+              gw: v.number(),
+              points: v.number(),
+              transfersCost: v.number(),
+              benchPoints: v.number(),
+              activeChip: v.optional(v.string()),
+            })
+          )
+        ),
       })
     ),
   },
   handler: async (ctx, args) => {
+    const gwMonth = args.gwMonth ?? {};
+    const monthKeyFor = (gw: number): string | undefined => gwMonth[String(gw)];
+
     // 1. Oppdater league_settings
     const settings = await ctx.db.query("league_settings").first();
     if (settings) {
@@ -518,6 +727,37 @@ export const saveLiveFplSyncResult = mutation({
     }
 
     const deductHits = settings?.deductTransferHits ?? true;
+    const netOf = (points: number, cost: number) =>
+      deductHits ? points - cost : points;
+
+    // 1b. Vedlikehold månedsinndelingen (monthly_standings) fra FPL-kalenderen.
+    for (const m of args.monthRanges ?? []) {
+      const existingMonth = await ctx.db
+        .query("monthly_standings")
+        .withIndex("by_monthKey", (q) => q.eq("monthKey", m.monthKey))
+        .first();
+      if (existingMonth) {
+        await ctx.db.patch(existingMonth._id, {
+          monthName: m.monthName,
+          gameweekStart: m.gameweekStart,
+          gameweekEnd: m.gameweekEnd,
+          customGwList: m.customGwList,
+          isCompleted: m.isCompleted,
+        });
+      } else {
+        await ctx.db.insert("monthly_standings", {
+          monthKey: m.monthKey,
+          monthName: m.monthName,
+          gameweekStart: m.gameweekStart,
+          gameweekEnd: m.gameweekEnd,
+          customGwList: m.customGwList,
+          isCompleted: m.isCompleted,
+        });
+      }
+    }
+
+    // GW-er som trenger ny rom-snitt-beregning (inneværende + evt. backfilte).
+    const touchedGws = new Set<number>([args.currentGameweek]);
 
     // 2. Oppdater / opprett fpl_teams
     for (const item of args.teamsData) {
@@ -533,6 +773,11 @@ export const saveLiveFplSyncResult = mutation({
           totalPoints: item.totalPoints,
           currentGwPoints: item.currentGwPoints,
           currentGwTransfersCost: item.currentGwTransfersCost,
+          captainName: item.captainName,
+          captainPoints: item.captainPoints,
+          benchPoints: item.benchPoints,
+          benchedPlayer: item.benchedPlayer,
+          totalHitsCost: item.totalHitsCost,
           lastUpdated: Date.now(),
         });
       } else {
@@ -543,12 +788,17 @@ export const saveLiveFplSyncResult = mutation({
           totalPoints: item.totalPoints,
           currentGwPoints: item.currentGwPoints,
           currentGwTransfersCost: item.currentGwTransfersCost,
+          captainName: item.captainName,
+          captainPoints: item.captainPoints,
+          benchPoints: item.benchPoints,
+          benchedPlayer: item.benchedPlayer,
+          totalHitsCost: item.totalHitsCost,
           active: true,
           lastUpdated: Date.now(),
         });
       }
 
-      // Lagre gameweek_scores historikk
+      // Lagre gameweek_scores for INNEVÆRENDE runde (full live-rad).
       const existingGw = await ctx.db
         .query("gameweek_scores")
         .withIndex("by_entryId_and_gw", (q) =>
@@ -556,69 +806,133 @@ export const saveLiveFplSyncResult = mutation({
         )
         .first();
 
-      const netPts = deductHits
-        ? item.currentGwPoints - item.currentGwTransfersCost
-        : item.currentGwPoints;
+      const liveNet = netOf(item.currentGwPoints, item.currentGwTransfersCost);
+      const liveRow = {
+        monthKey: monthKeyFor(args.currentGameweek),
+        points: item.currentGwPoints,
+        transfersCost: item.currentGwTransfersCost,
+        netPoints: liveNet,
+        benchPoints: item.benchPoints,
+        captainName: item.captainName,
+        captainPoints: item.captainPoints,
+        activeChip: item.activeChip,
+        source: "live",
+        lastCalculated: Date.now(),
+      };
 
       if (existingGw) {
-        await ctx.db.patch(existingGw._id, {
-          points: item.currentGwPoints,
-          transfersCost: item.currentGwTransfersCost,
-          netPoints: netPts,
-          captainName: item.captainName,
-          lastCalculated: Date.now(),
-        });
+        await ctx.db.patch(existingGw._id, liveRow);
       } else {
         await ctx.db.insert("gameweek_scores", {
           entryId: item.entryId,
           gameweek: args.currentGameweek,
-          points: item.currentGwPoints,
-          transfersCost: item.currentGwTransfersCost,
-          netPoints: netPts,
-          captainName: item.captainName,
+          ...liveRow,
+        });
+      }
+
+      // Backfill: tidligere spilte runder som mangler en rad (poeng/hits/benk +
+      // chip-bruk fra history-endepunktet – kaptein finnes ikke der).
+      for (const h of item.perGwHistory ?? []) {
+        if (h.gw >= args.currentGameweek) continue;
+        const existingHist = await ctx.db
+          .query("gameweek_scores")
+          .withIndex("by_entryId_and_gw", (q) =>
+            q.eq("entryId", item.entryId).eq("gameweek", h.gw)
+          )
+          .first();
+        if (existingHist) {
+          // Fyll inn manglende felt på gamle rader (monthKey + benkepoeng +
+          // chip), slik at sesong-/måneds-aggregering blir korrekt fra
+          // sesongstart.
+          const patch: Record<string, any> = {};
+          if (!existingHist.monthKey && monthKeyFor(h.gw)) {
+            patch.monthKey = monthKeyFor(h.gw);
+          }
+          if (
+            (existingHist.benchPoints ?? null) === null &&
+            h.benchPoints != null
+          ) {
+            patch.benchPoints = h.benchPoints;
+          }
+          if (!existingHist.activeChip && h.activeChip) {
+            patch.activeChip = h.activeChip;
+          }
+          if (Object.keys(patch).length > 0) {
+            await ctx.db.patch(existingHist._id, patch);
+          }
+          continue;
+        }
+        await ctx.db.insert("gameweek_scores", {
+          entryId: item.entryId,
+          gameweek: h.gw,
+          monthKey: monthKeyFor(h.gw),
+          points: h.points,
+          transfersCost: h.transfersCost,
+          netPoints: netOf(h.points, h.transfersCost),
+          benchPoints: h.benchPoints,
+          activeChip: h.activeChip,
+          source: "backfill",
           lastCalculated: Date.now(),
         });
+        touchedGws.add(h.gw);
       }
     }
 
-    // 3. Beregn og oppdater romsnitt per gameweek (Top 2 spillere per rom)
+    // 3. Beregn romsnitt (Top 2 spillere) for hver berørt gameweek, basert på
+    //    gameweek_scores (dekker både inneværende runde og backfilte runder).
     const allRooms = await ctx.db.query("rooms").collect();
     const allTeams = await ctx.db.query("fpl_teams").collect();
+    const roomByEntry = new Map<number, string>();
+    for (const t of allTeams) {
+      if (t.roomId) roomByEntry.set(t.entryId, t.roomId);
+    }
 
-    for (const room of allRooms) {
-      const roomTeams = allTeams.filter((t) => t.roomId === room._id);
-      if (roomTeams.length === 0) continue;
+    const F1_SCALE = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
 
-      const scored = roomTeams.map((t) => {
-        const net = deductHits
-          ? t.currentGwPoints - t.currentGwTransfersCost
-          : t.currentGwPoints;
-        return {
-          entryId: t.entryId,
-          net,
-        };
-      });
+    for (const gw of touchedGws) {
+      const gwScores = await ctx.db
+        .query("gameweek_scores")
+        .withIndex("by_gameweek", (q) => q.eq("gameweek", gw))
+        .collect();
 
-      scored.sort((a, b) => b.net - a.net);
-      const top1 = scored[0];
-      const top2 = scored[1];
-
-      let avg = 0;
-      if (top1 && top2) {
-        avg = (top1.net + top2.net) / 2;
-      } else if (top1) {
-        avg = top1.net;
+      // F1-poeng for runden – deles ut etter netto-rangering og lagres på
+      // hver rad, men kun for ferdigspilte runder (inneværende runde er "live"
+      // og rangeringen kan fortsatt endre seg). Ligainnsikt summerer disse.
+      if (gw < args.currentGameweek) {
+        const rankedF1 = [...gwScores].sort(
+          (a, b) => (b.netPoints ?? 0) - (a.netPoints ?? 0)
+        );
+        for (let i = 0; i < rankedF1.length; i++) {
+          const pts = i < F1_SCALE.length ? F1_SCALE[i] : 0;
+          if (rankedF1[i].f1Points !== pts) {
+            await ctx.db.patch(rankedF1[i]._id, { f1Points: pts });
+          }
+        }
       }
 
-      const existingRoomScore = await ctx.db
-        .query("room_gameweek_scores")
-        .withIndex("by_roomId_and_gw", (q) =>
-          q.eq("roomId", room._id).eq("gameweek", args.currentGameweek)
-        )
-        .first();
+      // Grupper netto-poeng per rom.
+      const netByRoom = new Map<string, Array<{ entryId: number; net: number }>>();
+      for (const s of gwScores) {
+        const roomId = roomByEntry.get(s.entryId);
+        if (!roomId) continue;
+        const list = netByRoom.get(roomId) ?? [];
+        list.push({ entryId: s.entryId, net: s.netPoints ?? 0 });
+        netByRoom.set(roomId, list);
+      }
 
-      if (existingRoomScore) {
-        await ctx.db.patch(existingRoomScore._id, {
+      const monthKey = monthKeyFor(gw);
+
+      for (const room of allRooms) {
+        const scored = (netByRoom.get(room._id) ?? []).sort(
+          (a, b) => b.net - a.net
+        );
+        if (scored.length === 0) continue;
+        const top1 = scored[0];
+        const top2 = scored[1];
+        const avg = top1 && top2 ? (top1.net + top2.net) / 2 : top1.net;
+
+        const row = {
+          monthKey,
           averageTop2: Math.round(avg * 10) / 10,
           top1EntryId: top1?.entryId || 0,
           top1Points: top1?.net || 0,
@@ -626,19 +940,24 @@ export const saveLiveFplSyncResult = mutation({
           top2Points: top2?.net || 0,
           deductedHits: deductHits,
           lastCalculated: Date.now(),
-        });
-      } else {
-        await ctx.db.insert("room_gameweek_scores", {
-          roomId: room._id,
-          gameweek: args.currentGameweek,
-          averageTop2: Math.round(avg * 10) / 10,
-          top1EntryId: top1?.entryId || 0,
-          top1Points: top1?.net || 0,
-          top2EntryId: top2?.entryId || 0,
-          top2Points: top2?.net || 0,
-          deductedHits: deductHits,
-          lastCalculated: Date.now(),
-        });
+        };
+
+        const existingRoomScore = await ctx.db
+          .query("room_gameweek_scores")
+          .withIndex("by_roomId_and_gw", (q) =>
+            q.eq("roomId", room._id).eq("gameweek", gw)
+          )
+          .first();
+
+        if (existingRoomScore) {
+          await ctx.db.patch(existingRoomScore._id, row);
+        } else {
+          await ctx.db.insert("room_gameweek_scores", {
+            roomId: room._id,
+            gameweek: gw,
+            ...row,
+          });
+        }
       }
     }
   },

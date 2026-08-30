@@ -43,23 +43,23 @@
 {#if isOpen}
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 text-[#E2E8F0] font-sans">
     <div
-      class="w-full max-w-md bg-[#2A303C] border border-[#384252] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in duration-150"
+      class="w-full max-w-md bg-white/[0.055] backdrop-blur-sm border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in duration-150"
     >
       <!-- Header -->
-      <div class="p-4 border-b border-[#384252] bg-[#191E24] flex items-center justify-between">
+      <div class="p-4 border-b border-white/10 bg-black/20 flex items-center justify-between">
         <div class="flex items-center gap-2.5">
           <div class="p-2 rounded-lg bg-[#9FE88D]/15 border border-[#9FE88D]/30 text-[#9FE88D]">
             <KeyRound class="w-5 h-5" />
           </div>
           <div>
             <h2 class="text-sm font-bold text-white">Bli med i Atlantasy</h2>
-            <p class="text-xs text-[#94A3B8]">Registrer deg med invitasjonskode</p>
+            <p class="text-xs text-[#AEB9CC]">Registrer deg med invitasjonskode</p>
           </div>
         </div>
 
         <button
           onclick={onClose}
-          class="p-1.5 rounded-lg bg-[#242B35] hover:bg-[#384252] text-[#94A3B8] hover:text-white transition-colors"
+          class="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/10 text-[#AEB9CC] hover:text-white transition-colors"
         >
           <X class="w-4 h-4" />
         </button>
@@ -81,7 +81,7 @@
             type="text"
             bind:value={inviteCode}
             placeholder="f.eks. ATL-2025"
-            class="w-full px-3 py-2 text-xs rounded-xl bg-[#191E24] border border-[#384252] text-white uppercase focus:border-[#9FE88D] focus:outline-none font-mono"
+            class="w-full px-3 py-2 text-xs rounded-xl bg-black/20 border border-white/10 text-white uppercase focus:border-[#9FE88D] focus:outline-none font-mono"
           />
         </div>
 
@@ -92,7 +92,7 @@
             type="text"
             bind:value={username}
             placeholder="f.eks. Ola Nordmann"
-            class="w-full px-3 py-2 text-xs rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+            class="w-full px-3 py-2 text-xs rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
           />
         </div>
 
@@ -103,7 +103,7 @@
             type="email"
             bind:value={email}
             placeholder="ola@bedrift.no"
-            class="w-full px-3 py-2 text-xs rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+            class="w-full px-3 py-2 text-xs rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
           />
         </div>
 
@@ -115,7 +115,7 @@
               type="text"
               bind:value={fplTeamName}
               placeholder="f.eks. Haaland XI"
-              class="w-full px-3 py-2 text-xs rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+              class="w-full px-3 py-2 text-xs rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
             />
           </div>
 
@@ -126,7 +126,7 @@
               type="text"
               bind:value={fplManagerName}
               placeholder="Ola N."
-              class="w-full px-3 py-2 text-xs rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+              class="w-full px-3 py-2 text-xs rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
             />
           </div>
         </div>
@@ -136,7 +136,7 @@
           <select
             id="reg-room"
             bind:value={preferredRoomId}
-            class="w-full px-3 py-2 text-xs rounded-xl bg-[#191E24] border border-[#384252] text-white focus:border-[#9FE88D] focus:outline-none"
+            class="w-full px-3 py-2 text-xs rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
           >
             <option value="">Ingen preferanse / fordeles av admin</option>
             {#each rooms as room}

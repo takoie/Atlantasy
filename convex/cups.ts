@@ -1,6 +1,67 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAdmin } from "./security";
+import { buildCupPlan, type CupPlan } from "./cupEngine";
+import { roomAccentColor } from "./roomColors";
+
+/** Eldre formatnavn -> nye, generiske navn. */
+function normalizeFormat(format: string): string {
+  const map: Record<string, string> = {
+    lucky_loser_12: "lucky_loser",
+    double_elimination_12: "double_elimination",
+    top8_single: "single_elimination",
+    group_stage_12: "group_stage",
+  };
+  return map[format] ?? format;
+}
+
+/**
+ * Gjør en generert plan om til cup_matches-rader og kobler nextMatchId i to steg.
+ */
+async function persistCupPlan(
+  ctx: any,
+  cupId: any,
+  plan: CupPlan,
+  seededRooms: any[],
+  startGw: number
+) {
+  const now = Date.now();
+  const keyToId = new Map<string, any>();
+
+  for (const m of plan.matches) {
+    const id = await ctx.db.insert("cup_matches", {
+      cupId,
+      bracketType: m.bracketType,
+      stage: m.stage,
+      group: m.group,
+      roundNumber: m.roundNumber,
+      roundTitle: m.roundTitle,
+      matchIndex: m.matchIndex,
+      gameweek: startGw + (m.roundNumber - 1),
+      room1Id: m.seed1 != null ? seededRooms[m.seed1]?._id : undefined,
+      room2Id: m.seed2 != null ? seededRooms[m.seed2]?._id : undefined,
+      isLuckyLoser: m.isLuckyLoser || undefined,
+      status: "scheduled",
+      updatedAt: now,
+    });
+    keyToId.set(m.key, id);
+  }
+
+  for (const m of plan.matches) {
+    const patch: Record<string, any> = {};
+    if (m.nextWinnerKey && keyToId.has(m.nextWinnerKey)) {
+      patch.nextMatchId = keyToId.get(m.nextWinnerKey);
+      patch.nextMatchSlot = m.nextWinnerSlot ?? 1;
+    }
+    if (m.nextLoserKey && keyToId.has(m.nextLoserKey)) {
+      patch.nextLoserMatchId = keyToId.get(m.nextLoserKey);
+      patch.nextLoserMatchSlot = m.nextLoserSlot ?? 1;
+    }
+    if (Object.keys(patch).length > 0) {
+      await ctx.db.patch(keyToId.get(m.key), patch);
+    }
+  }
+}
 
 /**
  * Convex Modul for Cup & Sluttspill (Flere Turneringsformater)
@@ -39,7 +100,7 @@ export const getActiveCup = query({
       .collect();
 
     const rooms = await ctx.db.query("rooms").collect();
-    const roomMap = new Map(rooms.map((r) => [r._id, r]));
+    const roomMap = new Map(rooms.map((r) => [r._id, { ...r, accentColor: roomAccentColor(r.roomNumber) }]));
 
     const populatedMatches = matches.map((m) => ({
       ...m,
@@ -83,7 +144,7 @@ export const getCupDetails = query({
       .collect();
 
     const rooms = await ctx.db.query("rooms").collect();
-    const roomMap = new Map(rooms.map((r) => [r._id, r]));
+    const roomMap = new Map(rooms.map((r) => [r._id, { ...r, accentColor: roomAccentColor(r.roomNumber) }]));
 
     const populatedMatches = matches.map((m) => ({
       ...m,
@@ -120,9 +181,10 @@ export const createCupWithBracket = mutation({
     name: v.string(),
     season: v.optional(v.string()),
     startGameweek: v.number(),
-    format: v.optional(v.string()), // "lucky_loser_12" | "double_elimination_12" | "top8_single" | "group_stage_12"
+    format: v.optional(v.string()), // "single_elimination" | "double_elimination" | "round_robin" | "group_stage" | "lucky_loser"
     seedMethod: v.string(), // "leaderboard" | "manual" | "random"
     customSeedRoomIds: v.optional(v.array(v.id("rooms"))),
+    groupCount: v.optional(v.number()), // antall grupper (kun round_robin/group_stage)
     roundGwMap: v.optional(
       v.array(
         v.object({
@@ -141,12 +203,12 @@ export const createCupWithBracket = mutation({
       throw new Error("Du må ha minst 2 rom i ligaen for å opprette en cup.");
     }
 
-    const format = args.format || "lucky_loser_12";
+    const format = normalizeFormat(args.format || "single_elimination");
 
     // 1. Bestem seeding
     let seededRooms: any[] = [];
     if (args.seedMethod === "manual" && args.customSeedRoomIds && args.customSeedRoomIds.length > 0) {
-      const roomMap = new Map(allRooms.map((r) => [r._id, r]));
+      const roomMap = new Map(allRooms.map((r) => [r._id, { ...r, accentColor: roomAccentColor(r.roomNumber) }]));
       seededRooms = args.customSeedRoomIds
         .map((id) => roomMap.get(id))
         .filter((r): r is any => r !== undefined);
@@ -174,38 +236,48 @@ export const createCupWithBracket = mutation({
     }
 
     const teamCount = seededRooms.length;
+    if (teamCount < 2) {
+      throw new Error("Trenger minst 2 lag for å generere en cup.");
+    }
     const startGw = args.startGameweek;
-    const totalRounds = calculateTotalRounds(format, teamCount);
-    const roundGwMap = args.roundGwMap || generateFormatRoundGwMap(format, startGw, teamCount);
 
-    // Initialiser eventuelle gruppespilltabeller
-    let groupStandings = undefined;
-    if (format === "group_stage_12") {
-      groupStandings = [
-        ...seededRooms.slice(0, 6).map((r) => ({
-          group: "A",
-          roomId: r._id,
-          played: 0,
-          won: 0,
-          drawn: 0,
-          lost: 0,
-          points: 0,
-          totalRoomScore: 0,
-        })),
-        ...seededRooms.slice(6, 12).map((r) => ({
-          group: "B",
-          roomId: r._id,
-          played: 0,
-          won: 0,
-          drawn: 0,
-          lost: 0,
-          points: 0,
-          totalRoomScore: 0,
-        })),
-      ];
+    // Bygg turneringsplanen for det faktiske antallet lag (9, 10, 12, oddetall …).
+    const plan = buildCupPlan(format, teamCount, args.groupCount ?? 2);
+    const totalRounds = plan.totalRounds;
+    const roundGwMap =
+      args.roundGwMap ||
+      Array.from({ length: totalRounds }, (_, i) => {
+        const r = i + 1;
+        const first = plan.matches.find((m) => m.roundNumber === r);
+        return {
+          roundNumber: r,
+          roundTitle: first?.roundTitle || `Runde ${r}`,
+          gameweek: startGw + i,
+        };
+      });
+
+    // Gruppespilltabeller ut fra faktisk gruppeinndeling.
+    let groupStandings: any = undefined;
+    if (plan.groupSizes && plan.groupSizes.length >= 2) {
+      const letters = "ABCDEFGH";
+      groupStandings = [];
+      let idx = 0;
+      plan.groupSizes.forEach((sz, gi) => {
+        for (let k = 0; k < sz; k++) {
+          groupStandings.push({
+            group: letters[gi] ?? String(gi + 1),
+            roomId: seededRooms[idx++]._id,
+            played: 0,
+            won: 0,
+            drawn: 0,
+            lost: 0,
+            points: 0,
+            totalRoomScore: 0,
+          });
+        }
+      });
     }
 
-    // Opprett Cup
     const cupId = await ctx.db.insert("cups", {
       name: args.name,
       season: args.season || "2025/2026",
@@ -220,746 +292,12 @@ export const createCupWithBracket = mutation({
       updatedAt: Date.now(),
     });
 
-    // Generer kamper basert på valgt format
-    if (format === "lucky_loser_12") {
-      await generateLuckyLoser12Bracket(ctx, cupId, seededRooms, startGw);
-    } else if (format === "double_elimination_12") {
-      await generate12or16TeamDoubleElimination(ctx, cupId, seededRooms, startGw);
-    } else if (format === "top8_single") {
-      await generateTop8Bracket(ctx, cupId, seededRooms.slice(0, 8), startGw);
-    } else if (format === "group_stage_12") {
-      await generateGroupStage12(ctx, cupId, seededRooms, startGw);
-    } else {
-      // Fallback
-      await generateLuckyLoser12Bracket(ctx, cupId, seededRooms, startGw);
-    }
+    await persistCupPlan(ctx, cupId, plan, seededRooms, startGw);
 
     return cupId;
   },
 });
 
-function calculateTotalRounds(format: string, _teamCount: number): number {
-  if (format === "lucky_loser_12") return 4;
-  if (format === "double_elimination_12") return 7;
-  if (format === "top8_single") return 3;
-  if (format === "group_stage_12") return 5;
-  return 4;
-}
-
-function generateFormatRoundGwMap(format: string, startGw: number, _teamCount: number) {
-  if (format === "lucky_loser_12") {
-    return [
-      { roundNumber: 1, roundTitle: "Runde 1: Alle 12 lag spiller (6 kamper)", gameweek: startGw },
-      { roundNumber: 2, roundTitle: "Runde 2: Kvartfinaler (6 vinnere + 2 Lucky Losers)", gameweek: startGw + 1 },
-      { roundNumber: 3, roundTitle: "Runde 3: Semifinaler", gameweek: startGw + 2 },
-      { roundNumber: 4, roundTitle: "Runde 4: 🏆 Storfinale", gameweek: startGw + 3 },
-    ];
-  }
-
-  if (format === "double_elimination_12") {
-    return [
-      { roundNumber: 1, roundTitle: "Runde 1 (Innledende WB)", gameweek: startGw },
-      { roundNumber: 2, roundTitle: "Runde 2 (Kvartfinaler WB / LB R1)", gameweek: startGw + 1 },
-      { roundNumber: 3, roundTitle: "Runde 3 (LB R2)", gameweek: startGw + 2 },
-      { roundNumber: 4, roundTitle: "Runde 4 (Semifinaler WB / LB R3)", gameweek: startGw + 3 },
-      { roundNumber: 5, roundTitle: "Runde 5 (LB R4)", gameweek: startGw + 4 },
-      { roundNumber: 6, roundTitle: "Runde 6 (WB Finale / LB Finale)", gameweek: startGw + 5 },
-      { roundNumber: 7, roundTitle: "Runde 7 (Grand Final)", gameweek: startGw + 6 },
-    ];
-  }
-
-  if (format === "top8_single") {
-    return [
-      { roundNumber: 1, roundTitle: "Runde 1: Kvartfinaler (Topp 8)", gameweek: startGw },
-      { roundNumber: 2, roundTitle: "Runde 2: Semifinaler", gameweek: startGw + 1 },
-      { roundNumber: 3, roundTitle: "Runde 3: 🏆 Storfinale", gameweek: startGw + 2 },
-    ];
-  }
-
-  if (format === "group_stage_12") {
-    return [
-      { roundNumber: 1, roundTitle: "Gruppespill: Kamp 1 (Gruppe A & B)", gameweek: startGw },
-      { roundNumber: 2, roundTitle: "Gruppespill: Kamp 2 (Gruppe A & B)", gameweek: startGw + 1 },
-      { roundNumber: 3, roundTitle: "Gruppespill: Kamp 3 (Gruppe A & B)", gameweek: startGw + 2 },
-      { roundNumber: 4, roundTitle: "Sluttspill: Semifinaler (A1 vs B2, B1 vs A2)", gameweek: startGw + 3 },
-      { roundNumber: 5, roundTitle: "Sluttspill: 🏆 Storfinale", gameweek: startGw + 4 },
-    ];
-  }
-
-  return [];
-}
-
-/**
- * GENERATOR 1: 12 Lag - Alle 12 lag spiller (6 kamper) + 2 Lucky Losers til Kvartfinale
- */
-async function generateLuckyLoser12Bracket(
-  ctx: any,
-  cupId: any,
-  seededRooms: any[],
-  startGw: number
-) {
-  const now = Date.now();
-
-  // Finale (Runde 4, GW startGw + 3)
-  const finalMatchId = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "knockout",
-    stage: "knockout",
-    roundNumber: 4,
-    roundTitle: "🏆 Storfinale",
-    matchIndex: 1,
-    gameweek: startGw + 3,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  // Semifinaler (Runde 3, GW startGw + 2)
-  const semi1Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "knockout",
-    stage: "knockout",
-    roundNumber: 3,
-    roundTitle: "Semifinale 1",
-    matchIndex: 1,
-    gameweek: startGw + 2,
-    nextMatchId: finalMatchId,
-    nextMatchSlot: 1,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const semi2Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "knockout",
-    stage: "knockout",
-    roundNumber: 3,
-    roundTitle: "Semifinale 2",
-    matchIndex: 2,
-    gameweek: startGw + 2,
-    nextMatchId: finalMatchId,
-    nextMatchSlot: 2,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  // Kvartfinaler (Runde 2, GW startGw + 1)
-  const qf1Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "knockout",
-    stage: "knockout",
-    roundNumber: 2,
-    roundTitle: "Kvartfinale 1",
-    matchIndex: 1,
-    gameweek: startGw + 1,
-    nextMatchId: semi1Id,
-    nextMatchSlot: 1,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const qf2Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "knockout",
-    stage: "knockout",
-    roundNumber: 2,
-    roundTitle: "Kvartfinale 2",
-    matchIndex: 2,
-    gameweek: startGw + 1,
-    nextMatchId: semi1Id,
-    nextMatchSlot: 2,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const qf3Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "knockout",
-    stage: "knockout",
-    roundNumber: 2,
-    roundTitle: "Kvartfinale 3",
-    matchIndex: 3,
-    gameweek: startGw + 1,
-    nextMatchId: semi2Id,
-    nextMatchSlot: 1,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const qf4Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "knockout",
-    stage: "knockout",
-    roundNumber: 2,
-    roundTitle: "Kvartfinale 4",
-    matchIndex: 4,
-    gameweek: startGw + 1,
-    nextMatchId: semi2Id,
-    nextMatchSlot: 2,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  // Runde 1: 6 kamper for alle 12 lag (GW startGw)
-  const r1Matchups = [
-    { r1: seededRooms[0]?._id, r2: seededRooms[11]?._id, nextW: qf1Id, slotW: 1, title: "Runde 1 - Kamp 1" },
-    { r1: seededRooms[1]?._id, r2: seededRooms[10]?._id, nextW: qf2Id, slotW: 1, title: "Runde 1 - Kamp 2" },
-    { r1: seededRooms[2]?._id, r2: seededRooms[9]?._id,  nextW: qf3Id, slotW: 1, title: "Runde 1 - Kamp 3" },
-    { r1: seededRooms[3]?._id, r2: seededRooms[8]?._id,  nextW: qf4Id, slotW: 1, title: "Runde 1 - Kamp 4" },
-    { r1: seededRooms[4]?._id, r2: seededRooms[7]?._id,  nextW: qf2Id, slotW: 2, title: "Runde 1 - Kamp 5" },
-    { r1: seededRooms[5]?._id, r2: seededRooms[6]?._id,  nextW: qf1Id, slotW: 2, title: "Runde 1 - Kamp 6" },
-  ];
-
-  for (let i = 0; i < r1Matchups.length; i++) {
-    const m = r1Matchups[i];
-    await ctx.db.insert("cup_matches", {
-      cupId,
-      bracketType: "knockout",
-      stage: "knockout",
-      roundNumber: 1,
-      roundTitle: m.title,
-      matchIndex: i + 1,
-      gameweek: startGw,
-      room1Id: m.r1,
-      room2Id: m.r2,
-      nextMatchId: m.nextW,
-      nextMatchSlot: m.slotW,
-      status: "scheduled",
-      updatedAt: now,
-    });
-  }
-}
-
-/**
- * GENERATOR 2: Standard Double Elimination 12/16 Lag med Byes
- */
-async function generate12or16TeamDoubleElimination(
-  ctx: any,
-  cupId: any,
-  seededRooms: any[],
-  startGw: number
-) {
-  const now = Date.now();
-
-  const grandFinalId = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "grand_final",
-    stage: "bracket",
-    roundNumber: 7,
-    roundTitle: "🏆 Storfinale (Grand Final)",
-    matchIndex: 1,
-    gameweek: startGw + 6,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const lbFinalId = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "losers",
-    stage: "bracket",
-    roundNumber: 6,
-    roundTitle: "Taperfinale (LB Final)",
-    matchIndex: 1,
-    gameweek: startGw + 5,
-    nextMatchId: grandFinalId,
-    nextMatchSlot: 2,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const wbFinalId = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "winners",
-    stage: "bracket",
-    roundNumber: 6,
-    roundTitle: "Vinnerfinale (WB Final)",
-    matchIndex: 1,
-    gameweek: startGw + 5,
-    nextMatchId: grandFinalId,
-    nextMatchSlot: 1,
-    nextLoserMatchId: lbFinalId,
-    nextLoserMatchSlot: 2,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const lbR5Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "losers",
-    stage: "bracket",
-    roundNumber: 5,
-    roundTitle: "Taperbrakett R5 (Semifinale)",
-    matchIndex: 1,
-    gameweek: startGw + 4,
-    nextMatchId: lbFinalId,
-    nextMatchSlot: 1,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const lbR4M1Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "losers",
-    stage: "bracket",
-    roundNumber: 4,
-    roundTitle: "Taperbrakett R4 - Kamp 1",
-    matchIndex: 1,
-    gameweek: startGw + 3,
-    nextMatchId: lbR5Id,
-    nextMatchSlot: 1,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const lbR4M2Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "losers",
-    stage: "bracket",
-    roundNumber: 4,
-    roundTitle: "Taperbrakett R4 - Kamp 2",
-    matchIndex: 2,
-    gameweek: startGw + 3,
-    nextMatchId: lbR5Id,
-    nextMatchSlot: 2,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const wbSemi1Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "winners",
-    stage: "bracket",
-    roundNumber: 4,
-    roundTitle: "Vinnerbrakett Semifinale 1",
-    matchIndex: 1,
-    gameweek: startGw + 3,
-    nextMatchId: wbFinalId,
-    nextMatchSlot: 1,
-    nextLoserMatchId: lbR4M2Id,
-    nextLoserMatchSlot: 2,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const wbSemi2Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "winners",
-    stage: "bracket",
-    roundNumber: 4,
-    roundTitle: "Vinnerbrakett Semifinale 2",
-    matchIndex: 2,
-    gameweek: startGw + 3,
-    nextMatchId: wbFinalId,
-    nextMatchSlot: 2,
-    nextLoserMatchId: lbR4M1Id,
-    nextLoserMatchSlot: 2,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const lbR3M1Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "losers",
-    stage: "bracket",
-    roundNumber: 3,
-    roundTitle: "Taperbrakett R3 - Kamp 1",
-    matchIndex: 1,
-    gameweek: startGw + 2,
-    nextMatchId: lbR4M1Id,
-    nextMatchSlot: 1,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const lbR3M2Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "losers",
-    stage: "bracket",
-    roundNumber: 3,
-    roundTitle: "Taperbrakett R3 - Kamp 2",
-    matchIndex: 2,
-    gameweek: startGw + 2,
-    nextMatchId: lbR4M2Id,
-    nextMatchSlot: 1,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const lbR2M1Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "losers",
-    stage: "bracket",
-    roundNumber: 2,
-    roundTitle: "Taperbrakett R2 - Kamp 1",
-    matchIndex: 1,
-    gameweek: startGw + 1,
-    nextMatchId: lbR3M1Id,
-    nextMatchSlot: 1,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const lbR2M2Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "losers",
-    stage: "bracket",
-    roundNumber: 2,
-    roundTitle: "Taperbrakett R2 - Kamp 2",
-    matchIndex: 2,
-    gameweek: startGw + 1,
-    nextMatchId: lbR3M2Id,
-    nextMatchSlot: 1,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const wbQf1Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "winners",
-    stage: "bracket",
-    roundNumber: 2,
-    roundTitle: "Vinnerbrakett Kvartfinale 1",
-    matchIndex: 1,
-    gameweek: startGw + 1,
-    room1Id: seededRooms[0]?._id, // Seed 1
-    nextMatchId: wbSemi1Id,
-    nextMatchSlot: 1,
-    nextLoserMatchId: lbR2M1Id,
-    nextLoserMatchSlot: 2,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const wbQf2Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "winners",
-    stage: "bracket",
-    roundNumber: 2,
-    roundTitle: "Vinnerbrakett Kvartfinale 2",
-    matchIndex: 2,
-    gameweek: startGw + 1,
-    room1Id: seededRooms[3]?._id, // Seed 4
-    nextMatchId: wbSemi1Id,
-    nextMatchSlot: 2,
-    nextLoserMatchId: lbR2M1Id,
-    nextLoserMatchSlot: 1,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const wbQf3Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "winners",
-    stage: "bracket",
-    roundNumber: 2,
-    roundTitle: "Vinnerbrakett Kvartfinale 3",
-    matchIndex: 3,
-    gameweek: startGw + 1,
-    room1Id: seededRooms[1]?._id, // Seed 2
-    nextMatchId: wbSemi2Id,
-    nextMatchSlot: 1,
-    nextLoserMatchId: lbR2M2Id,
-    nextLoserMatchSlot: 2,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const wbQf4Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "winners",
-    stage: "bracket",
-    roundNumber: 2,
-    roundTitle: "Vinnerbrakett Kvartfinale 4",
-    matchIndex: 4,
-    gameweek: startGw + 1,
-    room1Id: seededRooms[2]?._id, // Seed 3
-    nextMatchId: wbSemi2Id,
-    nextMatchSlot: 2,
-    nextLoserMatchId: lbR2M2Id,
-    nextLoserMatchSlot: 1,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const lbR1M1Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "losers",
-    stage: "bracket",
-    roundNumber: 1,
-    roundTitle: "Taperbrakett R1 - Kamp 1",
-    matchIndex: 1,
-    gameweek: startGw,
-    nextMatchId: lbR3M1Id,
-    nextMatchSlot: 2,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const lbR1M2Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "losers",
-    stage: "bracket",
-    roundNumber: 1,
-    roundTitle: "Taperbrakett R1 - Kamp 2",
-    matchIndex: 2,
-    gameweek: startGw,
-    nextMatchId: lbR3M2Id,
-    nextMatchSlot: 2,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const r1Matches = [
-    { r1: seededRooms[4]?._id, r2: seededRooms[11]?._id, nextW: wbQf1Id, slotW: 2, nextL: lbR1M1Id, slotL: 1, title: "Innledende Kamp 1 (Seed 5 vs 12)" },
-    { r1: seededRooms[7]?._id, r2: seededRooms[8]?._id,  nextW: wbQf2Id, slotW: 2, nextL: lbR1M1Id, slotL: 2, title: "Innledende Kamp 2 (Seed 8 vs 9)" },
-    { r1: seededRooms[5]?._id, r2: seededRooms[10]?._id, nextW: wbQf3Id, slotW: 2, nextL: lbR1M2Id, slotL: 1, title: "Innledende Kamp 3 (Seed 6 vs 11)" },
-    { r1: seededRooms[6]?._id, r2: seededRooms[9]?._id,  nextW: wbQf4Id, slotW: 2, nextL: lbR1M2Id, slotL: 2, title: "Innledende Kamp 4 (Seed 7 vs 10)" },
-  ];
-
-  for (let i = 0; i < r1Matches.length; i++) {
-    const m = r1Matches[i];
-    await ctx.db.insert("cup_matches", {
-      cupId,
-      bracketType: "winners",
-      stage: "bracket",
-      roundNumber: 1,
-      roundTitle: m.title,
-      matchIndex: i + 1,
-      gameweek: startGw,
-      room1Id: m.r1,
-      room2Id: m.r2,
-      nextMatchId: m.nextW,
-      nextMatchSlot: m.slotW,
-      nextLoserMatchId: m.nextL,
-      nextLoserMatchSlot: m.slotL,
-      status: "scheduled",
-      updatedAt: now,
-    });
-  }
-}
-
-/**
- * GENERATOR 3: Topp 8 Sluttspill (Kvartfinaler -> Semifinaler -> Finale)
- */
-async function generateTop8Bracket(
-  ctx: any,
-  cupId: any,
-  seededRooms: any[],
-  startGw: number
-) {
-  const now = Date.now();
-
-  // Finale (Runde 3, GW startGw + 2)
-  const finalId = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "knockout",
-    stage: "knockout",
-    roundNumber: 3,
-    roundTitle: "🏆 Storfinale",
-    matchIndex: 1,
-    gameweek: startGw + 2,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  // Semifinaler (Runde 2, GW startGw + 1)
-  const semi1Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "knockout",
-    stage: "knockout",
-    roundNumber: 2,
-    roundTitle: "Semifinale 1",
-    matchIndex: 1,
-    gameweek: startGw + 1,
-    nextMatchId: finalId,
-    nextMatchSlot: 1,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const semi2Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "knockout",
-    stage: "knockout",
-    roundNumber: 2,
-    roundTitle: "Semifinale 2",
-    matchIndex: 2,
-    gameweek: startGw + 1,
-    nextMatchId: finalId,
-    nextMatchSlot: 2,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  // Kvartfinaler (Runde 1, GW startGw)
-  const qfMatchups = [
-    { r1: seededRooms[0]?._id, r2: seededRooms[7]?._id, nextW: semi1Id, slotW: 1, title: "Kvartfinale 1" },
-    { r1: seededRooms[3]?._id, r2: seededRooms[4]?._id, nextW: semi1Id, slotW: 2, title: "Kvartfinale 2" },
-    { r1: seededRooms[1]?._id, r2: seededRooms[6]?._id, nextW: semi2Id, slotW: 1, title: "Kvartfinale 3" },
-    { r1: seededRooms[2]?._id, r2: seededRooms[5]?._id, nextW: semi2Id, slotW: 2, title: "Kvartfinale 4" },
-  ];
-
-  for (let i = 0; i < qfMatchups.length; i++) {
-    const m = qfMatchups[i];
-    await ctx.db.insert("cup_matches", {
-      cupId,
-      bracketType: "knockout",
-      stage: "knockout",
-      roundNumber: 1,
-      roundTitle: m.title,
-      matchIndex: i + 1,
-      gameweek: startGw,
-      room1Id: m.r1,
-      room2Id: m.r2,
-      nextMatchId: m.nextW,
-      nextMatchSlot: m.slotW,
-      status: "scheduled",
-      updatedAt: now,
-    });
-  }
-}
-
-/**
- * GENERATOR 4: 12 Lag Gruppespill (2 grupper à 6) + Sluttspill
- */
-async function generateGroupStage12(
-  ctx: any,
-  cupId: any,
-  seededRooms: any[],
-  startGw: number
-) {
-  const now = Date.now();
-
-  // Finale (Runde 5, GW startGw + 4)
-  const finalId = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "knockout",
-    stage: "knockout",
-    roundNumber: 5,
-    roundTitle: "🏆 Storfinale",
-    matchIndex: 1,
-    gameweek: startGw + 4,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  // Semifinaler (Runde 4, GW startGw + 3)
-  const semi1Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "knockout",
-    stage: "knockout",
-    roundNumber: 4,
-    roundTitle: "Semifinale 1 (Vinner Gruppe A vs Nr 2 Gruppe B)",
-    matchIndex: 1,
-    gameweek: startGw + 3,
-    nextMatchId: finalId,
-    nextMatchSlot: 1,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  const semi2Id = await ctx.db.insert("cup_matches", {
-    cupId,
-    bracketType: "knockout",
-    stage: "knockout",
-    roundNumber: 4,
-    roundTitle: "Semifinale 2 (Vinner Gruppe B vs Nr 2 Gruppe A)",
-    matchIndex: 2,
-    gameweek: startGw + 3,
-    nextMatchId: finalId,
-    nextMatchSlot: 2,
-    status: "scheduled",
-    updatedAt: now,
-  });
-
-  // Gruppe A (6 rom) & Gruppe B (6 rom)
-  const groupA = seededRooms.slice(0, 6);
-  const groupB = seededRooms.slice(6, 12);
-
-  // 3 runder med gruppespillkamper (GW startGw, GW startGw + 1, GW startGw + 2)
-  const groupMatchSchedule = [
-    // Runde 1
-    {
-      round: 1,
-      gwOffset: 0,
-      matchesA: [
-        { r1: groupA[0]?._id, r2: groupA[5]?._id, t: "Gruppe A - Runde 1: Kamp 1" },
-        { r1: groupA[1]?._id, r2: groupA[4]?._id, t: "Gruppe A - Runde 1: Kamp 2" },
-        { r1: groupA[2]?._id, r2: groupA[3]?._id, t: "Gruppe A - Runde 1: Kamp 3" },
-      ],
-      matchesB: [
-        { r1: groupB[0]?._id, r2: groupB[5]?._id, t: "Gruppe B - Runde 1: Kamp 1" },
-        { r1: groupB[1]?._id, r2: groupB[4]?._id, t: "Gruppe B - Runde 1: Kamp 2" },
-        { r1: groupB[2]?._id, r2: groupB[3]?._id, t: "Gruppe B - Runde 1: Kamp 3" },
-      ],
-    },
-    // Runde 2
-    {
-      round: 2,
-      gwOffset: 1,
-      matchesA: [
-        { r1: groupA[0]?._id, r2: groupA[4]?._id, t: "Gruppe A - Runde 2: Kamp 1" },
-        { r1: groupA[1]?._id, r2: groupA[3]?._id, t: "Gruppe A - Runde 2: Kamp 2" },
-        { r1: groupA[2]?._id, r2: groupA[5]?._id, t: "Gruppe A - Runde 2: Kamp 3" },
-      ],
-      matchesB: [
-        { r1: groupB[0]?._id, r2: groupB[4]?._id, t: "Gruppe B - Runde 2: Kamp 1" },
-        { r1: groupB[1]?._id, r2: groupB[3]?._id, t: "Gruppe B - Runde 2: Kamp 2" },
-        { r1: groupB[2]?._id, r2: groupB[5]?._id, t: "Gruppe B - Runde 2: Kamp 3" },
-      ],
-    },
-    // Runde 3
-    {
-      round: 3,
-      gwOffset: 2,
-      matchesA: [
-        { r1: groupA[0]?._id, r2: groupA[3]?._id, t: "Gruppe A - Runde 3: Kamp 1" },
-        { r1: groupA[1]?._id, r2: groupA[2]?._id, t: "Gruppe A - Runde 3: Kamp 2" },
-        { r1: groupA[4]?._id, r2: groupA[5]?._id, t: "Gruppe A - Runde 3: Kamp 3" },
-      ],
-      matchesB: [
-        { r1: groupB[0]?._id, r2: groupB[3]?._id, t: "Gruppe B - Runde 3: Kamp 1" },
-        { r1: groupB[1]?._id, r2: groupB[2]?._id, t: "Gruppe B - Runde 3: Kamp 2" },
-        { r1: groupB[4]?._id, r2: groupB[5]?._id, t: "Gruppe B - Runde 3: Kamp 3" },
-      ],
-    },
-  ];
-
-  for (const s of groupMatchSchedule) {
-    let mIdx = 1;
-    for (const m of s.matchesA) {
-      await ctx.db.insert("cup_matches", {
-        cupId,
-        bracketType: "group",
-        stage: "group",
-        group: "A",
-        roundNumber: s.round,
-        roundTitle: m.t,
-        matchIndex: mIdx++,
-        gameweek: startGw + s.gwOffset,
-        room1Id: m.r1,
-        room2Id: m.r2,
-        status: "scheduled",
-        updatedAt: now,
-      });
-    }
-    for (const m of s.matchesB) {
-      await ctx.db.insert("cup_matches", {
-        cupId,
-        bracketType: "group",
-        stage: "group",
-        group: "B",
-        roundNumber: s.round,
-        roundTitle: m.t,
-        matchIndex: mIdx++,
-        gameweek: startGw + s.gwOffset,
-        room1Id: m.r1,
-        room2Id: m.r2,
-        status: "scheduled",
-        updatedAt: now,
-      });
-    }
-  }
-}
 
 /**
  * Oppdaterer innstillinger for en Cup (Kun for Administrator)
@@ -1175,7 +513,7 @@ export const calculateCupRoundScores = mutation({
         stats2,
       });
 
-      // Standard avansering (for DE og Topp 8 og Kvartfinaler i Lucky Loser)
+      // Standard avansering (for DE og Topp 8 og Quarter-finalr i Lucky Loser)
       if (cup.format !== "lucky_loser_12" || args.roundNumber > 1) {
         if (winnerId && match.nextMatchId && match.nextMatchSlot) {
           const nextMatch = await ctx.db.get(match.nextMatchId);
@@ -1214,7 +552,7 @@ export const calculateCupRoundScores = mutation({
       const isFinalRound =
         args.roundNumber === cup.totalRounds ||
         match.bracketType === "grand_final" ||
-        match.roundTitle.includes("Storfinale") ||
+        match.roundTitle.includes("Grand Final") ||
         match.roundTitle.toLowerCase().includes("finale");
 
       if (isFinalRound && winnerId) {
@@ -1260,7 +598,7 @@ export const calculateCupRoundScores = mutation({
       const luckyLoser1 = losers[0]; // Beste taper
       const luckyLoser2 = losers[1]; // Nest beste taper
 
-      // Hent Kvartfinale-kampene (Runde 2)
+      // Hent Quarter-final-kampene (Runde 2)
       const qfMatches = await ctx.db
         .query("cup_matches")
         .withIndex("by_cupId_and_round", (q) =>
@@ -1316,7 +654,7 @@ export const calculateCupRoundScores = mutation({
       }
     }
 
-    // SPESIALHÅNDTERING: Gruppespill tabelloppdatering & avansering til semifinale
+    // SPESIALHÅNDTERING: Gruppespill tabelloppdatering & avansering til semi-final
     if (cup.format === "group_stage_12" && cup.groupStandings) {
       const standings = [...cup.groupStandings];
       for (const res of completedResults) {
@@ -1351,7 +689,7 @@ export const calculateCupRoundScores = mutation({
         updatedAt: Date.now(),
       });
 
-      // Etter runde 3 (siste gruppespillrunde), finn topp 2 i gruppe A og B og populer semifinalene i runde 4!
+      // Etter runde 3 (siste gruppespillrunde), finn topp 2 i gruppe A og B og populer semi-finalne i runde 4!
       if (args.roundNumber === 3) {
         const groupAStandings = standings
           .filter((s) => s.group === "A")
@@ -1451,7 +789,7 @@ export const advanceMatchManually = mutation({
 
     if (
       match.bracketType === "grand_final" ||
-      match.roundTitle?.includes("Storfinale") ||
+      match.roundTitle?.includes("Grand Final") ||
       match.roundTitle?.toLowerCase().includes("finale")
     ) {
       await ctx.db.patch(match.cupId, {

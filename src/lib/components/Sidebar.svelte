@@ -161,35 +161,35 @@
   ];
 </script>
 
-<aside class="w-64 sm:w-72 bg-[#1c2128] border-r border-[#384252] flex flex-col justify-between select-none shrink-0 z-30 font-sans h-full">
+<aside class="w-64 sm:w-72 flex flex-col justify-between select-none shrink-0 z-30 font-sans h-full bg-transparent">
   <!-- Statisk Toppseksjon: Live Deadline Countdown Banner -->
-  <div class="p-3.5 pb-3 border-b border-[#384252] bg-[#191E24]/70 shrink-0">
-    <!-- Frist & Countdown Boks -->
-    <div class="p-3 rounded-xl bg-[#242B35] border border-[#384252] space-y-2 shadow-md">
+  <div class="px-3 pt-3.5 pb-3 shrink-0">
+    <!-- Deadline & Countdown Boks -->
+    <div class="p-3 rounded-xl bg-white/[0.04] border border-white/[0.07] space-y-2 shadow-lg backdrop-blur-sm">
       <div class="flex items-center justify-between text-xs font-bold">
         <span class="text-[#F4C152] flex items-center gap-1.5 text-xs">
           <Timer class="w-4 h-4 text-[#F4C152] animate-pulse" />
-          <span>Frist {cleanGwLabel}:</span>
+          <span>Deadline {cleanGwLabel}:</span>
         </span>
-        <span class="text-white font-mono text-xs font-bold bg-[#191E24] px-2 py-0.5 rounded-lg border border-[#384252] shadow-inner">
+        <span class="text-white font-mono text-xs font-bold bg-white/[0.03] px-2 py-0.5 rounded-lg border border-white/[0.06] shadow-inner">
           {formattedDeadlineTime}
         </span>
       </div>
 
       {#if timeLeft.isExpired}
         <div class="text-xs font-mono font-bold text-[#FB6F84] text-center bg-[#FB6F84]/10 py-1.5 rounded-lg border border-[#FB6F84]/20">
-          Fristen er passert! (Spilles nå)
+          Deadline er passert! (Spilles nå)
         </div>
       {:else}
-        <div class="flex items-center justify-center gap-1.5 py-1 px-2 rounded-lg bg-[#191E24] border border-[#384252] font-mono font-bold text-sm text-white shadow-inner">
+        <div class="flex items-center justify-center gap-1.5 py-1 px-2 rounded-lg bg-white/[0.03] border border-white/[0.06] font-mono font-bold text-sm text-white shadow-inner">
           {#if timeLeft.days > 0}
             <span class="text-[#9FE88D]">{timeLeft.days}d</span>
-            <span class="text-[#94A3B8] text-xs">:</span>
+            <span class="text-[#AEB9CC] text-xs">:</span>
           {/if}
           <span class="text-white">{String(timeLeft.hours).padStart(2, "0")}t</span>
-          <span class="text-[#94A3B8] text-xs">:</span>
+          <span class="text-[#AEB9CC] text-xs">:</span>
           <span class="text-white">{String(timeLeft.minutes).padStart(2, "0")}m</span>
-          <span class="text-[#94A3B8] text-xs">:</span>
+          <span class="text-[#AEB9CC] text-xs">:</span>
           <span class="text-[#F4C152]">{String(timeLeft.seconds).padStart(2, "0")}s</span>
         </div>
       {/if}
@@ -199,7 +199,7 @@
   <!-- Rullbart Menyinnhold (dersom skjermen er lav) -->
   <div class="p-3 space-y-1 overflow-y-auto custom-scrollbar flex-1">
     <nav class="space-y-1">
-      <span class="text-[11px] uppercase font-bold text-[#94A3B8] px-2.5 tracking-wider block text-left">
+      <span class="text-[11px] uppercase font-bold text-[#AEB9CC] px-2.5 tracking-wider block text-left">
         Meny
       </span>
 
@@ -210,8 +210,8 @@
             onclick={() => onSelectView(item.id)}
             class={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-semibold transition-all group ${
               isActive
-                ? "bg-[#2A303C] border border-[#9FE88D]/50 text-white shadow-sm"
-                : "text-[#94A3B8] hover:bg-[#2A303C]/60 hover:text-white border border-transparent"
+                ? "bg-white/[0.06] border border-[#9FE88D]/45 text-white shadow-sm"
+                : "text-[#AEB9CC] hover:bg-white/[0.045] hover:text-white border border-transparent"
             }`}
           >
             <div class="flex items-center gap-3 min-w-0">
@@ -219,7 +219,7 @@
                 class={`p-1.5 rounded-lg transition-colors ${
                   isActive
                     ? "bg-[#9FE88D]/20 text-[#9FE88D]"
-                    : "bg-[#242B35] text-[#94A3B8] group-hover:text-white"
+                    : "bg-white/[0.04] text-[#AEB9CC] group-hover:text-white"
                 }`}
               >
                 <item.icon class="w-4 h-4" />
@@ -257,13 +257,13 @@
   </div>
 
   <!-- Bunnseksjon: Admin, Synkronisering & Brukerstatus -->
-  <div class="p-4 border-t border-[#384252] space-y-3 bg-[#191E24]">
+  <div class="p-4 border-t border-white/[0.05] space-y-3">
     <!-- Handlinger -->
     <div class={`grid ${currentUser?.role === "admin" ? "grid-cols-2" : "grid-cols-1"} gap-2`}>
       <button
         onclick={onRefreshFpl}
         disabled={isSyncing}
-        class="px-3 py-2.5 rounded-xl bg-[#2A303C] hover:bg-[#384252] text-[#E2E8F0] border border-[#384252] text-xs font-bold transition-colors flex items-center justify-center gap-2"
+        class="px-3 py-2.5 rounded-xl bg-white/[0.045] hover:bg-white/[0.09] text-[#E2E8F0] border border-white/[0.06] text-xs font-bold transition-colors flex items-center justify-center gap-2"
         title="Oppdater og synkroniser runderesultater fra Fantasy Premier League"
       >
         <RefreshCw class={`w-4 h-4 text-[#9FE88D] ${isSyncing ? "animate-spin" : ""}`} />
@@ -273,7 +273,7 @@
       {#if currentUser?.role === "admin"}
         <button
           onclick={onOpenAdmin}
-          class="px-3 py-2.5 rounded-xl bg-[#2A303C] hover:bg-[#384252] text-[#E2E8F0] border border-[#384252] text-xs font-bold transition-colors flex items-center justify-center gap-2"
+          class="px-3 py-2.5 rounded-xl bg-white/[0.045] hover:bg-white/[0.09] text-[#E2E8F0] border border-white/[0.06] text-xs font-bold transition-colors flex items-center justify-center gap-2"
           title="Åpne administratorpanelet"
         >
           <Shield class="w-4 h-4 text-[#F4C152]" />
@@ -300,14 +300,14 @@
       type="button"
       onclick={() => onOpenProfile(currentUser?.fplEntryId)}
       title="Åpne min profil, troféer og avatar-innstillinger"
-      class="w-full text-left p-3 rounded-xl bg-[#2A303C] hover:bg-[#323947] border border-[#384252] hover:border-[#9FE88D]/60 transition-all flex items-center justify-between group shadow-sm focus:outline-none focus:ring-1 focus:ring-[#9FE88D]"
+      class="w-full text-left p-3 rounded-xl bg-white/[0.045] hover:bg-white/[0.08] border border-white/[0.06] hover:border-[#9FE88D]/60 transition-all flex items-center justify-between group shadow-sm focus:outline-none focus:ring-1 focus:ring-[#9FE88D]"
     >
       <div class="flex items-center gap-2.5 min-w-0">
         {#if currentUser?.avatar}
           <img
             src={currentUser.avatar}
             alt="Avatar"
-            class="w-8 h-8 rounded-xl border border-[#384252] group-hover:border-[#9FE88D] object-contain bg-[#191E24] p-0.5 shrink-0 transition-colors"
+            class="w-8 h-8 rounded-xl border border-white/[0.06] group-hover:border-[#9FE88D] object-contain bg-white/[0.03] p-0.5 shrink-0 transition-colors"
           />
         {:else}
           <div class="w-8 h-8 rounded-xl bg-[#9FE88D] text-[#16380c] font-black flex items-center justify-center text-sm shrink-0 shadow-sm">
@@ -318,7 +318,7 @@
           <p class="text-sm font-bold text-white group-hover:text-[#9FE88D] transition-colors truncate leading-tight">
             {currentUser?.username || "Gjest"}
           </p>
-          <p class="text-xs text-[#94A3B8] truncate leading-tight mt-0.5">
+          <p class="text-xs text-[#AEB9CC] truncate leading-tight mt-0.5">
             {currentUser?.role === "admin" ? "Administrator" : (currentUser?.fplTeamName || "Se min profil")}
           </p>
         </div>
@@ -335,13 +335,13 @@
     </button>
 
     <!-- Versjon, Lisenser & Oppdateringssjekk -->
-    <div class="flex items-center justify-between px-1 text-[11px] text-[#94A3B8]">
+    <div class="flex items-center justify-between px-1 text-[11px] text-[#AEB9CC]">
       <div class="flex items-center gap-1.5">
-        <span class="font-mono text-white/80">v0.9.2</span>
+        <span class="font-mono text-white/80">v1.0.0</span>
         <button
           type="button"
           onclick={onOpenLicenses}
-          class="text-[#94A3B8] hover:text-[#70E1F8] transition-colors p-0.5 rounded hover:bg-[#2A303C] flex items-center justify-center"
+          class="text-[#AEB9CC] hover:text-[#70E1F8] transition-colors p-0.5 rounded hover:bg-white/[0.06] flex items-center justify-center"
           title="Vis åpne kildekodelisenser og rettigheter (Tauri, Svelte, Convex, m.m.)"
         >
           <Info class="w-3.5 h-3.5" />
@@ -351,7 +351,7 @@
       <button
         type="button"
         onclick={onCheckForUpdates}
-        class="text-[#94A3B8] hover:text-[#9FE88D] transition-colors flex items-center gap-1 hover:underline"
+        class="text-[#AEB9CC] hover:text-[#9FE88D] transition-colors flex items-center gap-1 hover:underline"
         title="Søk etter nye oppdateringer på GitHub"
       >
         <Sparkles class="w-3 h-3 text-[#F4C152]" />

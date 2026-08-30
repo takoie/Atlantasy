@@ -26,16 +26,20 @@
   const roomsQuery = useQuery(api.rooms.listRooms);
   const leaderboardQuery = useQuery(api.rooms.getLeaderboard, () => ({
     sortBy: activeSort,
+    monthKey: selectedMonthKey ?? undefined,
   }));
   const individualLeaderboardQuery = useQuery(api.rooms.getIndividualLeaderboard, () => ({
     sortBy: activeSort,
+    monthKey: selectedMonthKey ?? undefined,
   }));
+  const availableMonthsQuery = useQuery(api.rooms.listAvailableMonths);
   let insightsTimeframe = $state<"round" | "month" | "season">("round");
   const funStatsQuery = useQuery(api.rooms.getLeagueFunStats, () => ({
     timeframe: insightsTimeframe,
   }));
   const settingsQuery = useQuery(api.admin.getSettings);
   const monthWinnersQuery = useQuery(api.admin.getMonthWinners);
+  const standingLeadersQuery = useQuery(api.rooms.getStandingLeaders);
   const inviteCodesQuery = useQuery(api.admin.listInviteCodes);
   const usersQuery = useQuery(api.auth.listUsers);
   const articlesQuery = useQuery(api.articles.listArticles);
@@ -44,6 +48,7 @@
   // Reaktiv State med Svelte 5 Runes
   let activeView = $state("leaderboard"); // "leaderboard" | "wall_of_fame" | "news"
   let activeSort = $state("live");         // "live" | "month" | "season"
+  let selectedMonthKey = $state<string | null>(null); // null = inneværende måned
   let selectedRoomId = $state<string | null>(null);
   let activeChatChannel = $state("banter"); // "banter" | "room"
   let activeUserId = $state<string | null>(null);
@@ -116,6 +121,8 @@
   let leaderboard = $derived(leaderboardQuery.data ?? []);
   let individualPlayers = $derived(individualLeaderboardQuery.data ?? []);
   let funStats = $derived(funStatsQuery.data ?? null);
+  let standingLeaders = $derived(standingLeadersQuery.data ?? null);
+  let availableMonths = $derived(availableMonthsQuery.data ?? []);
   let settings = $derived(settingsQuery.data ?? null);
   let monthWinners = $derived(monthWinnersQuery.data ?? null);
   let roomWinner = $derived(monthWinners?.roomWinner ?? null);
@@ -188,7 +195,7 @@
       showOnboarding = true;
     }
 
-    // Hent offisiell neste FPL-frist
+    // Hent offisiell neste FPL-deadline
     try {
       const dl = await fetchDeadlineAction.execute({});
       if (dl) {
@@ -279,6 +286,22 @@
     }
   }
 
+  // Så snart data er lastet: kjør ÉN synk automatisk hvis dataene ikke er ferske.
+  // Kort terskel (90 sek) så det skjer ved hver reelle app-åpning, men en rask
+  // reload / HMR ikke hamrer FPL-API-et.
+  let didStartupSync = $state(false);
+  const STARTUP_STALE_MS = 90 * 1000;
+  $effect(() => {
+    // Vent til settings-spørringen har svart (data er undefined mens den laster).
+    if (didStartupSync || !currentUser || settingsQuery.data === undefined) return;
+    didStartupSync = true;
+    if ((settings?.autoSyncEnabled ?? true) === false) return;
+    const lastSync = settings?.lastSyncedAt ?? 0;
+    if (Date.now() - lastSync > STARTUP_STALE_MS && !isSyncing) {
+      handleRefreshFpl();
+    }
+  });
+
   // Automatisk periodisk FPL-synkronisering KUN når en bruker er aktiv i appen
   $effect(() => {
     if (!currentUser) return;
@@ -289,12 +312,6 @@
     if (!isAutoSyncEnabled) return;
 
     const intervalMs = syncIntervalMinutes * 60 * 1000;
-    const lastSync = settings?.lastSyncedAt ?? 0;
-
-    // Sjekk ved oppstart dersom dataene er eldre enn intervallet
-    if (Date.now() - lastSync > intervalMs && !isSyncing) {
-      handleRefreshFpl();
-    }
 
     // Sjekk hvert 60. sekund om det er på tide med en ny bakgrunnssynkronisering
     const intervalId = setInterval(() => {
@@ -318,21 +335,23 @@
     selectedProfileEntryId = entryId;
   }
 
-  async function handleUpdateRoomName(roomId: string, newName: string) {
+  async function handleUpdateRoomName(roomId: string, newName: string, newTag?: string) {
     try {
       await updateRoomMutation.mutate({
         roomId: roomId as any,
         name: newName,
+        tag: newTag,
         userId: currentUser?._id as any,
       });
     } catch (err: any) {
-      alert(err.message || "Kunne ikke oppdatere romnavn.");
+      alert(err.message || "Kunne ikke oppdatere rommet.");
     }
   }
 </script>
 
 <main
-  class="flex flex-col h-screen w-screen bg-[#1c2128] text-[#E2E8F0] overflow-hidden font-sans select-none"
+  class="flex flex-col h-screen w-screen text-[#E2E8F0] overflow-hidden font-sans select-none"
+  style="background-color:#0f1826;background-image:radial-gradient(125% 80% at 8% -14%, rgba(96,165,235,0.20) 0%, rgba(96,165,235,0) 58%), linear-gradient(158deg, #0f1a2c 0%, #111c31 44%, #142a49 100%);"
 >
   <!-- Velkomstside for registrering & Innlogging (Låst uten gjestemodus) -->
   {#if showOnboarding || !activeUserId || !currentUser}
@@ -393,7 +412,7 @@
     />
 
     <!-- Hovedinnholdsområde for valgt modul/side -->
-    <div class="flex-1 flex flex-col p-3.5 sm:p-4 space-y-3 overflow-hidden bg-[#1c2128] min-w-0">
+    <div class="flex-1 flex flex-col p-3.5 sm:p-4 space-y-3 overflow-hidden bg-transparent min-w-0">
       <!-- 1. Rom-tabell (Leaderboard) -->
       {#if activeView === "leaderboard"}
         {#if roomWinner || soloWinner}
@@ -417,6 +436,9 @@
           currentGw={settings?.currentGameweek ?? 1}
           deductHits={settings?.deductTransferHits ?? true}
           sortBy={activeSort}
+          months={availableMonths}
+          selectedMonthKey={selectedMonthKey}
+          onSelectMonth={(k: string | null) => (selectedMonthKey = k)}
           onSelectSort={(s: string) => (activeSort = s)}
           onOpenRoomModal={handleOpenRoomModal}
           onOpenProfile={handleOpenProfile}
@@ -429,11 +451,14 @@
           currentGw={settings?.currentGameweek ?? 1}
           deductHits={settings?.deductTransferHits ?? true}
           sortBy={activeSort}
+          months={availableMonths}
+          selectedMonthKey={selectedMonthKey}
+          onSelectMonth={(k: string | null) => (selectedMonthKey = k)}
           onSelectSort={(s: string) => (activeSort = s)}
           onOpenProfile={handleOpenProfile}
         />
 
-      <!-- 3. Cup & Sluttspill (Double Elimination) -->
+      <!-- 3. Cup & Playoffs (Double Elimination) -->
       {:else if activeView === "cup"}
         <CupView
           {currentUser}
@@ -461,9 +486,7 @@
           {currentRoom}
           {users}
           {rooms}
-          {leaderboard}
-          {monthWinners}
-          {individualPlayers}
+          {standingLeaders}
           activeChannel={activeChatChannel}
           onSelectChannel={(c) => (activeChatChannel = c)}
           onSendMessage={handleSendMessage}
@@ -499,20 +522,20 @@
       <!-- 6. Skrytevegg & Hedersvegg (Full Side) -->
       {:else if activeView === "wall_of_fame"}
         <div class="flex-1 overflow-y-auto space-y-5 pr-1 pb-4 custom-scrollbar text-[#E2E8F0]">
-          <div class="flex items-center justify-between pb-3 border-b border-[#384252]">
+          <div class="flex items-center justify-between pb-3 border-b border-white/10">
             <div class="flex items-center gap-2.5">
               <div class="p-2 rounded-xl bg-[#F4C152]/15 text-[#F4C152] border border-[#F4C152]/30">
                 <Trophy class="w-5 h-5" />
               </div>
               <div>
                 <h2 class="text-base font-bold text-white">Månedens vinnere og hedersvegg</h2>
-                <p class="text-xs text-[#94A3B8]">Offisiell hedersplass for de skarpeste FPL-rommene og solovinnerne</p>
+                <p class="text-xs text-[#AEB9CC]">Offisiell hedersplass for de skarpeste FPL-rommene og solovinnerne</p>
               </div>
             </div>
 
             <button
               onclick={() => (activeView = "leaderboard")}
-              class="px-3.5 py-1.5 rounded-xl bg-[#242B35] hover:bg-[#2A303C] text-xs font-semibold text-[#E2E8F0] border border-[#384252] transition-colors flex items-center gap-1.5"
+              class="px-3.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.055] text-xs font-semibold text-[#E2E8F0] border border-white/10 transition-colors flex items-center gap-1.5"
             >
               <ArrowLeft class="w-3.5 h-3.5" />
               <span>Tilbake til rom-tabell</span>
@@ -531,7 +554,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <!-- 🏆 Aktivt Vinnerrom -->
               {#if roomWinner}
-                <div class="p-4 rounded-2xl bg-[#2A303C] border border-[#F4C152]/40 space-y-3 shadow-sm relative overflow-hidden">
+                <div class="p-4 rounded-2xl bg-white/[0.055] backdrop-blur-sm border border-[#F4C152]/40 space-y-3 shadow-sm relative overflow-hidden">
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-bold uppercase tracking-wider text-[#F4C152] bg-[#F4C152]/15 px-2.5 py-0.5 rounded-md border border-[#F4C152]/30 flex items-center gap-1">
                       <Trophy class="w-3 h-3" />
@@ -545,7 +568,7 @@
                       {roomWinner.content}
                     </p>
                   </div>
-                  <div class="flex items-center justify-between pt-2 border-t border-[#384252]">
+                  <div class="flex items-center justify-between pt-2 border-t border-white/10">
                     <div class="text-xs text-[#F4C152] font-mono font-bold">
                       Vinnende romsnitt: <strong class="text-white">{roomWinner.winningScore} pts</strong>
                     </div>
@@ -555,7 +578,7 @@
                           selectedRoomId = roomWinner.winningRoomId;
                           activeView = "leaderboard";
                         }}
-                        class="px-2.5 py-1 rounded-lg bg-[#242B35] text-[#F4C152] hover:bg-[#384252] text-xs font-bold transition-colors border border-[#384252] flex items-center gap-1"
+                        class="px-2.5 py-1 rounded-lg bg-white/[0.04] text-[#F4C152] hover:bg-white/10 text-xs font-bold transition-colors border border-white/10 flex items-center gap-1"
                       >
                         <span>Se rom</span>
                         <Flame class="w-3.5 h-3.5" />
@@ -564,16 +587,16 @@
                   </div>
                 </div>
               {:else}
-                <div class="p-5 rounded-2xl bg-[#242B35] border border-[#384252] text-center flex flex-col items-center justify-center space-y-1">
-                  <Trophy class="w-8 h-8 text-[#94A3B8] mb-1" />
+                <div class="p-5 rounded-2xl bg-white/[0.04] border border-white/10 text-center flex flex-col items-center justify-center space-y-1">
+                  <Trophy class="w-8 h-8 text-[#AEB9CC] mb-1" />
                   <span class="text-xs font-bold text-white">Ingen aktiv romvinner kåret</span>
-                  <span class="text-[11px] text-[#94A3B8]">Kår vinnerrom i adminpanelet</span>
+                  <span class="text-[11px] text-[#AEB9CC]">Kår vinnerrom i adminpanelet</span>
                 </div>
               {/if}
 
               <!-- 👑 Aktiv Solovinner -->
               {#if soloWinner}
-                <div class="p-4 rounded-2xl bg-[#2A303C] border border-[#9FE88D]/40 space-y-3 shadow-sm relative overflow-hidden">
+                <div class="p-4 rounded-2xl bg-white/[0.055] backdrop-blur-sm border border-[#9FE88D]/40 space-y-3 shadow-sm relative overflow-hidden">
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-bold uppercase tracking-wider text-[#9FE88D] bg-[#9FE88D]/15 px-2.5 py-0.5 rounded-md border border-[#9FE88D]/30 flex items-center gap-1">
                       <Crown class="w-3 h-3" />
@@ -585,14 +608,14 @@
                     <h4 class="text-lg font-bold text-white flex items-center gap-2">
                       <span>{soloWinner.winnerName || "Solovinner"}</span>
                       {#if soloWinner.winnerTeamName}
-                        <span class="text-xs text-[#94A3B8] font-normal">({soloWinner.winnerTeamName})</span>
+                        <span class="text-xs text-[#AEB9CC] font-normal">({soloWinner.winnerTeamName})</span>
                       {/if}
                     </h4>
                     <p class="text-xs text-[#E2E8F0] leading-relaxed mt-1">
                       {soloWinner.content}
                     </p>
                   </div>
-                  <div class="flex items-center justify-between pt-2 border-t border-[#384252]">
+                  <div class="flex items-center justify-between pt-2 border-t border-white/10">
                     <div class="text-xs text-[#9FE88D] font-mono font-bold">
                       Månedsscore: <strong class="text-white">{soloWinner.winningScore} pts</strong>
                     </div>
@@ -602,7 +625,7 @@
                           selectedRoomId = soloWinner.winningRoomId;
                           activeView = "leaderboard";
                         }}
-                        class="px-2.5 py-1 rounded-lg bg-[#242B35] text-[#9FE88D] hover:bg-[#384252] text-xs font-bold transition-colors border border-[#384252] flex items-center gap-1"
+                        class="px-2.5 py-1 rounded-lg bg-white/[0.04] text-[#9FE88D] hover:bg-white/10 text-xs font-bold transition-colors border border-white/10 flex items-center gap-1"
                       >
                         <span>Se rom</span>
                         <Crown class="w-3.5 h-3.5" />
@@ -611,10 +634,10 @@
                   </div>
                 </div>
               {:else}
-                <div class="p-5 rounded-2xl bg-[#242B35] border border-[#384252] text-center flex flex-col items-center justify-center space-y-1">
-                  <Crown class="w-8 h-8 text-[#94A3B8] mb-1" />
+                <div class="p-5 rounded-2xl bg-white/[0.04] border border-white/10 text-center flex flex-col items-center justify-center space-y-1">
+                  <Crown class="w-8 h-8 text-[#AEB9CC] mb-1" />
                   <span class="text-xs font-bold text-white">Ingen aktiv solovinner kåret</span>
-                  <span class="text-[11px] text-[#94A3B8]">Kår solovinner i adminpanelet</span>
+                  <span class="text-[11px] text-[#AEB9CC]">Kår solovinner i adminpanelet</span>
                 </div>
               {/if}
             </div>
@@ -632,12 +655,12 @@
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {#each winnerHistory as h}
-                  <div class="p-3.5 rounded-xl bg-[#242B35] border border-[#384252] flex items-center justify-between">
+                  <div class="p-3.5 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between">
                     <div>
                       <span class="text-[11px] font-bold text-[#F4C152]">{h.monthName}</span>
                       <p class="text-xs font-bold text-white mt-0.5">{h.winningRoomName || "Rom"}</p>
                     </div>
-                    <span class="text-xs font-mono font-bold text-[#9FE88D] bg-[#191E24] px-2 py-0.5 rounded border border-[#384252]">
+                    <span class="text-xs font-mono font-bold text-[#9FE88D] bg-black/20 px-2 py-0.5 rounded border border-white/10">
                       {h.winningScore} pts
                     </span>
                   </div>
@@ -658,9 +681,7 @@
     {currentRoom}
     {users}
     {rooms}
-    {leaderboard}
-    {monthWinners}
-    {individualPlayers}
+    {standingLeaders}
     activeChannel={activeChatChannel}
     onClose={() => (isChatOpen = false)}
     onSelectChannel={(ch: string) => (activeChatChannel = ch)}
@@ -706,7 +727,7 @@
     onClearAllAssignments={() => clearAllAssignmentsMutation.mutate({ adminUserId: currentUser?._id })}
     onCreateRoom={(params) => createRoomMutation.mutate({ ...params, adminUserId: currentUser?._id })}
     onDeleteRoom={(roomId) => deleteRoomMutation.mutate({ roomId: roomId as any, adminUserId: currentUser?._id })}
-    onUpdateRoomName={(roomId, newName) => updateRoomMutation.mutate({ roomId: roomId as any, name: newName, adminUserId: currentUser?._id })}
+    onUpdateRoomName={(roomId, newName, newTag) => updateRoomMutation.mutate({ roomId: roomId as any, name: newName, tag: newTag, adminUserId: currentUser?._id })}
     onUpdateTeamName={(entryId, newTeamName) => updateTeamNameMutation.mutate({ entryId, newTeamName, userId: currentUser?._id })}
     onStartNewSeason={(params) => startNewSeasonMutation.mutate({ ...params, adminUserId: currentUser?._id })}
     onSetUserRole={(uId, role) => setUserRoleMutation.mutate({ userId: uId as any, role, adminUserId: currentUser?._id })}
@@ -744,7 +765,7 @@
   <UpdateModal
     bind:isOpen={isUpdateModalOpen}
     bind:this={updateModalRef}
-    currentVersion="0.9.2"
+    currentVersion="1.0.0"
     autoCheck={true}
   />
 
