@@ -52,6 +52,7 @@ export default {
           'sans-serif',
         ],
         mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+        display: ['Bebas Neue', 'Impact', '"Arial Narrow"', 'sans-serif'],
       },
       boxShadow: {
         'dim': '0 4px 20px -2px rgba(0, 0, 0, 0.45)',

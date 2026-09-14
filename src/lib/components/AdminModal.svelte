@@ -37,6 +37,7 @@
   import { useQuery, useMutation } from "$lib/convex.svelte";
   import { api } from "../../../convex/_generated/api";
   import { formatConvexError } from "$lib/utils/formatError";
+  import RoomPosterExport from "./RoomPosterExport.svelte";
 
   let {
     isOpen = false,
@@ -1482,6 +1483,18 @@
           >
             <Swords class="w-4 h-4 text-[#F4C152]" />
             <span>Cup</span>
+          </button>
+
+          <button
+            onclick={() => (activeTab = "export")}
+            class={`px-4 py-3 border-b-2 text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 ${
+              activeTab === "export"
+                ? "border-[#9FE88D] text-[#9FE88D] font-bold"
+                : "border-transparent text-[#AEB9CC] hover:text-white"
+            }`}
+          >
+            <Download class="w-4 h-4" />
+            <span>Rom-plakat</span>
           </button>
         </div>
 
@@ -3782,6 +3795,8 @@
               </div>
             {/if}
           </div>
+        {:else if activeTab === "export"}
+          <RoomPosterExport />
         {/if}
       {/if}
     </div>
