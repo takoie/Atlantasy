@@ -9,7 +9,6 @@
   let monthKey = $state<string | undefined>(undefined);
   let format = $state<"a4" | "a3">("a4");
   let showContrib = $state(false);
-  let showSpark = $state(false);
   let showSeason = $state(true);
   let isExporting = $state(false);
   let exportError = $state<string | null>(null);
@@ -34,6 +33,10 @@
       ? `runde ${selectedMonthMeta.gameweekStart}–${selectedMonthMeta.gameweekEnd}`
       : ""
   );
+  let maxGwCount = $derived(
+    leaderboard.reduce((max, r) => Math.max(max, r.monthBreakdown.length), 0)
+  );
+  let isDense = $derived(maxGwCount >= 4);
 
   // Følg backendens resolverte måned til <select> har fått en verdi, uten å
   // overstyre et eksplisitt brukervalg senere.
@@ -51,7 +54,7 @@
 
   $effect(() => {
     // Referer state som skal trigge en ny måling når innholdet endrer form.
-    void [leaderboard, showContrib, showSpark, showSeason, format];
+    void [leaderboard, showContrib, showSeason, format];
     tick().then(checkFit);
   });
 
@@ -64,31 +67,6 @@
     const parts = name.trim().split(/\s+/);
     if (parts.length < 2) return name;
     return `${parts[0]} ${parts[1].charAt(0)}.`;
-  }
-
-  function sparkPoints(values: number[]) {
-    const w = 56;
-    const h = 18;
-    const pad = 2;
-    if (values.length === 0) {
-      return { areaD: "", line: "", lastX: 0, lastY: 0 };
-    }
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const range = max - min || 1;
-    const step = (w - pad * 2) / Math.max(values.length - 1, 1);
-    const pts = values.map((v, i) => {
-      const x = pad + i * step;
-      const y = h - pad - ((v - min) / range) * (h - pad * 2);
-      return [x, y] as const;
-    });
-    const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-    const areaD =
-      `M${pts[0][0].toFixed(1)},${(h - pad).toFixed(1)} ` +
-      `L${line} ` +
-      `L${pts[pts.length - 1][0].toFixed(1)},${(h - pad).toFixed(1)} Z`;
-    const [lastX, lastY] = pts[pts.length - 1];
-    return { areaD, line, lastX, lastY };
   }
 
   async function exportPdf() {
@@ -219,22 +197,11 @@
       <label class="flex items-center justify-between gap-3 py-2 border-t border-white/5 cursor-pointer">
         <span class="flex flex-col gap-0.5">
           <span class="text-[13px] font-semibold text-white">Bidragsytere per gameweek</span>
-          <span class="text-[11px] text-[#8A93A6]">Topp-2 spillere for hver runde i perioden</span>
+          <span class="text-[11px] text-[#8A93A6]">Topp-2 og rundesnitt for hver spilte runde</span>
         </span>
         <span class={`relative inline-flex h-[22px] w-[38px] shrink-0 items-center rounded-full border transition-colors ${showContrib ? "bg-[#9FE88D]/25 border-[#9FE88D]/60" : "bg-white/10 border-white/10"}`}>
           <input type="checkbox" bind:checked={showContrib} class="absolute inset-0 opacity-0 cursor-pointer" aria-label="Vis bidragsytere per gameweek" />
           <span class={`inline-block h-4 w-4 rounded-full transition-transform ${showContrib ? "translate-x-[18px] bg-[#9FE88D]" : "translate-x-[3px] bg-[#6b7686]"}`}></span>
-        </span>
-      </label>
-
-      <label class="flex items-center justify-between gap-3 py-2 border-t border-white/5 cursor-pointer">
-        <span class="flex flex-col gap-0.5">
-          <span class="text-[13px] font-semibold text-white">Måned-for-måned</span>
-          <span class="text-[11px] text-[#8A93A6]">Sparkline pr. runde</span>
-        </span>
-        <span class={`relative inline-flex h-[22px] w-[38px] shrink-0 items-center rounded-full border transition-colors ${showSpark ? "bg-[#9FE88D]/25 border-[#9FE88D]/60" : "bg-white/10 border-white/10"}`}>
-          <input type="checkbox" bind:checked={showSpark} class="absolute inset-0 opacity-0 cursor-pointer" aria-label="Vis måned-for-måned sparkline" />
-          <span class={`inline-block h-4 w-4 rounded-full transition-transform ${showSpark ? "translate-x-[18px] bg-[#9FE88D]" : "translate-x-[3px] bg-[#6b7686]"}`}></span>
         </span>
       </label>
 
@@ -296,11 +263,9 @@
             <span class="p-sub">{resolvedMonthName}{periodLabel ? ` · ${periodLabel}` : ""}</span>
           </div>
 
-          <div class="p-list">
+          <div class="p-list" class:gw-dense={isDense}>
             {#each leaderboard as room (room._id)}
               {@const rankClass = room.rank === 1 ? "top1" : room.rank === 2 ? "top2" : room.rank === 3 ? "top3" : ""}
-              {@const avgPerGw = room.monthGamesPlayed > 0 ? room.monthTotal / room.monthGamesPlayed : room.liveAverage}
-              {@const spark = sparkPoints(room.monthBreakdown.map((b) => b.average))}
               <div class="p-row {rankClass}">
                 <span class="p-rank">{String(room.rank).padStart(2, "0")}</span>
                 <span
@@ -317,25 +282,19 @@
                   {#if showContrib}
                     <span class="p-detail">
                       {#each room.monthBreakdown as b (b.gw)}
-                        {#if b.top1}
-                          <span class="gwchip">
-                            GW{b.gw} <b>{abbrev(b.top1.managerName)}</b> {b.top1.points}p{#if b.top2} · <b>{abbrev(b.top2.managerName)}</b> {b.top2.points}p{/if}
-                          </span>
-                        {/if}
+                        <span class="gwchip">
+                          GW{b.gw}
+                          {#if b.top1}
+                            <b>{abbrev(b.top1.managerName)}</b> {b.top1.points}p{#if b.top2} · <b>{abbrev(b.top2.managerName)}</b> {b.top2.points}p{/if} ·
+                          {/if}
+                          {isDense ? "sn." : "snitt"} {b.average.toFixed(1)}p
+                        </span>
                       {/each}
                     </span>
                   {/if}
                 </span>
                 <span class="p-stat-col">
                   <span class="p-points">{room.monthTotal.toFixed(1)}<small>p</small></span>
-                  <span class="p-avg">snitt {avgPerGw.toFixed(1)}</span>
-                  {#if showSpark && spark.line}
-                    <svg class="p-spark" width="56" height="18" viewBox="0 0 56 18" role="img" aria-label="Poeng per runde">
-                      <path d={spark.areaD} fill={room.accentColor} opacity="0.16" />
-                      <polyline points={spark.line} fill="none" stroke={room.accentColor} stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" />
-                      <circle cx={spark.lastX} cy={spark.lastY} r="2" fill={room.accentColor} />
-                    </svg>
-                  {/if}
                 </span>
               </div>
             {/each}
@@ -405,12 +364,14 @@
     flex: 1;
   }
   .p-row {
-    display: grid;
-    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    display: flex;
     align-items: center;
     gap: 2.6%;
     padding-block: 1.6%;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .gw-dense .p-row {
+    padding-block: 1.2%;
   }
   .p-row:last-child {
     border-bottom: 0;
@@ -419,6 +380,7 @@
     font: 400 1px/1 "Bebas Neue", Impact, sans-serif;
     font-size: clamp(15px, 3.9vw, 22px);
     width: 1.6em;
+    flex: none;
     text-align: center;
     color: #66707d;
   }
@@ -433,6 +395,18 @@
   .p-row.top3 .p-rank {
     color: #db8a3a;
     text-shadow: 0 0 10px rgba(219, 138, 58, 0.35);
+  }
+  .p-row.top1 .p-name {
+    color: #f4c152;
+    text-shadow: 0 0 7px rgba(244, 193, 82, 0.5);
+  }
+  .p-row.top2 .p-name {
+    color: #cbd5e1;
+    text-shadow: 0 0 6px rgba(203, 213, 225, 0.4);
+  }
+  .p-row.top3 .p-name {
+    color: #db8a3a;
+    text-shadow: 0 0 6px rgba(219, 138, 58, 0.4);
   }
 
   .p-tag {
@@ -451,6 +425,7 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+    flex: 1 1 0%;
     min-width: 0;
   }
   .p-name {
@@ -479,6 +454,13 @@
     color: #9aa5b4;
     font-weight: 600;
   }
+  .gw-dense .gwchip {
+    font-size: 7.2px;
+    padding: 1px 4px;
+  }
+  .gw-dense .p-detail {
+    gap: 2px 5px;
+  }
   .p-season {
     font: 500 9.5px/1 "JetBrains Mono", monospace;
     color: #66707d;
@@ -494,6 +476,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
+    flex: none;
     gap: 1px;
   }
   .p-points {
@@ -506,12 +489,5 @@
     color: #66707d;
     font-weight: 500;
     margin-left: 2px;
-  }
-  .p-avg {
-    font: 500 9px/1 "JetBrains Mono", monospace;
-    color: #66707d;
-  }
-  .p-spark {
-    margin-top: 3px;
   }
 </style>
