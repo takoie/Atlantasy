@@ -13,7 +13,26 @@
   let isExporting = $state(false);
   let exportError = $state<string | null>(null);
   let posterEl: HTMLDivElement | undefined = $state();
+  let posterShellEl: HTMLDivElement | undefined = $state();
   let fitWarning = $state(false);
+
+  // A4/A3 share the ISO 216 ratio (1:1.4142). html2canvas doesn't reliably
+  // respect the CSS `aspect-ratio` property, so the poster's pixel size is
+  // computed here and applied as an explicit inline style instead - that
+  // way the exported canvas always matches the page ratio regardless of
+  // how much content it holds.
+  const PAGE_RATIO = 1.4142;
+  let shellWidth = $state(0);
+  let posterHeight = $derived(shellWidth * PAGE_RATIO);
+
+  $effect(() => {
+    if (!posterShellEl) return;
+    const ro = new ResizeObserver((entries) => {
+      shellWidth = entries[0].contentRect.width;
+    });
+    ro.observe(posterShellEl);
+    return () => ro.disconnect();
+  });
 
   const monthsQuery = useQuery(api.rooms.listAvailableMonths);
   const leaderboardQuery = useQuery(api.rooms.getLeaderboard, () => ({
@@ -47,20 +66,14 @@
   });
 
   function checkFit() {
-    if (!posterEl) return;
-    const nominal = posterEl.clientWidth * 1.4142;
-    fitWarning = format === "a4" && posterEl.scrollHeight > nominal * 1.04;
+    if (!posterEl || !posterHeight) return;
+    fitWarning = format === "a4" && posterEl.scrollHeight > posterHeight * 1.04;
   }
 
   $effect(() => {
     // Referer state som skal trigge en ny måling når innholdet endrer form.
-    void [leaderboard, showContrib, showSeason, format];
+    void [leaderboard, showContrib, showSeason, format, posterHeight];
     tick().then(checkFit);
-  });
-
-  $effect(() => {
-    window.addEventListener("resize", checkFit);
-    return () => window.removeEventListener("resize", checkFit);
   });
 
   function abbrev(name: string) {
@@ -255,8 +268,13 @@
         Laster topplista...
       </div>
     {:else}
-      <div class="w-full max-w-[520px] poster-shell">
-        <div class="poster" class:fmt-a3={format === "a3"} bind:this={posterEl}>
+      <div class="w-full max-w-[520px] poster-shell" bind:this={posterShellEl}>
+        <div
+          class="poster"
+          class:fmt-a3={format === "a3"}
+          style="width:{shellWidth}px; height:{posterHeight}px;"
+          bind:this={posterEl}
+        >
           <div class="p-head">
             <span class="p-wordmark">Atlantasy</span>
             <div class="p-title">ROMLIGAEN</div>
@@ -310,9 +328,6 @@
     filter: drop-shadow(0 30px 50px rgba(0, 0, 0, 0.55));
   }
   .poster {
-    width: 100%;
-    aspect-ratio: 1 / 1.4142;
-    height: auto;
     background:
       radial-gradient(120% 90% at 15% -10%, rgba(159, 232, 141, 0.1), transparent 55%),
       radial-gradient(100% 70% at 100% 0%, rgba(112, 225, 248, 0.08), transparent 50%),
@@ -367,11 +382,11 @@
     display: flex;
     align-items: center;
     gap: 2.6%;
-    padding-block: 1.6%;
+    padding-block: 2%;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   }
   .gw-dense .p-row {
-    padding-block: 1.2%;
+    padding-block: 1.4%;
   }
   .p-row:last-child {
     border-bottom: 0;
@@ -424,7 +439,7 @@
   .p-name-col {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
     flex: 1 1 0%;
     min-width: 0;
   }
