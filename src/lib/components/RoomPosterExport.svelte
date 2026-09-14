@@ -1,6 +1,8 @@
 <script lang="ts">
   import { tick } from "svelte";
   import { Download, Loader2, AlertTriangle } from "lucide-svelte";
+  import { save as saveFileDialog } from "@tauri-apps/plugin-dialog";
+  import { writeFile } from "@tauri-apps/plugin-fs";
   import { useQuery } from "$lib/convex.svelte";
   import { api } from "../../../convex/_generated/api";
 
@@ -133,7 +135,15 @@
       const fileLabel = (resolvedMonthName || "romliga")
         .toLowerCase()
         .replace(/\s+/g, "-");
-      pdf.save(`romliga-${fileLabel}-${format}.pdf`);
+
+      const targetPath = await saveFileDialog({
+        defaultPath: `romliga-${fileLabel}-${format}.pdf`,
+        filters: [{ name: "PDF", extensions: ["pdf"] }],
+      });
+      if (!targetPath) return;
+
+      const pdfBytes = pdf.output("arraybuffer") as ArrayBuffer;
+      await writeFile(targetPath, new Uint8Array(pdfBytes));
     } catch (e) {
       exportError = e instanceof Error ? e.message : "Ukjent feil under eksport.";
     } finally {
