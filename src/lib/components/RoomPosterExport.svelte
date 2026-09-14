@@ -429,11 +429,9 @@
     min-width: 0;
   }
   .p-name {
+    display: block;
     font: 700 12px/1.2 "Inter", sans-serif;
     color: #eef1f5;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
   .p-detail {
     display: flex;
@@ -462,6 +460,7 @@
     gap: 2px 5px;
   }
   .p-season {
+    display: block;
     font: 500 9.5px/1 "JetBrains Mono", monospace;
     color: #66707d;
     letter-spacing: 0.02em;
