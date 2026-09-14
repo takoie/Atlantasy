@@ -330,11 +330,6 @@
               </div>
             {/each}
           </div>
-
-          <div class="p-foot">
-            <span>Generert {new Date().toLocaleDateString("nb-NO")} · atlantasy.no</span>
-            <span class="qr" aria-hidden="true"></span>
-          </div>
         </div>
       </div>
     {/if}
@@ -508,30 +503,5 @@
   }
   .p-spark {
     margin-top: 3px;
-  }
-
-  .p-foot {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding-top: 2.6%;
-    margin-top: 2.6%;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    font: 500 9px/1.4 "JetBrains Mono", monospace;
-    color: #66707d;
-    letter-spacing: 0.02em;
-  }
-  .p-foot .qr {
-    width: 30px;
-    height: 30px;
-    border-radius: 4px;
-    flex: none;
-    background:
-      linear-gradient(90deg, currentColor 0 2px, transparent 0 4px) 0 0 / 7px 7px,
-      linear-gradient(0deg, currentColor 0 2px, transparent 0 4px) 0 0 / 7px 7px,
-      #2a303c;
-    color: rgba(255, 255, 255, 0.35);
-    border: 1px solid rgba(255, 255, 255, 0.12);
   }
 </style>
