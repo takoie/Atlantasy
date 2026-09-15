@@ -252,8 +252,8 @@
           bind:this={posterEl}
         >
           <div class="p-head">
-            <span class="p-wordmark">Atlantasy</span>
-            <div class="p-title">ROMLIGAEN</div>
+            <div class="p-title">ATLANTASY</div>
+            <span class="p-event">ROMLIGAEN</span>
             <span class="p-sub">{resolvedMonthName}{periodLabel ? ` · ${periodLabel}` : ""}</span>
           </div>
 
@@ -329,24 +329,25 @@
   .p-head {
     display: flex;
     flex-direction: column;
+    align-items: center;
+    text-align: center;
     gap: 0.4cqw;
     padding-bottom: 3%;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     margin-bottom: 2.8%;
   }
-  .p-wordmark {
-    font: 600 1px/1 "JetBrains Mono", monospace;
-    font-size: clamp(9px, 1.9cqw, 13px);
-    letter-spacing: 0.22em;
-    color: #9fe88d;
-    text-transform: uppercase;
-  }
   .p-title {
     font: 400 1px/0.86 "Bebas Neue", Impact, sans-serif;
-    font-size: clamp(24px, 7.6cqw, 44px);
-    letter-spacing: 0.01em;
+    font-size: clamp(28px, 8.6cqw, 50px);
+    letter-spacing: 0.03em;
     color: #eef1f5;
-    margin-top: 1cqw;
+  }
+  .p-event {
+    font: 400 1px/0.9 "Bebas Neue", Impact, sans-serif;
+    font-size: clamp(18px, 5.6cqw, 32px);
+    letter-spacing: 0.02em;
+    color: #9fe88d;
+    margin-top: 0.3cqw;
   }
   .p-sub {
     font: 600 1px/1 "JetBrains Mono", monospace;
@@ -495,7 +496,7 @@
   }
   .p-points {
     font: 700 1px/1 "JetBrains Mono", monospace;
-    font-size: calc(clamp(13px, 3.1cqw, 17px) * var(--density, 1));
+    font-size: calc(clamp(18px, 4.8cqw, 25px) * var(--density, 1));
     color: #eef1f5;
   }
   .p-points :global(small) {
