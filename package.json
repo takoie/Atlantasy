@@ -1,7 +1,7 @@
 {
   "name": "atlantasy",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "start": "npx --yes concurrently -n \"convex,tauri\" -c \"magenta.bold,cyan.bold\" \"npx convex dev\" \"npm run tauri dev\"",
