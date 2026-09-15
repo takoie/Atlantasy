@@ -396,6 +396,8 @@
     display: flex;
     flex-direction: column;
     flex: 1;
+    min-height: 0;
+    overflow: hidden;
   }
   .p-row {
     display: flex;
@@ -475,15 +477,15 @@
   .gwchip {
     font: 500 8.4px/1.5 "JetBrains Mono", monospace;
     font-size: calc(8.4px * var(--density, 1));
-    color: #66707d;
-    background: rgba(255, 255, 255, 0.035);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: #a7b1bf;
+    background: rgba(255, 255, 255, 0.065);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 4px;
     padding: calc(1.5px * var(--density, 1)) calc(5px * var(--density, 1));
     white-space: nowrap;
   }
   .gwchip :global(b) {
-    color: #9aa5b4;
+    color: #eef1f5;
     font-weight: 600;
   }
   .p-season {
