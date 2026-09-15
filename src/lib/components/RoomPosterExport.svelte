@@ -87,8 +87,15 @@
       const pageStyle = document.createElement("style");
       pageStyle.textContent = `@page { size: ${format} portrait; margin: 0; }`;
       document.head.appendChild(pageStyle);
+      // window.print() isn't guaranteed to block until the dialog closes -
+      // remove the style on `afterprint` instead of right after the call,
+      // so it's still there whenever the print engine actually reads it.
+      const cleanup = () => {
+        pageStyle.remove();
+        window.removeEventListener("afterprint", cleanup);
+      };
+      window.addEventListener("afterprint", cleanup);
       window.print();
-      document.head.removeChild(pageStyle);
     } finally {
       isPreparingPrint = false;
     }
@@ -494,6 +501,13 @@
     :global(.print-poster),
     :global(.print-poster *) {
       visibility: visible;
+    }
+    /* `filter` on an ancestor creates a new containing block for
+       `position: fixed` descendants (same rule as `transform`) - without
+       neutralizing it here, .print-poster's inset:0 below resolves against
+       this small drop-shadow wrapper instead of the actual printed page. */
+    :global(.poster-shell) {
+      filter: none !important;
     }
     :global(.print-poster) {
       position: fixed;
