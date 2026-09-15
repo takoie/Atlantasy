@@ -14,7 +14,8 @@
   let exportError = $state<string | null>(null);
   let posterEl: HTMLDivElement | undefined = $state();
   let posterShellEl: HTMLDivElement | undefined = $state();
-  let fitWarning = $state(false);
+  let listEl: HTMLDivElement | undefined = $state();
+  let densityScale = $state(1);
 
   // A4/A3 share the ISO 216 ratio (1:1.4142). html2canvas doesn't reliably
   // respect the CSS `aspect-ratio` property, so the poster's pixel size is
@@ -52,10 +53,8 @@
       ? `runde ${selectedMonthMeta.gameweekStart}–${selectedMonthMeta.gameweekEnd}`
       : ""
   );
-  let maxGwCount = $derived(
-    leaderboard.reduce((max, r) => Math.max(max, r.monthBreakdown.length), 0)
-  );
-  let isDense = $derived(maxGwCount >= 4);
+  let isScaled = $derived(densityScale < 0.995);
+  let isCriticallyScaled = $derived(densityScale <= 0.56);
 
   // Følg backendens resolverte måned til <select> har fått en verdi, uten å
   // overstyre et eksplisitt brukervalg senere.
@@ -65,15 +64,29 @@
     }
   });
 
-  function checkFit() {
-    if (!posterEl || !posterHeight) return;
-    fitWarning = format === "a4" && posterEl.scrollHeight > posterHeight * 1.04;
+  // Krymper lista (skrift, padding, mellomrom - via CSS-variabelen --density)
+  // til den faktisk får plass i den faste side-boksen, uansett hvor mange rom
+  // eller spilte gameweeks perioden har. Konvergerer på noen få runder siden
+  // mindre skrift endrer den faktiske høyden litt ujevnt.
+  async function fitContent() {
+    if (!listEl) return;
+    let scale = 1;
+    for (let i = 0; i < 6; i++) {
+      densityScale = scale;
+      await tick();
+      await new Promise(requestAnimationFrame);
+      if (!listEl) return;
+      const natural = listEl.scrollHeight;
+      const available = listEl.clientHeight;
+      if (natural <= available + 0.5 || scale <= 0.5) break;
+      scale = Math.max(0.5, scale * (available / natural) * 0.98);
+    }
   }
 
   $effect(() => {
-    // Referer state som skal trigge en ny måling når innholdet endrer form.
+    // Referer state som skal trigge en ny tilpasning når innholdet endrer form.
     void [leaderboard, showContrib, showSeason, format, posterHeight];
-    tick().then(checkFit);
+    fitContent();
   });
 
   function abbrev(name: string) {
@@ -87,6 +100,8 @@
     isExporting = true;
     exportError = null;
     try {
+      await fitContent();
+
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
         import("html2canvas"),
         import("jspdf"),
@@ -256,10 +271,14 @@
       <span>{resolvedMonthName}</span>
     </div>
 
-    {#if fitWarning}
+    {#if isCriticallyScaled}
       <div class="w-full max-w-[520px] flex items-start gap-2 text-xs text-[#F0B23A] bg-[#F0B23A]/10 border border-[#F0B23A]/35 rounded-xl px-3 py-2.5">
         <AlertTriangle class="w-3.5 h-3.5 shrink-0 mt-0.5" />
-        <span>Med disse valgene og {leaderboard.length} rom blir A4 tett. Bytt til A3 for bedre lesbarhet på avstand.</span>
+        <span>Med disse valgene og {leaderboard.length} rom blir teksten veldig liten selv nedskalert. Bytt til A3 for bedre lesbarhet.</span>
+      </div>
+    {:else if isScaled}
+      <div class="w-full max-w-[520px] text-[11px] text-[#8A93A6]">
+        Listen er skalert til {Math.round(densityScale * 100)}% for at alle {leaderboard.length} rom skal få plass på siden.
       </div>
     {/if}
 
@@ -281,7 +300,7 @@
             <span class="p-sub">{resolvedMonthName}{periodLabel ? ` · ${periodLabel}` : ""}</span>
           </div>
 
-          <div class="p-list" class:gw-dense={isDense}>
+          <div class="p-list" bind:this={listEl} style="--density:{densityScale};">
             {#each leaderboard as room (room._id)}
               {@const rankClass = room.rank === 1 ? "top1" : room.rank === 2 ? "top2" : room.rank === 3 ? "top3" : ""}
               <div class="p-row {rankClass}">
@@ -305,7 +324,7 @@
                           {#if b.top1}
                             <b>{abbrev(b.top1.managerName)}</b> {b.top1.points}p{#if b.top2} · <b>{abbrev(b.top2.managerName)}</b> {b.top2.points}p{/if} ·
                           {/if}
-                          {isDense ? "sn." : "snitt"} {b.average.toFixed(1)}p
+                          snitt {b.average.toFixed(1)}p
                         </span>
                       {/each}
                     </span>
@@ -382,18 +401,15 @@
     display: flex;
     align-items: center;
     gap: 2.6%;
-    padding-block: 2%;
+    padding-block: calc(2% * var(--density, 1));
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  }
-  .gw-dense .p-row {
-    padding-block: 1.4%;
   }
   .p-row:last-child {
     border-bottom: 0;
   }
   .p-rank {
     font: 400 1px/1 "Bebas Neue", Impact, sans-serif;
-    font-size: clamp(15px, 3.9vw, 22px);
+    font-size: calc(clamp(15px, 3.9vw, 22px) * var(--density, 1));
     width: 1.6em;
     flex: none;
     text-align: center;
@@ -432,6 +448,7 @@
     align-items: center;
     justify-content: center;
     font: 700 9.5px/1 "JetBrains Mono", monospace;
+    font-size: calc(9.5px * var(--density, 1));
     flex: none;
     border: 1px solid rgba(255, 255, 255, 0.12);
   }
@@ -439,47 +456,43 @@
   .p-name-col {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: calc(3px * var(--density, 1));
     flex: 1 1 0%;
     min-width: 0;
   }
   .p-name {
     display: block;
     font: 700 12px/1.2 "Inter", sans-serif;
+    font-size: calc(12px * var(--density, 1));
     color: #eef1f5;
   }
   .p-detail {
     display: flex;
     flex-wrap: wrap;
-    gap: 3px 8px;
-    margin-top: 2px;
+    gap: calc(3px * var(--density, 1)) calc(8px * var(--density, 1));
+    margin-top: calc(2px * var(--density, 1));
   }
   .gwchip {
     font: 500 8.4px/1.5 "JetBrains Mono", monospace;
+    font-size: calc(8.4px * var(--density, 1));
     color: #66707d;
     background: rgba(255, 255, 255, 0.035);
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 4px;
-    padding: 1.5px 5px;
+    padding: calc(1.5px * var(--density, 1)) calc(5px * var(--density, 1));
     white-space: nowrap;
   }
   .gwchip :global(b) {
     color: #9aa5b4;
     font-weight: 600;
   }
-  .gw-dense .gwchip {
-    font-size: 7.2px;
-    padding: 1px 4px;
-  }
-  .gw-dense .p-detail {
-    gap: 2px 5px;
-  }
   .p-season {
     display: block;
     font: 500 9.5px/1 "JetBrains Mono", monospace;
+    font-size: calc(9.5px * var(--density, 1));
     color: #66707d;
     letter-spacing: 0.02em;
-    margin-top: 2px;
+    margin-top: calc(2px * var(--density, 1));
   }
   .p-season :global(b) {
     color: #9fe88d;
@@ -495,7 +508,7 @@
   }
   .p-points {
     font: 700 1px/1 "JetBrains Mono", monospace;
-    font-size: clamp(13px, 3.1vw, 17px);
+    font-size: calc(clamp(13px, 3.1vw, 17px) * var(--density, 1));
     color: #eef1f5;
   }
   .p-points :global(small) {
