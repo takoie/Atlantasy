@@ -79,19 +79,33 @@
   // "Microsoft Print to PDF" (eller en fysisk skriver) i den vanlige
   // Windows-utskriftsdialogen. @page-størrelsen settes dynamisk siden CSS
   // ikke støtter et variabelt @page-mål.
+  //
+  // Plakaten klones til en egen node rett under <body> i stedet for å
+  // printes der den står inne i admin-modalen: position:fixed for å "hoppe
+  // ut" til selve papirsiden brytes av enhver forelder med transform/filter
+  // et sted i treet (modalens åpne-animasjon, skygge-wrapperen, osv.) - ved
+  // å klone ut av treet finnes det ingen slike foreldre å bekymre seg for.
   async function printPoster() {
     if (!posterEl || isPreparingPrint) return;
     isPreparingPrint = true;
     try {
       await fitContent();
+
       const pageStyle = document.createElement("style");
       pageStyle.textContent = `@page { size: ${format} portrait; margin: 0; }`;
       document.head.appendChild(pageStyle);
+
+      const printRoot = document.createElement("div");
+      printRoot.id = "poster-print-root";
+      printRoot.appendChild(posterEl.cloneNode(true));
+      document.body.appendChild(printRoot);
+
       // window.print() isn't guaranteed to block until the dialog closes -
-      // remove the style on `afterprint` instead of right after the call,
-      // so it's still there whenever the print engine actually reads it.
+      // clean up on `afterprint` instead of right after the call, so the
+      // print engine still has both nodes whenever it actually reads them.
       const cleanup = () => {
         pageStyle.remove();
+        printRoot.remove();
         window.removeEventListener("afterprint", cleanup);
       };
       window.addEventListener("afterprint", cleanup);
@@ -233,7 +247,7 @@
     {:else}
       <div class="w-full max-w-[520px] poster-shell">
         <div
-          class="poster print-poster"
+          class="poster"
           class:fmt-a3={format === "a3"}
           bind:this={posterEl}
         >
@@ -495,31 +509,28 @@
      i faktisk fysisk A4/A3-størrelse (WebView2 sin ekte layout-motor -
      samme rendering som forhåndsvisningen, derfor 1:1). */
   @media print {
-    :global(body *) {
-      visibility: hidden;
+    /* Alt annet på siden er skjult - #poster-print-root er en klone av
+       plakaten, satt rett under <body> (se printPoster()), så den har ingen
+       mellomliggende foreldre med transform/filter som kan forstyrre den. */
+    :global(body > *:not(#poster-print-root)) {
+      display: none !important;
     }
-    :global(.print-poster),
-    :global(.print-poster *) {
-      visibility: visible;
+    :global(#poster-print-root) {
+      display: block;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
-    /* `filter` on an ancestor creates a new containing block for
-       `position: fixed` descendants (same rule as `transform`) - without
-       neutralizing it here, .print-poster's inset:0 below resolves against
-       this small drop-shadow wrapper instead of the actual printed page. */
-    :global(.poster-shell) {
-      filter: none !important;
-    }
-    :global(.print-poster) {
-      position: fixed;
-      inset: 0;
+    :global(#poster-print-root .poster) {
       width: 210mm !important;
       height: 297mm !important;
       aspect-ratio: unset !important;
+      margin: 0;
       border: 0;
       border-radius: 0;
       box-shadow: none;
+      filter: none;
     }
-    :global(.print-poster.fmt-a3) {
+    :global(#poster-print-root .poster.fmt-a3) {
       width: 297mm !important;
       height: 420mm !important;
     }
