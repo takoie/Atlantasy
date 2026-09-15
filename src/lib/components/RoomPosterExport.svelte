@@ -1,8 +1,6 @@
 <script lang="ts">
   import { tick } from "svelte";
-  import { Download, Loader2, AlertTriangle } from "lucide-svelte";
-  import { save as saveFileDialog } from "@tauri-apps/plugin-dialog";
-  import { writeFile } from "@tauri-apps/plugin-fs";
+  import { Printer, Loader2, AlertTriangle } from "lucide-svelte";
   import { useQuery } from "$lib/convex.svelte";
   import { api } from "../../../convex/_generated/api";
 
@@ -10,30 +8,10 @@
   let format = $state<"a4" | "a3">("a4");
   let showContrib = $state(false);
   let showSeason = $state(true);
-  let isExporting = $state(false);
-  let exportError = $state<string | null>(null);
+  let isPreparingPrint = $state(false);
   let posterEl: HTMLDivElement | undefined = $state();
-  let posterShellEl: HTMLDivElement | undefined = $state();
   let listEl: HTMLDivElement | undefined = $state();
   let densityScale = $state(1);
-
-  // A4/A3 share the ISO 216 ratio (1:1.4142). html2canvas doesn't reliably
-  // respect the CSS `aspect-ratio` property, so the poster's pixel size is
-  // computed here and applied as an explicit inline style instead - that
-  // way the exported canvas always matches the page ratio regardless of
-  // how much content it holds.
-  const PAGE_RATIO = 1.4142;
-  let shellWidth = $state(0);
-  let posterHeight = $derived(shellWidth * PAGE_RATIO);
-
-  $effect(() => {
-    if (!posterShellEl) return;
-    const ro = new ResizeObserver((entries) => {
-      shellWidth = entries[0].contentRect.width;
-    });
-    ro.observe(posterShellEl);
-    return () => ro.disconnect();
-  });
 
   const monthsQuery = useQuery(api.rooms.listAvailableMonths);
   const leaderboardQuery = useQuery(api.rooms.getLeaderboard, () => ({
@@ -85,7 +63,7 @@
 
   $effect(() => {
     // Referer state som skal trigge en ny tilpasning når innholdet endrer form.
-    void [leaderboard, showContrib, showSeason, format, posterHeight];
+    void [leaderboard, showContrib, showSeason, format];
     fitContent();
   });
 
@@ -95,65 +73,24 @@
     return `${parts[0]} ${parts[1].charAt(0)}.`;
   }
 
-  async function exportPdf() {
-    if (!posterEl || isExporting) return;
-    isExporting = true;
-    exportError = null;
+  // Bruker WebView2 sin egen print-motor i stedet for html2canvas: siden det
+  // er den samme motoren som tegner forhåndsvisningen, blir utskriften
+  // garantert 1:1 - ingen egen rendering-logikk som kan avvike. Admin velger
+  // "Microsoft Print to PDF" (eller en fysisk skriver) i den vanlige
+  // Windows-utskriftsdialogen. @page-størrelsen settes dynamisk siden CSS
+  // ikke støtter et variabelt @page-mål.
+  async function printPoster() {
+    if (!posterEl || isPreparingPrint) return;
+    isPreparingPrint = true;
     try {
       await fitContent();
-
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import("html2canvas"),
-        import("jspdf"),
-      ]);
-
-      const canvas = await html2canvas(posterEl, {
-        backgroundColor: "#12151a",
-        scale: 3,
-        useCORS: true,
-      });
-
-      const pageWidthMm = format === "a3" ? 297 : 210;
-      const pageHeightMm = format === "a3" ? 420 : 297;
-      let drawWidth = pageWidthMm;
-      let drawHeight = (canvas.height / canvas.width) * pageWidthMm;
-      if (drawHeight > pageHeightMm) {
-        const shrink = pageHeightMm / drawHeight;
-        drawHeight = pageHeightMm;
-        drawWidth = pageWidthMm * shrink;
-      }
-      const offsetX = (pageWidthMm - drawWidth) / 2;
-
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: format === "a3" ? "a3" : "a4",
-      });
-      pdf.addImage(
-        canvas.toDataURL("image/png"),
-        "PNG",
-        offsetX,
-        0,
-        drawWidth,
-        drawHeight
-      );
-
-      const fileLabel = (resolvedMonthName || "romliga")
-        .toLowerCase()
-        .replace(/\s+/g, "-");
-
-      const targetPath = await saveFileDialog({
-        defaultPath: `romliga-${fileLabel}-${format}.pdf`,
-        filters: [{ name: "PDF", extensions: ["pdf"] }],
-      });
-      if (!targetPath) return;
-
-      const pdfBytes = pdf.output("arraybuffer") as ArrayBuffer;
-      await writeFile(targetPath, new Uint8Array(pdfBytes));
-    } catch (e) {
-      exportError = e instanceof Error ? e.message : "Ukjent feil under eksport.";
+      const pageStyle = document.createElement("style");
+      pageStyle.textContent = `@page { size: ${format} portrait; margin: 0; }`;
+      document.head.appendChild(pageStyle);
+      window.print();
+      document.head.removeChild(pageStyle);
     } finally {
-      isExporting = false;
+      isPreparingPrint = false;
     }
   }
 </script>
@@ -247,21 +184,21 @@
 
     <button
       type="button"
-      onclick={exportPdf}
-      disabled={isExporting || leaderboard.length === 0}
+      onclick={printPoster}
+      disabled={isPreparingPrint || leaderboard.length === 0}
       class="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#9FE88D] text-[#0f1a0c] text-[13.5px] font-bold shadow-[0_8px_20px_-8px_rgba(159,232,141,0.55)] hover:brightness-105 disabled:opacity-60 disabled:cursor-not-allowed transition"
     >
-      {#if isExporting}
+      {#if isPreparingPrint}
         <Loader2 class="w-4 h-4 animate-spin" />
-        Genererer PDF...
+        Forbereder...
       {:else}
-        <Download class="w-4 h-4" />
-        Last ned PDF
+        <Printer class="w-4 h-4" />
+        Skriv ut / Lagre som PDF
       {/if}
     </button>
-    {#if exportError}
-      <p class="text-[11px] text-[#FB6F84]">{exportError}</p>
-    {/if}
+    <p class="text-[11px] text-[#8A93A6]">
+      Velg "Microsoft Print to PDF" i utskriftsdialogen for å lagre som fil.
+    </p>
   </div>
 
   <!-- Plakat-forhåndsvisning -->
@@ -287,11 +224,10 @@
         Laster topplista...
       </div>
     {:else}
-      <div class="w-full max-w-[520px] poster-shell" bind:this={posterShellEl}>
+      <div class="w-full max-w-[520px] poster-shell">
         <div
-          class="poster"
+          class="poster print-poster"
           class:fmt-a3={format === "a3"}
-          style="width:{shellWidth}px; height:{posterHeight}px;"
           bind:this={posterEl}
         >
           <div class="p-head">
@@ -347,6 +283,12 @@
     filter: drop-shadow(0 30px 50px rgba(0, 0, 0, 0.55));
   }
   .poster {
+    /* Etablerer en query-container så cqw-enhetene under alltid er relativt
+       til PLAKATENS egen bredde - identisk forhold enten den vises i en
+       520px forhåndsvisning eller skrives ut i full A4/A3-størrelse. */
+    container-type: inline-size;
+    width: 100%;
+    aspect-ratio: 1 / 1.4142;
     background:
       radial-gradient(120% 90% at 15% -10%, rgba(159, 232, 141, 0.1), transparent 55%),
       radial-gradient(100% 70% at 100% 0%, rgba(112, 225, 248, 0.08), transparent 50%),
@@ -366,30 +308,32 @@
   .p-head {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 0.4cqw;
     padding-bottom: 3%;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     margin-bottom: 2.8%;
   }
   .p-wordmark {
-    font: 600 10px/1 "JetBrains Mono", monospace;
+    font: 600 1px/1 "JetBrains Mono", monospace;
+    font-size: clamp(9px, 1.9cqw, 13px);
     letter-spacing: 0.22em;
     color: #9fe88d;
     text-transform: uppercase;
   }
   .p-title {
     font: 400 1px/0.86 "Bebas Neue", Impact, sans-serif;
-    font-size: clamp(24px, 7.6vw, 44px);
+    font-size: clamp(24px, 7.6cqw, 44px);
     letter-spacing: 0.01em;
     color: #eef1f5;
-    margin-top: 5px;
+    margin-top: 1cqw;
   }
   .p-sub {
-    font: 600 10.5px/1 "JetBrains Mono", monospace;
+    font: 600 1px/1 "JetBrains Mono", monospace;
+    font-size: clamp(9px, 2cqw, 13px);
     color: #9aa5b4;
     letter-spacing: 0.07em;
     text-transform: uppercase;
-    margin-top: 6px;
+    margin-top: 1.15cqw;
   }
 
   .p-list {
@@ -422,7 +366,7 @@
   }
   .p-rank {
     font: 400 1px/1 "Bebas Neue", Impact, sans-serif;
-    font-size: calc(clamp(15px, 3.9vw, 22px) * var(--density, 1));
+    font-size: calc(clamp(15px, 3.9cqw, 22px) * var(--density, 1));
     width: 1.6em;
     flex: none;
     text-align: center;
@@ -461,8 +405,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font: 700 9.5px/1 "JetBrains Mono", monospace;
-    font-size: calc(9.5px * var(--density, 1));
+    font: 700 1px/1 "JetBrains Mono", monospace;
+    font-size: calc(1.83cqw * var(--density, 1));
     letter-spacing: -0.02em;
     flex: none;
     border: 1px solid rgba(255, 255, 255, 0.14);
@@ -471,30 +415,30 @@
   .p-name-col {
     display: flex;
     flex-direction: column;
-    gap: calc(3px * var(--density, 1));
+    gap: calc(0.6cqw * var(--density, 1));
     flex: 1 1 0%;
     min-width: 0;
   }
   .p-name {
     display: block;
-    font: 700 12px/1.2 "Inter", sans-serif;
-    font-size: calc(12px * var(--density, 1));
+    font: 700 1px/1.2 "Inter", sans-serif;
+    font-size: calc(2.3cqw * var(--density, 1));
     color: #eef1f5;
   }
   .p-detail {
     display: flex;
     flex-wrap: wrap;
-    gap: calc(3px * var(--density, 1)) calc(8px * var(--density, 1));
-    margin-top: calc(2px * var(--density, 1));
+    gap: calc(0.6cqw * var(--density, 1)) calc(1.5cqw * var(--density, 1));
+    margin-top: calc(0.4cqw * var(--density, 1));
   }
   .gwchip {
-    font: 500 8.4px/1.5 "JetBrains Mono", monospace;
-    font-size: calc(8.4px * var(--density, 1));
+    font: 500 1px/1.5 "JetBrains Mono", monospace;
+    font-size: calc(1.6cqw * var(--density, 1));
     color: #eef1f5;
     background: rgba(255, 255, 255, 0.07);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 4px;
-    padding: calc(1.5px * var(--density, 1)) calc(5px * var(--density, 1));
+    padding: calc(0.3cqw * var(--density, 1)) calc(1cqw * var(--density, 1));
     white-space: nowrap;
   }
   .gwchip :global(b) {
@@ -510,11 +454,11 @@
   }
   .p-season {
     display: block;
-    font: 500 9.5px/1 "JetBrains Mono", monospace;
-    font-size: calc(9.5px * var(--density, 1));
+    font: 500 1px/1 "JetBrains Mono", monospace;
+    font-size: calc(1.8cqw * var(--density, 1));
     color: #66707d;
     letter-spacing: 0.02em;
-    margin-top: calc(2px * var(--density, 1));
+    margin-top: calc(0.4cqw * var(--density, 1));
   }
   .p-season :global(b) {
     color: #9fe88d;
@@ -530,7 +474,7 @@
   }
   .p-points {
     font: 700 1px/1 "JetBrains Mono", monospace;
-    font-size: calc(clamp(13px, 3.1vw, 17px) * var(--density, 1));
+    font-size: calc(clamp(13px, 3.1cqw, 17px) * var(--density, 1));
     color: #eef1f5;
   }
   .p-points :global(small) {
@@ -538,5 +482,32 @@
     color: #66707d;
     font-weight: 500;
     margin-left: 2px;
+  }
+
+  /* Skjuler alt annet på siden under utskrift og viser kun selve plakaten,
+     i faktisk fysisk A4/A3-størrelse (WebView2 sin ekte layout-motor -
+     samme rendering som forhåndsvisningen, derfor 1:1). */
+  @media print {
+    :global(body *) {
+      visibility: hidden;
+    }
+    :global(.print-poster),
+    :global(.print-poster *) {
+      visibility: visible;
+    }
+    :global(.print-poster) {
+      position: fixed;
+      inset: 0;
+      width: 210mm !important;
+      height: 297mm !important;
+      aspect-ratio: unset !important;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    :global(.print-poster.fmt-a3) {
+      width: 297mm !important;
+      height: 420mm !important;
+    }
   }
 </style>

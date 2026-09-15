@@ -21,17 +21,6 @@
     "updater:allow-check",
     "updater:allow-download-and-install",
     "process:default",
-    "process:allow-restart",
-    "dialog:default",
-    "dialog:allow-save",
-    {
-      "identifier": "fs:allow-write-file",
-      "allow": [
-        { "path": "$HOME/**" },
-        { "path": "$DOWNLOAD/**" },
-        { "path": "$DOCUMENT/**" },
-        { "path": "$DESKTOP/**" }
-      ]
-    }
+    "process:allow-restart"
   ]
 }
