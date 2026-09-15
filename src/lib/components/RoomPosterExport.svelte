@@ -320,11 +320,11 @@
                     <span class="p-detail">
                       {#each room.monthBreakdown as b (b.gw)}
                         <span class="gwchip">
-                          GW{b.gw}
+                          <span class="gw-label">GW{b.gw}</span>
                           {#if b.top1}
-                            <b>{abbrev(b.top1.managerName)}</b> {b.top1.points}p{#if b.top2} · <b>{abbrev(b.top2.managerName)}</b> {b.top2.points}p{/if} ·
+                            <b>{abbrev(b.top1.managerName)}</b> <span class="pt">{b.top1.points}p</span>{#if b.top2} · <b>{abbrev(b.top2.managerName)}</b> <span class="pt">{b.top2.points}p</span>{/if} ·
                           {/if}
-                          snitt {b.average.toFixed(1)}p
+                          <span class="gw-label">snitt</span> <span class="pt">{b.average.toFixed(1)}p</span>
                         </span>
                       {/each}
                     </span>
@@ -404,10 +404,21 @@
     align-items: center;
     gap: 2.6%;
     padding-block: calc(2% * var(--density, 1));
+    padding-inline: 2%;
+    border-radius: 8px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   }
   .p-row:last-child {
     border-bottom: 0;
+  }
+  .p-row.top1 {
+    background: linear-gradient(90deg, rgba(244, 193, 82, 0.18), rgba(244, 193, 82, 0.02));
+  }
+  .p-row.top2 {
+    background: linear-gradient(90deg, rgba(203, 213, 225, 0.13), rgba(203, 213, 225, 0.02));
+  }
+  .p-row.top3 {
+    background: linear-gradient(90deg, rgba(219, 138, 58, 0.15), rgba(219, 138, 58, 0.02));
   }
   .p-rank {
     font: 400 1px/1 "Bebas Neue", Impact, sans-serif;
@@ -443,16 +454,18 @@
   }
 
   .p-tag {
-    width: 2.1em;
-    height: 2.1em;
+    min-width: 2.3em;
+    height: 2.3em;
+    padding-inline: 0.3em;
     border-radius: 7px;
     display: flex;
     align-items: center;
     justify-content: center;
     font: 700 9.5px/1 "JetBrains Mono", monospace;
     font-size: calc(9.5px * var(--density, 1));
+    letter-spacing: -0.02em;
     flex: none;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.14);
   }
 
   .p-name-col {
@@ -477,9 +490,9 @@
   .gwchip {
     font: 500 8.4px/1.5 "JetBrains Mono", monospace;
     font-size: calc(8.4px * var(--density, 1));
-    color: #a7b1bf;
-    background: rgba(255, 255, 255, 0.065);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #eef1f5;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 4px;
     padding: calc(1.5px * var(--density, 1)) calc(5px * var(--density, 1));
     white-space: nowrap;
@@ -487,6 +500,13 @@
   .gwchip :global(b) {
     color: #eef1f5;
     font-weight: 600;
+  }
+  .gwchip .gw-label {
+    color: #7c8794;
+  }
+  .gwchip .pt {
+    color: #9fe88d;
+    font-weight: 700;
   }
   .p-season {
     display: block;
