@@ -388,7 +388,7 @@
   }
   .p-rank {
     font: 400 1px/1 "Bebas Neue", Impact, sans-serif;
-    font-size: calc(clamp(15px, 3.9cqw, 22px) * var(--density, 1));
+    font-size: calc(clamp(19px, 4.8cqw, 27px) * var(--density, 1));
     width: 1.6em;
     flex: none;
     text-align: center;
@@ -444,13 +444,14 @@
   .p-name {
     display: block;
     font: 700 1px/1.2 "Inter", sans-serif;
-    font-size: calc(2.3cqw * var(--density, 1));
+    font-size: calc(2.9cqw * var(--density, 1));
     color: #eef1f5;
   }
   .p-detail {
     display: flex;
-    flex-wrap: wrap;
-    gap: calc(0.6cqw * var(--density, 1)) calc(1.5cqw * var(--density, 1));
+    flex-direction: column;
+    align-items: flex-start;
+    gap: calc(0.6cqw * var(--density, 1));
     margin-top: calc(0.4cqw * var(--density, 1));
   }
   .gwchip {
