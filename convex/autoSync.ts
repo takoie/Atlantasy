@@ -99,6 +99,18 @@ export const tick = internalAction({
           stage: decision.stage,
           wakeAt: decision.stage === "final" ? sleepUntilNextRound : 0,
         });
+        // Cupen følger gameweeken: beregn rundene som spilles i denne GW-en. Feiler det,
+        // skal synken likevel stå som utført (admin kan beregne manuelt).
+        try {
+          const cups = await ctx.runMutation(internal.cups.autoCalculateForGameweek, {
+            gw: current.id,
+          });
+          for (const c of cups) {
+            console.log(`Cup-beregning GW ${current.id}: runde ${c.rounds.join(", ")}.`);
+          }
+        } catch (err: any) {
+          console.warn("Cup-beregning feilet:", err?.message ?? err);
+        }
       } else if (decision.kind === "done") {
         await ctx.runMutation(internal.autoSync.saveState, { wakeAt: sleepUntilNextRound });
       } else if (decision.wakeAt !== undefined && decision.wakeAt !== state.wakeAt) {

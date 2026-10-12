@@ -33,11 +33,15 @@
     MessageSquareX,
     Brush,
     Award,
+    Printer,
   } from "lucide-svelte";
   import { useQuery, useMutation } from "$lib/convex.svelte";
   import { api } from "../../../convex/_generated/api";
   import { formatConvexError } from "$lib/utils/formatError";
+  import { formatLabel, groupByRound, shortTitle } from "$lib/utils/cup";
+  import { seasonFor } from "../../../convex/season";
   import RoomPosterExport from "./RoomPosterExport.svelte";
+  import CupPosterExport from "./cup/CupPosterExport.svelte";
 
   let {
     isOpen = false,
@@ -143,7 +147,7 @@
   let showManualGwOverride = $state(false);
 
   // Ny sesong form-state
-  let newSeasonName = $state("2025/2026");
+  let newSeasonName = $state(seasonFor());
   let resetPointsCheckbox = $state(true);
 
   // Vinnerkåring state
@@ -331,6 +335,10 @@
   const createManualUserMutation = useMutation(api.admin.createManualUser);
   const activeCupQuery = useQuery(api.cups.getActiveCup);
   let activeCup = $derived(activeCupQuery.data ?? null);
+  let cupRoundGroups = $derived(groupByRound(activeCup?.matches ?? []));
+  let currentCupGw = $derived(
+    activeCup?.matches?.find((m: any) => m.roundNumber === activeCup?.currentRound)?.gameweek ?? null,
+  );
   const createCupMutation = useMutation(api.cups.createCupWithBracket);
   const updateCupSettingsMutation = useMutation(api.cups.updateCupSettings);
   const updateMatchMutation = useMutation(api.cups.updateMatch);
@@ -339,7 +347,8 @@
   );
   const deleteCupMutation = useMutation(api.cups.deleteCup);
 
-  let newCupName = $state("Atlantasy Vintercup 2025/2026");
+  let newCupSeason = $state(seasonFor());
+  let newCupName = $state(`Atlantasy Vintercup ${seasonFor()}`);
   let newCupStartGw = $state(20);
   let newCupFormat = $state<
     | "single_elimination"
@@ -349,10 +358,12 @@
     | "lucky_loser"
   >("single_elimination");
   let newCupGroupCount = $state(2);
+  let newCupAutoCalc = $state(true);
   let newCupSeedMethod = $state<"leaderboard" | "manual" | "random">(
     "leaderboard",
   );
   let isCreatingCup = $state(false);
+  let showCupPoster = $state(false);
   let isCalculatingCupRound = $state(false);
   let selectedMatchForEdit = $state<any>(null);
   let editMatchRoom1Id = $state("");
@@ -1184,6 +1195,8 @@
         format: newCupFormat,
         groupCount: Number(newCupGroupCount) || 2,
         seedMethod: newCupSeedMethod,
+        autoCalc: newCupAutoCalc,
+        season: newCupSeason.trim() || undefined,
       });
       showSuccess(`Cup "${newCupName.trim()}" opprettet!`);
     } catch (err: any) {
@@ -1201,13 +1214,60 @@
         cupId: cupId as any,
         roundNumber,
       });
+      const notes = [
+        res.waitingMatchesCount > 0 ? `${res.waitingMatchesCount} venter på motstander` : "",
+        res.lockedMatchesCount > 0 ? `${res.lockedMatchesCount} er låst av senere runde` : "",
+      ].filter(Boolean);
       showSuccess(
-        `Oppdaterte ${res.updatedMatchesCount} kamper for runde ${roundNumber}!`,
+        `Oppdaterte ${res.updatedMatchesCount} kamper for runde ${roundNumber}${notes.length ? ` (${notes.join(", ")})` : ""}.`,
       );
     } catch (err: any) {
       alert(formatConvexError(err, "Kunne ikke beregne runderesultater."));
     } finally {
       isCalculatingCupRound = false;
+    }
+  }
+
+  async function handleSaveCupName(cupId: string, name: string) {
+    const value = name.trim();
+    if (!value || value === activeCup?.name) return;
+    try {
+      await updateCupSettingsMutation.mutate({
+        adminUserId: currentUser?._id,
+        cupId: cupId as any,
+        name: value,
+      });
+      showSuccess("Cupnavn oppdatert.");
+    } catch (err: any) {
+      alert(formatConvexError(err, "Kunne ikke oppdatere navnet."));
+    }
+  }
+
+  async function handleSaveCupSeason(cupId: string, season: string) {
+    const value = season.trim();
+    if (!value || value === activeCup?.season) return;
+    try {
+      await updateCupSettingsMutation.mutate({
+        adminUserId: currentUser?._id,
+        cupId: cupId as any,
+        season: value,
+      });
+      showSuccess("Sesong oppdatert.");
+    } catch (err: any) {
+      alert(formatConvexError(err, "Kunne ikke oppdatere sesongen."));
+    }
+  }
+
+  async function handleToggleAutoCalc(cupId: string, enabled: boolean) {
+    try {
+      await updateCupSettingsMutation.mutate({
+        adminUserId: currentUser?._id,
+        cupId: cupId as any,
+        autoCalc: enabled,
+      });
+      showSuccess(enabled ? "Automatisk beregning slått på." : "Automatisk beregning slått av.");
+    } catch (err: any) {
+      alert(formatConvexError(err, "Kunne ikke endre innstillingen."));
     }
   }
 
@@ -2161,7 +2221,7 @@
                     <div class="text-sm sm:text-base font-black text-white font-mono flex items-center gap-2">
                       <span class="text-[#9FE88D]">GW {currentGameweek}</span>
                       {#if currentGameweek === 1}
-                        <span class="text-[11px] font-normal text-[#F4C152] font-sans">(sesongstart om en uke)</span>
+                        <span class="text-[11px] font-normal text-[#F4C152] font-sans">(første runde)</span>
                       {/if}
                     </div>
                     <p class="text-[11px] text-[#AEB9CC] mt-0.5">
@@ -3297,8 +3357,7 @@
                       Opprett Ny Cup & Playoffs
                     </h3>
                     <p class="text-xs text-[#AEB9CC]">
-                      Genererer et komplett Double Elimination turneringsformat
-                      (Winners & Losers bracket)
+                      Velg format – brakettene tilpasser seg antall rom automatisk
                     </p>
                   </div>
                 </div>
@@ -3315,7 +3374,7 @@
                       id="admin-cup-name"
                       type="text"
                       bind:value={newCupName}
-                      placeholder="f.eks. Atlantasy Vintercup 2025/2026"
+                      placeholder={`f.eks. Atlantasy Vintercup ${seasonFor()}`}
                       class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#F4C152] focus:outline-none text-sm"
                     />
                   </div>
@@ -3382,6 +3441,22 @@
                     </div>
                   {/if}
 
+                  <div>
+                    <label
+                      for="admin-cup-season"
+                      class="block font-bold text-white mb-1.5"
+                    >
+                      Sesong:
+                    </label>
+                    <input
+                      id="admin-cup-season"
+                      type="text"
+                      bind:value={newCupSeason}
+                      placeholder={`f.eks. ${seasonFor()}`}
+                      class="w-full px-3.5 py-2.5 rounded-xl bg-black/20 border border-white/10 text-white focus:border-[#F4C152] focus:outline-none text-sm"
+                    />
+                  </div>
+
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label
@@ -3416,12 +3491,22 @@
                           >Basert på tabell & romsnitt (Anbefalt)</option
                         >
                         <option value="manual"
-                          >Standard romrekkefølge (A1 - A12)</option
+                          >Standard romrekkefølge (Rom 1, Rom 2 …)</option
                         >
                         <option value="random">Helt tilfeldig trekning</option>
                       </select>
                     </div>
                   </div>
+
+                  <label class="flex items-start gap-2.5 p-3 rounded-xl bg-black/20 border border-white/10 cursor-pointer">
+                    <input type="checkbox" bind:checked={newCupAutoCalc} class="mt-0.5 accent-[#9FE88D]" />
+                    <span>
+                      <span class="block font-bold text-white">Beregn runder automatisk</span>
+                      <span class="block text-[11px] text-[#AEB9CC] mt-0.5">
+                        Når en gameweek er ferdig synket beregnes rundene som spilles da, og vinnerne sendes videre. Kan slås av/på senere, og du kan alltid beregne manuelt.
+                      </span>
+                    </span>
+                  </label>
 
                   <!-- Format og runder forhåndsvisning -->
                   <div
@@ -3444,6 +3529,7 @@
                       </span>
                       <ul class="space-y-1 text-xs text-[#AEB9CC]">
                         <li>• Winners bracket + taperbrakett. Du må tape to ganger for å ryke ut.</li>
+                        <li>• Vinner- og taperbrakett spilles parallelt – taperrunde 1 går i samme gameweek som vinnerbrakettens runde 2.</li>
                         <li>• Er ikke antallet en toerpotens spilles en play-in-runde først, så taperbraketten blir ren.</li>
                         <li>• Avsluttes med en grand final mellom vinner av hver brakett.</li>
                       </ul>
@@ -3465,7 +3551,7 @@
                       <ul class="space-y-1 text-xs text-[#AEB9CC]">
                         <li>• Rommene fordeles jevnt på {newCupGroupCount} grupper (slange-seeding).</li>
                         <li>• Alle møter alle i gruppa for gruppepoeng.</li>
-                        <li>• Gruppevinnerne går videre til et utslagsplayoffs.</li>
+                        <li>• Topp 2 fra hver gruppe går videre til utslagsrunder (kryssseedet) med bronsefinale.</li>
                       </ul>
                     {:else if newCupFormat === "lucky_loser"}
                       <span class="text-xs font-bold text-[#9FE88D] uppercase tracking-wider flex items-center gap-1.5">
@@ -3473,9 +3559,9 @@
                         <span>Lucky loser</span>
                       </span>
                       <ul class="space-y-1 text-xs text-[#AEB9CC]">
-                        <li>• Enkel knockout, men taperen i runde 1 med høyest poengsum får en ny sjanse og fyller en ledig plass.</li>
-                        <li>• Er antallet allerede en toerpotens oppfører den seg som en vanlig knockout.</li>
-                        <li>• 3rd place final mellom taperne i semifinalene.</li>
+                        <li>• Alle spiller runde 1 (oddetall: beste seed får walkover). Vinnerne går videre.</li>
+                        <li>• De beste taperne (lucky losers) fyller opp feltet til nærmeste toerpotens.</li>
+                        <li>• Er antallet allerede en toerpotens oppfører den seg som en vanlig knockout. Bronsefinale mellom semifinaltaperne.</li>
                       </ul>
                     {/if}
                   </div>
@@ -3523,10 +3609,16 @@
                         </span>
                       </div>
                       <p class="text-xs text-[#AEB9CC]">
-                        Aktiv runde: <strong class="text-white"
-                          >Runde {activeCup.currentRound}</strong
-                        >
-                        av {activeCup.totalRounds} • Format: Double Elimination
+                        {#if activeCup.status === "completed"}
+                          Cupen er ferdig
+                        {:else}
+                          Neste runde: <strong class="text-white"
+                            >Runde {activeCup.currentRound}</strong
+                          >
+                          av {activeCup.totalRounds}
+                          {#if currentCupGw}(GW {currentCupGw}){/if}
+                        {/if}
+                        • Format: {formatLabel(activeCup.format)}
                       </p>
                     </div>
                   </div>
@@ -3538,8 +3630,9 @@
                           activeCup._id,
                           activeCup.currentRound,
                         )}
-                      disabled={isCalculatingCupRound}
-                      class="px-4 py-2 rounded-xl bg-[#9FE88D] hover:bg-[#8ee07b] text-[#16380c] text-xs font-bold transition-all shadow-md flex items-center gap-2"
+                      disabled={isCalculatingCupRound ||
+                        activeCup.status === "completed"}
+                      class="px-4 py-2 rounded-xl bg-[#9FE88D] hover:bg-[#8ee07b] disabled:opacity-50 text-[#16380c] text-xs font-bold transition-all shadow-md flex items-center gap-2"
                     >
                       <RefreshCw
                         class={`w-4 h-4 ${isCalculatingCupRound ? "animate-spin" : ""}`}
@@ -3552,6 +3645,63 @@
                     </button>
 
                     <button
+                      onclick={() => (showCupPoster = !showCupPoster)}
+                      class={`px-3 py-2 rounded-xl border text-xs font-bold transition-colors flex items-center gap-1.5 ${
+                        showCupPoster
+                          ? "bg-[#F4C152]/20 border-[#F4C152]/50 text-[#F4C152]"
+                          : "bg-black/20 border-white/10 text-[#E2E8F0] hover:bg-white/10"
+                      }`}
+                    >
+                      <Printer class="w-3.5 h-3.5" />
+                      <span>Skriv ut oversikt (A3)</span>
+                    </button>
+
+                    <label
+                      class="px-3 py-2 rounded-xl bg-black/20 border border-white/10 text-xs font-semibold text-[#E2E8F0] flex items-center gap-2"
+                      title="Navnet som vises på cupen og plakaten"
+                    >
+                      <span>Navn</span>
+                      <input
+                        type="text"
+                        value={activeCup.name}
+                        onchange={(e) =>
+                          handleSaveCupName(activeCup._id, e.currentTarget.value)}
+                        class="w-52 px-2 py-0.5 rounded-lg bg-black/30 border border-white/10 text-white text-xs focus:border-[#F4C152] focus:outline-none"
+                      />
+                    </label>
+
+                    <label
+                      class="px-3 py-2 rounded-xl bg-black/20 border border-white/10 text-xs font-semibold text-[#E2E8F0] flex items-center gap-2"
+                      title="Sesongen som vises på cupen og plakaten"
+                    >
+                      <span>Sesong</span>
+                      <input
+                        type="text"
+                        value={activeCup.season || seasonFor(activeCup.createdAt)}
+                        onchange={(e) =>
+                          handleSaveCupSeason(activeCup._id, e.currentTarget.value)}
+                        class="w-24 px-2 py-0.5 rounded-lg bg-black/30 border border-white/10 text-white text-xs focus:border-[#F4C152] focus:outline-none"
+                      />
+                    </label>
+
+                    <label
+                      class="px-3 py-2 rounded-xl bg-black/20 border border-white/10 text-xs font-semibold text-[#E2E8F0] flex items-center gap-2 cursor-pointer"
+                      title="Beregner rundene automatisk når gameweeken er ferdig synket"
+                    >
+                      <input
+                        type="checkbox"
+                        class="accent-[#9FE88D]"
+                        checked={activeCup.autoCalc !== false}
+                        onchange={(e) =>
+                          handleToggleAutoCalc(
+                            activeCup._id,
+                            e.currentTarget.checked,
+                          )}
+                      />
+                      <span>Auto-beregning</span>
+                    </label>
+
+                    <button
                       onclick={() => promptDeleteCup(activeCup._id)}
                       class="px-3 py-2 rounded-xl bg-[#FB6F84]/15 hover:bg-[#FB6F84]/25 text-[#FB6F84] border border-[#FB6F84]/30 text-xs font-bold transition-colors flex items-center gap-1.5"
                     >
@@ -3560,6 +3710,12 @@
                     </button>
                   </div>
                 </div>
+
+                {#if showCupPoster}
+                  <div class="rounded-2xl bg-white/[0.04] border border-white/10">
+                    <CupPosterExport cup={activeCup} />
+                  </div>
+                {/if}
 
                 <!-- Redigeringsmodal / Boks for valgt kamp -->
                 {#if selectedMatchForEdit}
@@ -3700,93 +3856,98 @@
                   </div>
                 {/if}
 
-                <!-- Liste over alle kamper i cupen -->
-                <div class="space-y-2">
+                <!-- Kamper gruppert per runde (samme runde = samme gameweek) -->
+                <div class="space-y-3">
                   <div class="flex items-center justify-between">
                     <h4
                       class="text-xs font-bold text-[#AEB9CC] uppercase tracking-wider"
                     >
-                      Alle Kamper i Cupen ({activeCup.matches?.length || 0})
+                      Kamper i Cupen ({activeCup.matches?.length || 0})
                     </h4>
                     <span class="text-[11px] text-[#AEB9CC]">
                       Trykk "Rediger" for manuell overstyring
                     </span>
                   </div>
 
-                  <div
-                    class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[420px] overflow-y-auto custom-scrollbar pr-1"
-                  >
-                    {#each activeCup.matches || [] as match}
-                      <div
-                        class="p-3 rounded-xl bg-white/[0.04] border border-white/10 space-y-2 text-xs"
-                      >
+                  <div class="space-y-3 max-h-[480px] overflow-y-auto custom-scrollbar pr-1">
+                    {#each cupRoundGroups as round (round.roundNumber)}
+                      <div class="space-y-2">
                         <div
-                          class="flex items-center justify-between pb-1.5 border-b border-white/10/60"
+                          class={`flex items-center justify-between px-3 py-1.5 rounded-lg border text-[11px] font-bold ${
+                            round.roundNumber === activeCup.currentRound && activeCup.status !== "completed"
+                              ? "bg-[#70E1F8]/10 border-[#70E1F8]/40 text-[#70E1F8]"
+                              : "bg-black/20 border-white/10 text-[#AEB9CC]"
+                          }`}
                         >
-                          <span class="font-bold text-white text-[11px]">
-                            {match.roundTitle} (Runde {match.roundNumber})
+                          <span>
+                            Runde {round.roundNumber}
+                            {#if round.roundNumber === activeCup.currentRound && activeCup.status !== "completed"}
+                              · neste
+                            {/if}
                           </span>
-                          <div class="flex items-center gap-2">
-                            <span
-                              class="font-mono text-[10px] text-[#F4C152] bg-black/20 px-1.5 py-0.5 rounded border border-white/10"
-                            >
-                              GW {match.gameweek}
-                            </span>
-                            <span
-                              class={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                                match.status === "completed"
-                                  ? "text-[#9FE88D] bg-[#9FE88D]/15"
-                                  : "text-[#AEB9CC] bg-black/20"
-                              }`}
-                            >
-                              {match.status === "completed"
-                                ? "Ferdig"
-                                : "Kommende"}
-                            </span>
-                          </div>
+                          <span class="font-mono text-[#F4C152]">GW {round.gameweek}</span>
                         </div>
 
-                        <div class="flex items-center justify-between">
-                          <div class="space-y-1 min-w-0">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {#each round.matches as match (match._id)}
                             <div
-                              class={`flex items-center gap-1.5 truncate ${match.winnerRoomId && match.room1Id === match.winnerRoomId ? "font-bold text-[#9FE88D]" : "text-white"}`}
+                              class="p-3 rounded-xl bg-white/[0.04] border border-white/10 space-y-2 text-xs"
                             >
-                              <span
-                                class="w-2 h-2 rounded-full"
-                                style={`background-color: ${match.room1?.accentColor || "#1eb854"}`}
-                              ></span>
-                              <span>{match.room1?.name || "TBD"}</span>
-                              {#if match.room1Score !== undefined}
-                                <span
-                                  class="font-mono text-[11px] text-[#AEB9CC]"
-                                  >({match.room1Score}p)</span
-                                >
-                              {/if}
-                            </div>
+                              <div
+                                class="flex items-center justify-between pb-1.5 border-b border-white/10"
+                              >
+                                <span class="font-bold text-white text-[11px] truncate">
+                                  {shortTitle(match.roundTitle)}
+                                </span>
+                                <div class="flex items-center gap-1.5 shrink-0">
+                                  {#if match.bracketType === "winners"}
+                                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded text-[#9FE88D] bg-[#9FE88D]/10">WB</span>
+                                  {:else if match.bracketType === "losers"}
+                                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded text-[#FB6F84] bg-[#FB6F84]/10">LB</span>
+                                  {:else if match.bracketType === "group"}
+                                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded text-[#70E1F8] bg-[#70E1F8]/10">Gr. {match.group}</span>
+                                  {/if}
+                                  <span
+                                    class={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                      match.status === "completed"
+                                        ? "text-[#9FE88D] bg-[#9FE88D]/15"
+                                        : "text-[#AEB9CC] bg-black/20"
+                                    }`}
+                                  >
+                                    {match.isBye ? "Walkover" : match.status === "completed" ? "Ferdig" : "Kommende"}
+                                  </span>
+                                </div>
+                              </div>
 
-                            <div
-                              class={`flex items-center gap-1.5 truncate ${match.winnerRoomId && match.room2Id === match.winnerRoomId ? "font-bold text-[#9FE88D]" : "text-white"}`}
-                            >
-                              <span
-                                class="w-2 h-2 rounded-full"
-                                style={`background-color: ${match.room2?.accentColor || "#38bdf8"}`}
-                              ></span>
-                              <span>{match.room2?.name || "TBD"}</span>
-                              {#if match.room2Score !== undefined}
-                                <span
-                                  class="font-mono text-[11px] text-[#AEB9CC]"
-                                  >({match.room2Score}p)</span
-                                >
-                              {/if}
-                            </div>
-                          </div>
+                              <div class="flex items-center justify-between gap-2">
+                                <div class="space-y-1 min-w-0">
+                                  {#each [{ room: match.room1, id: match.room1Id, score: match.room1Score, color: "#1eb854" }, ...(match.isBye ? [] : [{ room: match.room2, id: match.room2Id, score: match.room2Score, color: "#38bdf8" }])] as side}
+                                    <div
+                                      class={`flex items-center gap-1.5 truncate ${match.winnerRoomId && side.id === match.winnerRoomId ? "font-bold text-[#9FE88D]" : "text-white"}`}
+                                    >
+                                      <span
+                                        class="w-2 h-2 rounded-full shrink-0"
+                                        style={`background-color: ${side.room?.accentColor || side.color}`}
+                                      ></span>
+                                      <span class="truncate">{side.room?.name || "TBD"}</span>
+                                      {#if side.score !== undefined}
+                                        <span class="font-mono text-[11px] text-[#AEB9CC]">({side.score}p)</span>
+                                      {/if}
+                                    </div>
+                                  {/each}
+                                </div>
 
-                          <button
-                            onclick={() => startEditingMatch(match)}
-                            class="px-2.5 py-1 rounded-lg bg-black/20 hover:bg-white/10 text-[#F4C152] border border-white/10 text-[11px] font-bold transition-colors shrink-0"
-                          >
-                            Rediger
-                          </button>
+                                {#if !match.isBye}
+                                  <button
+                                    onclick={() => startEditingMatch(match)}
+                                    class="px-2.5 py-1 rounded-lg bg-black/20 hover:bg-white/10 text-[#F4C152] border border-white/10 text-[11px] font-bold transition-colors shrink-0"
+                                  >
+                                    Rediger
+                                  </button>
+                                {/if}
+                              </div>
+                            </div>
+                          {/each}
                         </div>
                       </div>
                     {/each}

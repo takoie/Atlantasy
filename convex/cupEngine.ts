@@ -5,21 +5,36 @@
  * produserer en normalisert kampplan. Persisteringen (`convex/cups.ts`) gjør
  * planen om til `cup_matches`-rader og kobler `nextMatchId` etterpå.
  *
+ * `roundNumber` er en spilleomgang: alle kamper med samme roundNumber spilles i
+ * samme gameweek. Det er derfor vinner- og taperbrakett deler omganger i
+ * dobbel knockout – taperbraketten venter ikke til vinnerbraketten er ferdig.
+ *
  * Byes løses ved generering: et lag med bye får ingen kamp i runde 1, men
  * plasseres rett inn i runde 2 (som i en ekte seedet bracket).
+ *
+ * Noen kamper har ukjente deltakere til en tidligere fase er ferdig (utslagsfasen
+ * etter gruppespill / lucky loser). De peker på en plass i kvalifiseringslisten
+ * via `qual1`/`qual2`, og fylles av `cupScoring.ts` når fasen er avgjort.
  */
+
+export type MatchRole = "final" | "third_place" | "lb_final";
 
 export type PlanMatch = {
   key: string; // stabil id i planen, f.eks. "WB-R1-M1"
   bracketType: "winners" | "losers" | "grand_final" | "knockout" | "group";
   stage: "group" | "knockout" | "bracket";
   group?: string;
-  roundNumber: number; // global rekkefølge (for gameweek-mapping)
+  roundNumber: number; // spilleomgang (global rekkefølge, mappes til gameweek)
   roundTitle: string;
   matchIndex: number;
   seed1: number | null; // indeks i seededRooms, eller null (fylles av avansement)
   seed2: number | null;
-  isLuckyLoser?: boolean;
+  /** Plass i kvalifiseringslisten (fylles når gruppespill / runde 1 er ferdig). */
+  qual1?: number | null;
+  qual2?: number | null;
+  /** Walkover: seed1 går videre uten kamp. */
+  isBye?: boolean;
+  role?: MatchRole;
   nextWinnerKey?: string | null;
   nextWinnerSlot?: 1 | 2 | null;
   nextLoserKey?: string | null;
@@ -39,7 +54,14 @@ const nextPow2 = (n: number) => {
   while (p < n) p *= 2;
   return p;
 };
+const prevPow2 = (n: number) => {
+  let p = 1;
+  while (p * 2 <= n) p *= 2;
+  return p;
+};
 const log2 = (n: number) => Math.round(Math.log2(n));
+
+export const GROUP_LETTERS = "ABCDEFGH";
 
 /** Standard bracket-seedplassering: seedSlots(8) => [1,8,5,4,3,6,7,2] (1-basert). */
 export function seedSlots(size: number): number[] {
@@ -56,12 +78,24 @@ export function seedSlots(size: number): number[] {
   return slots;
 }
 
-function roundTitleFor(matchesInRound: number): string {
-  if (matchesInRound === 1) return "Final";
-  if (matchesInRound === 2) return "Semi-final";
-  if (matchesInRound === 4) return "Quarter-final";
-  if (matchesInRound === 8) return "Round of 16";
-  return `Round ${Math.ceil(Math.log2(matchesInRound * 2))}`;
+function roundTitleFor(matchesInRound: number, roundIndex: number): string {
+  if (matchesInRound === 1) return "Finale";
+  if (matchesInRound === 2) return "Semifinale";
+  if (matchesInRound === 4) return "Kvartfinale";
+  if (matchesInRound === 8) return "8-delsfinale";
+  if (matchesInRound === 16) return "16-delsfinale";
+  return `Runde ${roundIndex}`;
+}
+
+/** Gjør seed-plasser i en utslagsplan om til plasser i kvalifiseringslisten. */
+function asQualifierSlots(matches: PlanMatch[]): PlanMatch[] {
+  return matches.map((m) => ({
+    ...m,
+    qual1: m.seed1,
+    qual2: m.seed2,
+    seed1: null,
+    seed2: null,
+  }));
 }
 
 /* ------------------------------------------------------------------ */
@@ -102,10 +136,11 @@ export function singleElimination(
         bracketType: "knockout",
         stage: "knockout",
         roundNumber: startRound,
-        roundTitle: roundTitleFor(r1Count),
+        roundTitle: roundTitleFor(r1Count, 1),
         matchIndex: m + 1,
         seed1: a,
         seed2: b,
+        role: rounds === 1 ? "final" : undefined,
         nextWinnerKey: rounds > 1 ? key(2, r2Match + 1) : null,
         nextWinnerSlot: rounds > 1 ? r2Slot : null,
       });
@@ -125,30 +160,33 @@ export function singleElimination(
         bracketType: "knockout",
         stage: "knockout",
         roundNumber: startRound + r - 1,
-        roundTitle: roundTitleFor(count),
+        roundTitle: roundTitleFor(count, r),
         matchIndex: m + 1,
         seed1,
         seed2,
+        role: r === rounds ? "final" : undefined,
         nextWinnerKey: r < rounds ? key(r + 1, Math.floor(m / 2) + 1) : null,
         nextWinnerSlot: r < rounds ? (m % 2 === 0 ? 1 : 2) : null,
       });
     }
   }
 
-  if (opts.bronze && rounds >= 2) {
+  const semis = matches.filter(
+    (mm) => mm.roundNumber === startRound + rounds - 2
+  );
+  // Bronsefinale krever to semifinaler (med 3 lag er en av dem en walkover).
+  if (opts.bronze && rounds >= 2 && semis.length === 2) {
     const bronzeKey = `${prefix}-BRONZE`;
-    const semis = matches.filter(
-      (mm) => mm.roundNumber === startRound + rounds - 2
-    );
     matches.push({
       key: bronzeKey,
       bracketType: "knockout",
       stage: "knockout",
       roundNumber: startRound + rounds - 1,
-      roundTitle: "3rd place final",
+      roundTitle: "Bronsefinale",
       matchIndex: 2,
       seed1: null,
       seed2: null,
+      role: "third_place",
     });
     let slot: 1 | 2 = 1;
     for (const s of semis) {
@@ -162,17 +200,62 @@ export function singleElimination(
 }
 
 /* ------------------------------------------------------------------ */
-/* Lucky loser – single elim der beste taper i runde 1 får ny sjanse   */
+/* Lucky loser – alle spiller runde 1, beste tapere får ny sjanse      */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Feltet kuttes ned til nærmeste toerpotens under antall lag. Alle spiller
+ * runde 1 (oddetall: beste seed får walkover), og vinnerne fylles opp med de
+ * beste taperne ("lucky losers") til utslagsbraketten er full.
+ * 12 lag: 6 kamper -> 6 vinnere + 2 lucky losers = 8 i kvartfinalene.
+ */
 export function luckyLoser(teamCount: number): CupPlan {
-  const base = singleElimination(teamCount, { bronze: true, keyPrefix: "LL" });
-  const size = nextPow2(teamCount);
-  if (size > teamCount) {
-    const r1 = base.matches.filter((m) => m.roundNumber === 1);
-    if (r1.length > 0) r1[r1.length - 1].isLuckyLoser = true;
+  const target = prevPow2(teamCount);
+  if (target === teamCount) {
+    const base = singleElimination(teamCount, { bronze: true, keyPrefix: "M" });
+    return { ...base, format: "lucky_loser" };
   }
-  return { ...base, format: "lucky_loser" };
+
+  const matches: PlanMatch[] = [];
+  const hasBye = teamCount % 2 === 1;
+  const first = hasBye ? 1 : 0; // seed-indeks til første lag som spiller
+  const playing = teamCount - first;
+  const pairs = playing / 2;
+
+  if (hasBye) {
+    matches.push({
+      key: "LL-BYE",
+      bracketType: "knockout",
+      stage: "knockout",
+      roundNumber: 1,
+      roundTitle: "Runde 1",
+      matchIndex: 0,
+      seed1: 0,
+      seed2: null,
+      isBye: true,
+    });
+  }
+  for (let i = 0; i < pairs; i++) {
+    matches.push({
+      key: `LL-R1-M${i + 1}`,
+      bracketType: "knockout",
+      stage: "knockout",
+      roundNumber: 1,
+      roundTitle: "Runde 1",
+      matchIndex: i + 1,
+      seed1: first + i,
+      seed2: teamCount - 1 - i,
+    });
+  }
+
+  const ko = singleElimination(target, {
+    bronze: target >= 4,
+    keyPrefix: "KO",
+    startRound: 2,
+  });
+  matches.push(...asQualifierSlots(ko.matches));
+
+  return { format: "lucky_loser", matches, totalRounds: 1 + ko.totalRounds };
 }
 
 /* ------------------------------------------------------------------ */
@@ -198,6 +281,24 @@ function circleFixtures(ids: number[]): Array<[number, number]>[] {
   return rounds;
 }
 
+/**
+ * Hvem som går videre fra gruppene, i seedrekkefølge for utslagsbraketten:
+ * først alle gruppevinnere (A, B, …), så alle toere. Toerne forskyves ved
+ * oddetall grupper så en gruppevinner ikke møter sin egen gruppe i første runde.
+ * 2 grupper => A1, B1, A2, B2 => A1–B2 og B1–A2.
+ */
+export function groupQualifierOrder(
+  groupCount: number
+): Array<{ group: number; place: 1 | 2 }> {
+  const order: Array<{ group: number; place: 1 | 2 }> = [];
+  for (let g = 0; g < groupCount; g++) order.push({ group: g, place: 1 });
+  const shift = groupCount % 2 === 0 ? 0 : 1;
+  for (let k = 0; k < groupCount; k++) {
+    order.push({ group: (k + shift) % groupCount, place: 2 });
+  }
+  return order;
+}
+
 export function roundRobin(teamCount: number, groupCount = 1): CupPlan {
   const g = Math.max(1, Math.min(groupCount, Math.floor(teamCount / 2)));
   const groups: number[][] = Array.from({ length: g }, () => []);
@@ -212,10 +313,9 @@ export function roundRobin(teamCount: number, groupCount = 1): CupPlan {
   }
 
   const matches: PlanMatch[] = [];
-  const letters = "ABCDEFGH";
   let maxGroupRounds = 0;
   groups.forEach((ids, idx) => {
-    const label = letters[idx] ?? String(idx + 1);
+    const label = GROUP_LETTERS[idx] ?? String(idx + 1);
     const fixtures = circleFixtures(ids);
     maxGroupRounds = Math.max(maxGroupRounds, fixtures.length);
     fixtures.forEach((pairs, r) => {
@@ -226,7 +326,7 @@ export function roundRobin(teamCount: number, groupCount = 1): CupPlan {
           stage: "group",
           group: label,
           roundNumber: r + 1,
-          roundTitle: `Group ${label} – Round ${r + 1}`,
+          roundTitle: g === 1 ? `Runde ${r + 1}` : `Gruppe ${label} – Runde ${r + 1}`,
           matchIndex: m + 1,
           seed1: a,
           seed2: b,
@@ -237,17 +337,13 @@ export function roundRobin(teamCount: number, groupCount = 1): CupPlan {
 
   let totalRounds = maxGroupRounds;
   if (g >= 2) {
-    const ko = singleElimination(g, { bronze: g >= 4, keyPrefix: "KO" });
-    const koFirstRound = ko.matches[0]?.roundNumber ?? 1;
-    for (const km of ko.matches) {
-      matches.push({
-        ...km,
-        roundNumber: maxGroupRounds + (km.roundNumber - koFirstRound) + 1,
-        stage: "knockout",
-        seed1: null,
-        seed2: null,
-      });
-    }
+    // Topp 2 fra hver gruppe går videre -> 2*g lag i utslagsbraketten.
+    const ko = singleElimination(g * 2, {
+      bronze: true,
+      keyPrefix: "KO",
+      startRound: maxGroupRounds + 1,
+    });
+    matches.push(...asQualifierSlots(ko.matches));
     totalRounds = maxGroupRounds + ko.totalRounds;
   }
 
@@ -271,6 +367,9 @@ export function doubleElimination(teamCount: number): CupPlan {
   const W = log2(base);
   const matches: PlanMatch[] = [];
 
+  // Omgangen en vinnerbrakett-runde spilles i.
+  const wbGlobal = (r: number) => r + (playIn > 0 ? 1 : 0);
+
   // --- Winners bracket (ren toerpotens på `base` slots) ---
   const wbSlots = seedSlots(base);
   const wbKey = (r: number, m: number) => `WB-R${r}-M${m}`;
@@ -281,11 +380,8 @@ export function doubleElimination(teamCount: number): CupPlan {
         key: wbKey(r, m + 1),
         bracketType: "winners",
         stage: "bracket",
-        roundNumber: 1 + (r - 1) + (playIn > 0 ? 1 : 0),
-        roundTitle:
-          r === 1
-            ? `Winners bracket – ${roundTitleFor(count).toLowerCase()}`
-            : `Winners bracket – ${roundTitleFor(count).toLowerCase()}`,
+        roundNumber: wbGlobal(r),
+        roundTitle: `Vinnerbrakett – ${roundTitleFor(count, r)}`,
         matchIndex: m + 1,
         seed1: r === 1 ? wbSlots[m * 2] - 1 : null,
         seed2: r === 1 ? wbSlots[m * 2 + 1] - 1 : null,
@@ -326,13 +422,14 @@ export function doubleElimination(teamCount: number): CupPlan {
     matches.filter(
       (m) => m.bracketType === "winners" && m.roundNumber === globalR
     );
-  const wbGlobal = (r: number) => 1 + (r - 1) + (playIn > 0 ? 1 : 0);
 
   // --- Losers bracket: 2*(W-1) runder, vekselvis major/minor ---
+  // Kjører parallelt med vinnerbraketten: en taperrunde spilles så snart
+  // forrige taperrunde og vinnerrunden som mater den er ferdig.
   const lbKey = (r: number, m: number) => `LB-R${r}-M${m}`;
   const lbRounds = Math.max(0, 2 * (W - 1));
-  const lbBase = wbGlobal(W); // global runde for WB-finalen
   let lbPrev: string[] = [];
+  let lbPrevSlot = 0;
 
   for (let lr = 1; lr <= lbRounds; lr++) {
     const isMajor = lr === 1 || lr % 2 === 0;
@@ -342,6 +439,10 @@ export function doubleElimination(teamCount: number): CupPlan {
     else count = Math.ceil(lbPrev.length / 2);
     if (count < 1) continue;
 
+    // Vinnerrunden som sender tapere inn i denne taperrunden (om noen).
+    const feedR = lr === 1 ? 1 : isMajor ? lr / 2 + 1 : null;
+    const slot = Math.max(lbPrevSlot, feedR ? wbGlobal(feedR) : 0) + 1;
+
     const created: string[] = [];
     for (let m = 0; m < count; m++) {
       created.push(lbKey(lr, m + 1));
@@ -349,14 +450,15 @@ export function doubleElimination(teamCount: number): CupPlan {
         key: lbKey(lr, m + 1),
         bracketType: "losers",
         stage: "bracket",
-        roundNumber: lbBase + lr,
+        roundNumber: slot,
         roundTitle:
           lr === lbRounds
-            ? "Losers bracket – Final"
-            : `Losers bracket – Round ${lr}`,
+            ? "Taperbrakett – Finale"
+            : `Taperbrakett – Runde ${lr}`,
         matchIndex: m + 1,
         seed1: null,
         seed2: null,
+        role: lr === lbRounds ? "lb_final" : undefined,
       });
     }
 
@@ -377,8 +479,7 @@ export function doubleElimination(teamCount: number): CupPlan {
         wm.nextLoserKey = t;
         wm.nextLoserSlot = (i % 2 === 0 ? 1 : 2) as 1 | 2;
       });
-    } else if (isMajor) {
-      const feedR = lr / 2 + 1; // lr2<-WB2, lr4<-WB3, lr6<-WB4
+    } else if (isMajor && feedR) {
       wbByRound(wbGlobal(feedR)).forEach((wm, i) => {
         if (created[i]) {
           wm.nextLoserKey = created[i];
@@ -388,11 +489,12 @@ export function doubleElimination(teamCount: number): CupPlan {
     }
 
     lbPrev = created;
+    lbPrevSlot = slot;
   }
 
   // --- Grand Final ---
   const grandKey = "GF-1";
-  const grandRound = lbBase + lbRounds + 1;
+  const grandRound = Math.max(wbGlobal(W), lbPrevSlot) + 1;
   matches.push({
     key: grandKey,
     bracketType: "grand_final",
@@ -402,6 +504,7 @@ export function doubleElimination(teamCount: number): CupPlan {
     matchIndex: 1,
     seed1: null,
     seed2: null,
+    role: "final",
   });
   const wbFinal = matches.find((m) => m.key === wbKey(W, 1));
   if (wbFinal) {

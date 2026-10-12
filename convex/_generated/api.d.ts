@@ -14,13 +14,15 @@ import type * as auth from "../auth.js";
 import type * as autoSync from "../autoSync.js";
 import type * as autoSyncLogic from "../autoSyncLogic.js";
 import type * as chat from "../chat.js";
-import type * as cupEngine from "../cupEngine.js";
 import type * as crons from "../crons.js";
+import type * as cupEngine from "../cupEngine.js";
+import type * as cupScoring from "../cupScoring.js";
 import type * as cups from "../cups.js";
 import type * as fpl from "../fpl.js";
 import type * as fplCalendar from "../fplCalendar.js";
 import type * as roomColors from "../roomColors.js";
 import type * as rooms from "../rooms.js";
+import type * as season from "../season.js";
 import type * as security from "../security.js";
 
 import type {
@@ -36,13 +38,15 @@ declare const fullApi: ApiFromModules<{
   autoSync: typeof autoSync;
   autoSyncLogic: typeof autoSyncLogic;
   chat: typeof chat;
-  cupEngine: typeof cupEngine;
   crons: typeof crons;
+  cupEngine: typeof cupEngine;
+  cupScoring: typeof cupScoring;
   cups: typeof cups;
   fpl: typeof fpl;
   fplCalendar: typeof fplCalendar;
   roomColors: typeof roomColors;
   rooms: typeof rooms;
+  season: typeof season;
   security: typeof security;
 }>;
 

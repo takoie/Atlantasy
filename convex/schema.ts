@@ -127,7 +127,7 @@ export default defineSchema({
 
   // Tidsbegrensede invitasjonskoder
   invite_codes: defineTable({
-    code: v.string(),              // F.eks. "ATLANTIS-2025"
+    code: v.string(),              // F.eks. "ATLANTIS-2026"
     targetRoomId: v.optional(v.id("rooms")),
     role: v.string(),              // "user" | "admin"
     expiresAt: v.number(),         // Unix timestamp (ms)
@@ -200,8 +200,8 @@ export default defineSchema({
 
   // Turneringer / Sluttspill (Double Elimination Cup)
   cups: defineTable({
-    name: v.string(),                  // f.eks. "Atlantasy Vintercup 2025/2026"
-    season: v.optional(v.string()),    // "2025/2026"
+    name: v.string(),                  // f.eks. "Atlantasy Vintercup 2026/2027"
+    season: v.optional(v.string()),    // f.eks. "2026/2027"
     status: v.string(),                // "draft" | "active" | "completed"
     startGameweek: v.number(),         // F.eks. GW 20
     currentRound: v.number(),          // Nåværende aktiv runde
@@ -210,6 +210,10 @@ export default defineSchema({
     winnerRoomId: v.optional(v.id("rooms")),
     runnerUpRoomId: v.optional(v.id("rooms")),
     thirdPlaceRoomId: v.optional(v.id("rooms")),
+    // Beregn runder automatisk når en gameweek er endelig synket (default på).
+    autoCalc: v.optional(v.boolean()),
+    // Rom som kom videre som lucky loser (vises med merke i bracketen).
+    luckyLoserRoomIds: v.optional(v.array(v.id("rooms"))),
     roundGwMap: v.optional(
       v.array(
         v.object({
@@ -280,6 +284,10 @@ export default defineSchema({
     nextLoserMatchId: v.optional(v.id("cup_matches")),  // Taperens neste kamp (for Winners bracket)
     nextLoserMatchSlot: v.optional(v.number()),         // 1 eller 2
     isBye: v.optional(v.boolean()),                     // Om kampen er en automatisk videreføring
+    role: v.optional(v.string()),                       // "final" | "third_place" | "lb_final"
+    // Plass i kvalifiseringslisten (gruppespill / lucky loser) – rommet settes når fasen før er avgjort
+    qual1: v.optional(v.number()),
+    qual2: v.optional(v.number()),
     customNote: v.optional(v.string()),
     updatedAt: v.number(),
   })

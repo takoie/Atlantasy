@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { requireAdmin, requireUser } from "./security";
 import { roomAccentColor } from "./roomColors";
 import type { QueryCtx } from "./_generated/server";
+import { effectiveCupName, effectiveSeason } from "./season";
 
 /**
  * Finn inneværende "måned" (kalendermåned utledet fra GW-frister, lagret av
@@ -1309,8 +1310,8 @@ export const getTeamProfile = query({
           cupTrophies.push({
             place: 1,
             title: "Cupmester",
-            cupName: cup.name,
-            season: cup.season || "2025/2026",
+            cupName: effectiveCupName(cup),
+            season: effectiveSeason(cup),
             format: cup.format,
             date: cup.updatedAt || cup.createdAt,
             type: "cup",
@@ -1321,8 +1322,8 @@ export const getTeamProfile = query({
           cupTrophies.push({
             place: 2,
             title: "Finalist",
-            cupName: cup.name,
-            season: cup.season || "2025/2026",
+            cupName: effectiveCupName(cup),
+            season: effectiveSeason(cup),
             format: cup.format,
             date: cup.updatedAt || cup.createdAt,
             type: "cup",
@@ -1333,8 +1334,8 @@ export const getTeamProfile = query({
           cupTrophies.push({
             place: 3,
             title: "3. plass",
-            cupName: cup.name,
-            season: cup.season || "2025/2026",
+            cupName: effectiveCupName(cup),
+            season: effectiveSeason(cup),
             format: cup.format,
             date: cup.updatedAt || cup.createdAt,
             type: "cup",
@@ -1363,8 +1364,8 @@ export const getTeamProfile = query({
               cupTrophies.push({
                 place: 2,
                 title: "Finalist",
-                cupName: cup.name,
-                season: cup.season || "2025/2026",
+                cupName: effectiveCupName(cup),
+                season: effectiveSeason(cup),
                 format: cup.format,
                 date: finalMatch.updatedAt || cup.createdAt,
                 type: "cup",
@@ -1382,8 +1383,8 @@ export const getTeamProfile = query({
             cupTrophies.push({
               place: 3,
               title: "3. plass",
-              cupName: cup.name,
-              season: cup.season || "2025/2026",
+              cupName: effectiveCupName(cup),
+              season: effectiveSeason(cup),
               format: cup.format,
               date: lbFinalMatch.updatedAt || cup.createdAt,
               type: "cup",

@@ -718,7 +718,7 @@
                 {#each profile?.cupTrophies || [] as trophy}
                   <div
                     class="p-4 rounded-2xl bg-black/20 border border-[#F4C152]/40 shadow-lg space-y-3 relative overflow-hidden group hover:border-[#F4C152] transition-all hover:scale-[1.01]"
-                    title={`Turnering: ${trophy.cupName} | Sesong: ${trophy.season || '2025/2026'} | Plassering: ${trophy.place}. plass | Lag: ${profile?.roomName || 'Rom'}`}
+                    title={`Turnering: ${trophy.cupName} | Sesong: ${trophy.season || '—'} | Plassering: ${trophy.place}. plass | Lag: ${profile?.roomName || 'Rom'}`}
                   >
                     <div class="flex items-start justify-between gap-2">
                       <div class="flex items-center gap-2.5">
@@ -730,7 +730,7 @@
                           <span class="text-[11px] font-semibold text-[#AEB9CC] flex items-center gap-1 mt-0.5">
                             <span>{profile?.roomName || "Rom"}</span>
                             <span>•</span>
-                            <span>{trophy.season || "2025/2026"}</span>
+                            <span>{trophy.season || "—"}</span>
                           </span>
                         </div>
                       </div>

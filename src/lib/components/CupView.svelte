@@ -12,12 +12,15 @@
     RefreshCw,
     Plus,
     CheckCircle2,
+    Medal,
   } from "lucide-svelte";
   import CupBracket from "./cup/CupBracket.svelte";
   import CupMatchModal from "./cup/CupMatchModal.svelte";
   import { useQuery, useMutation } from "$lib/convex.svelte";
   import { api } from "../../../convex/_generated/api";
   import { formatConvexError } from "$lib/utils/formatError";
+  import { formatLabel, layoutFor } from "$lib/utils/cup";
+  import { seasonFor } from "../../../convex/season";
 
   let {
     currentUser = null,
@@ -33,40 +36,25 @@
   let cup = $derived(cupQuery.data ?? null);
   let matches = $derived(cup?.matches ?? []);
 
-  function formatLabel(fmt: string | undefined): string {
-    switch (fmt) {
-      case "single_elimination":
-      case "top8_single":
-        return "Enkel knockout";
-      case "double_elimination":
-      case "double_elimination_12":
-        return "Dobbel knockout";
-      case "round_robin":
-        return "Serie (alle mot alle)";
-      case "group_stage":
-      case "group_stage_12":
-        return "Gruppespill + playoffs";
-      case "lucky_loser":
-      case "lucky_loser_12":
-        return "Lucky loser";
-      default:
-        return "Knockout";
-    }
-  }
   let cupFormatLabel = $derived(formatLabel(cup?.format));
+  let layout = $derived(layoutFor(cup?.format));
 
-  const calculateRoundMutation = useMutation(api.cups.calculateCupRoundScores);
   const advanceMatchMutation = useMutation(api.cups.advanceMatchManually);
 
   let selectedMatch = $state<any>(null);
   let isMatchModalOpen = $state(false);
   let showRulesInfo = $state(false);
-  let isCalculating = $state(false);
-  let calculationStatusMsg = $state("");
+  let statusMsg = $state("");
 
   let isAdmin = $derived(currentUser?.role === "admin");
 
-  // Beregn raske statistikker for turneringen
+  let playable = $derived(matches.filter((m: any) => !m.isBye));
+  let playedCount = $derived(playable.filter((m: any) => m.status === "completed").length);
+  let currentGw = $derived(
+    matches.find((m: any) => m.roundNumber === cup?.currentRound)?.gameweek ?? null
+  );
+
+  // Beste romsnitt i cupen
   let topAverageInCup = $derived.by(() => {
     let max = 0;
     let topRoomName = "";
@@ -83,32 +71,19 @@
     return max > 0 ? { score: max, roomName: topRoomName } : null;
   });
 
+  let podium = $derived(
+    cup?.status === "completed"
+      ? [
+          { medal: "text-[#F4C152]", label: "Cupmester", room: cup.winnerRoom },
+          { medal: "text-[#CBD5E1]", label: "2. plass", room: cup.runnerUpRoom },
+          { medal: "text-[#D08A4B]", label: "3. plass", room: cup.thirdPlaceRoom },
+        ].filter((p) => p.room)
+      : []
+  );
+
   function handleOpenMatchDetails(match: any) {
     selectedMatch = match;
     isMatchModalOpen = true;
-  }
-
-  async function handleCalculateCurrentRound() {
-    if (!cup) return;
-    isCalculating = true;
-    calculationStatusMsg = "Beregner romsnitt for runden...";
-
-    try {
-      const res = await calculateRoundMutation.mutate({
-        adminUserId: currentUser?._id,
-        cupId: cup._id,
-        roundNumber: cup.currentRound || 1,
-      });
-
-      calculationStatusMsg = `Oppdaterte ${res.updatedMatchesCount} kamper for runde ${res.roundNumber}!`;
-      setTimeout(() => {
-        calculationStatusMsg = "";
-      }, 4000);
-    } catch (err: any) {
-      calculationStatusMsg = "Feil under beregning: " + formatConvexError(err);
-    } finally {
-      isCalculating = false;
-    }
   }
 
   async function handleAdvanceMatch(matchId: string, winnerRoomId: string) {
@@ -119,9 +94,9 @@
         winnerRoomId: winnerRoomId as any,
       });
       isMatchModalOpen = false;
-      calculationStatusMsg = "Kampvinner overstyrt og avansert i turneringen!";
+      statusMsg = "Kampvinner overstyrt og avansert i turneringen!";
       setTimeout(() => {
-        calculationStatusMsg = "";
+        statusMsg = "";
       }, 3000);
     } catch (err: any) {
       alert(formatConvexError(err, "Kunne ikke overstyre kamp."));
@@ -192,57 +167,37 @@
             </div>
 
             <div class="flex items-center gap-2 text-xs text-[#AEB9CC] mt-0.5">
-              <span>Sesong {cup.season || "2025/2026"}</span>
-              <span>•</span>
-              <span class="text-[#F4C152] font-semibold">
-                Runde {cup.currentRound || 1} av {cup.totalRounds || 7}
-              </span>
+              <span>Sesong {cup.season || seasonFor(cup.createdAt)}</span>
               <span>•</span>
               <span class="text-[#9FE88D]">{cupFormatLabel}</span>
             </div>
           </div>
         </div>
 
-        <!-- Handlingsknapper for Cup -->
-        <div class="flex items-center gap-2">
-          <button
-            onclick={() => (showRulesInfo = !showRulesInfo)}
-            class="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/10 text-xs font-semibold text-[#E2E8F0] border border-white/10 transition-colors flex items-center gap-1.5"
-          >
-            <Info class="w-3.5 h-3.5 text-[#70E1F8]" />
-            <span>Slik fungerer Cupen</span>
-            {#if showRulesInfo}
-              <ChevronUp class="w-3.5 h-3.5" />
-            {:else}
-              <ChevronDown class="w-3.5 h-3.5" />
-            {/if}
-          </button>
-
-          {#if isAdmin}
-            <button
-              onclick={handleCalculateCurrentRound}
-              disabled={isCalculating}
-              class="px-3.5 py-1.5 rounded-xl bg-[#9FE88D]/20 hover:bg-[#9FE88D]/30 text-[#9FE88D] border border-[#9FE88D]/50 text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
-              title="Beregn romsnitt for den aktive runden og send vinnere videre"
-            >
-              <RefreshCw class={`w-3.5 h-3.5 ${isCalculating ? "animate-spin" : ""}`} />
-              <span>{isCalculating ? "Beregner..." : "Oppdater resultater"}</span>
-            </button>
+        <button
+          onclick={() => (showRulesInfo = !showRulesInfo)}
+          class="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/10 text-xs font-semibold text-[#E2E8F0] border border-white/10 transition-colors flex items-center gap-1.5"
+        >
+          <Info class="w-3.5 h-3.5 text-[#70E1F8]" />
+          <span>Slik fungerer Cupen</span>
+          {#if showRulesInfo}
+            <ChevronUp class="w-3.5 h-3.5" />
+          {:else}
+            <ChevronDown class="w-3.5 h-3.5" />
           {/if}
-        </div>
+        </button>
       </div>
 
-      <!-- Varselmelding ved beregning -->
-      {#if calculationStatusMsg}
-        <div class="p-2.5 rounded-xl bg-[#9FE88D]/15 border border-[#9FE88D]/30 text-xs text-[#9FE88D] font-semibold flex items-center gap-2 animate-in fade-in shrink-0">
+      {#if statusMsg}
+        <div class="p-2.5 rounded-xl bg-[#9FE88D]/15 border border-[#9FE88D]/30 text-xs text-[#9FE88D] font-semibold flex items-center gap-2 shrink-0">
           <CheckCircle2 class="w-4 h-4" />
-          <span>{calculationStatusMsg}</span>
+          <span>{statusMsg}</span>
         </div>
       {/if}
 
       <!-- Nedfellbar Regelforklaring -->
       {#if showRulesInfo}
-        <div class="p-4 rounded-xl bg-black/20 border border-white/10 text-xs text-[#E2E8F0] space-y-2 animate-in fade-in shrink-0">
+        <div class="p-4 rounded-xl bg-black/20 border border-white/10 text-xs text-[#E2E8F0] space-y-2 shrink-0">
           <div class="flex items-center gap-2 text-white font-bold">
             <Sparkles class="w-4 h-4 text-[#F4C152]" />
             <span>Regler for {cup.name} ({cupFormatLabel})</span>
@@ -250,86 +205,95 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1 text-[#AEB9CC] leading-relaxed">
             <div class="p-2.5 rounded-lg bg-white/[0.04] border border-white/10">
               <strong class="text-white block mb-1">1. Romsnitt (Topp 2)</strong>
-              I hvert oppgjør er det gjennomsnittet av de 2 høyeste nettopoengene i hvert rom for gjeldende GW som avgjør hvem som vinner.
+              I hvert oppgjør er det gjennomsnittet av de 2 høyeste nettopoengene i hvert rom for gjeldende GW som avgjør hvem som vinner. Resultatene beregnes automatisk når gameweeken er ferdig.
             </div>
             <div class="p-2.5 rounded-lg bg-white/[0.04] border border-white/10">
               <strong class="text-[#9FE88D] block mb-1">2. Avansering</strong>
               {#if cup.format === "lucky_loser" || cup.format === "lucky_loser_12"}
-                Vinnerne går videre. Taperen i runde 1 med høyest romsnitt får en ny sjanse og fyller en ledig plass i bracketen.
-              {:else if cup.format === "double_elimination" || cup.format === "double_elimination_12"}
-                Et rom er først ute av cupen etter <strong>2 tap</strong>. Vinnere fortsetter i vinnerbraketten, tapere faller ned i taperbraketten og kan kjempe seg tilbake.
-              {:else if cup.format === "round_robin"}
-                Alle møter alle. Plasseringen avgjøres av gruppepoeng (3 for seier, 1 for uavgjort), deretter samlet romsnitt.
-              {:else if cup.format === "group_stage" || cup.format === "group_stage_12"}
-                Rommene kjemper om gruppepoeng i sine grupper. Gruppevinnerne går videre til playoffset.
+                Alle spiller runde 1. Vinnerne går videre, og de beste taperne (lucky losers) fyller de ledige plassene i utslagsrundene.
+              {:else if layout === "double"}
+                Et rom er først ute etter <strong>2 tap</strong>. Tapere i vinnerbraketten faller ned i taperbraketten, og begge brakettene spilles i samme gameweeks.
+              {:else if cup.format === "round_robin" && !((cup.groupStandings?.length ?? 0) > 1)}
+                Alle møter alle. Plasseringen avgjøres av poeng (3 for seier, 1 for uavgjort), deretter samlet romsnitt. Tabellens ener tar cupen.
+              {:else if layout === "groups"}
+                Alle møter alle i sin gruppe. Topp 2 fra hver gruppe går videre til utslagsrundene (playoffs).
               {:else}
-                Vinnerne avanserer direkte til neste runde. Lag uten motstander i en runde får walkover.
+                Vinnerne avanserer direkte til neste runde. Lag uten motstander i første runde får walkover.
               {/if}
             </div>
             <div class="p-2.5 rounded-lg bg-white/[0.04] border border-white/10">
               <strong class="text-[#F4C152] block mb-1">3. Tittel & Trofé</strong>
-              Vinneren av den store finalen kåres til ligaens offisielle cupmester med evig heder på skryteveggen!
+              Vinneren av finalen kåres til ligaens offisielle cupmester med evig heder på skryteveggen!
             </div>
           </div>
         </div>
       {/if}
 
+      <!-- Pallen når cupen er ferdig -->
+      {#if podium.length > 0}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
+          {#each podium as p}
+            <div class="p-3 rounded-xl bg-gradient-to-r from-[#F4C152]/10 to-white/[0.03] border border-[#F4C152]/30 flex items-center gap-3">
+              <Medal class={`w-6 h-6 shrink-0 ${p.medal}`} />
+              <div class="min-w-0">
+                <span class="text-[10px] uppercase font-bold text-[#AEB9CC] tracking-wider">{p.label}</span>
+                <p class="text-sm font-bold text-white truncate">{p.room?.name}</p>
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
+
       <!-- Raske Nøkkeltall / Statistikk -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
-        <!-- Aktiv Runde -->
         <div class="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between">
           <div>
             <span class="text-[10px] uppercase font-bold text-[#AEB9CC] tracking-wider">
-              Gjeldende Runde
+              {cup.status === "completed" ? "Spilt" : "Neste runde"}
             </span>
             <p class="text-sm font-bold text-white mt-0.5">
-              Runde {cup.currentRound || 1} av {cup.totalRounds || 4}
+              {#if cup.status === "completed"}
+                {playedCount} kamper
+              {:else if currentGw}
+                GW {currentGw} · {playedCount}/{playable.length} spilt
+              {:else}
+                {playedCount}/{playable.length} spilt
+              {/if}
             </p>
           </div>
           <Calendar class="w-5 h-5 text-[#F4C152]" />
         </div>
 
-        <!-- Høyeste Romsnitt i Cupen -->
         <div class="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between">
-          <div>
-            <span class="text-[10px] uppercase font-bold text-[#AEB9CC] tracking-wider">
-              Beste Romsnitt
-            </span>
-            <p class="text-sm font-bold text-[#9FE88D] mt-0.5">
+          <div class="min-w-0">
+            <span class="text-[10px] uppercase font-bold text-[#AEB9CC] tracking-wider">Beste Romsnitt</span>
+            <p class="text-sm font-bold text-[#9FE88D] mt-0.5 truncate">
               {topAverageInCup ? `${topAverageInCup.score}p (${topAverageInCup.roomName})` : "Ikke spilt"}
             </p>
           </div>
-          <Flame class="w-5 h-5 text-[#9FE88D]" />
+          <Flame class="w-5 h-5 text-[#9FE88D] shrink-0" />
         </div>
 
-        <!-- Format Badge -->
         <div class="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between">
-          <div>
-            <span class="text-[10px] uppercase font-bold text-[#AEB9CC] tracking-wider">
-              Turneringsmodell
-            </span>
-            <p class="text-sm font-bold text-[#70E1F8] truncate mt-0.5">
-              {cupFormatLabel}
-            </p>
+          <div class="min-w-0">
+            <span class="text-[10px] uppercase font-bold text-[#AEB9CC] tracking-wider">Turneringsmodell</span>
+            <p class="text-sm font-bold text-[#70E1F8] truncate mt-0.5">{cupFormatLabel}</p>
           </div>
-          <Shield class="w-5 h-5 text-[#70E1F8]" />
+          <Shield class="w-5 h-5 text-[#70E1F8] shrink-0" />
         </div>
 
-        <!-- Tittelforsvarer / Mester -->
         <div class="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between">
-          <div>
-            <span class="text-[10px] uppercase font-bold text-[#AEB9CC] tracking-wider">
-              Status / Mester
-            </span>
+          <div class="min-w-0">
+            <span class="text-[10px] uppercase font-bold text-[#AEB9CC] tracking-wider">Status / Mester</span>
             <p class="text-sm font-bold text-[#F4C152] truncate mt-0.5">
               {cup.winnerRoom ? cup.winnerRoom.name : "Kjemper om gull"}
             </p>
           </div>
-          <Crown class="w-5 h-5 text-[#F4C152]" />
+          <Crown class="w-5 h-5 text-[#F4C152] shrink-0" />
         </div>
       </div>
 
-      <!-- Det Visuelle Bracket-treet -->
+      <!-- Bracket / tabeller -->
       <div class="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar pr-1 min-h-0">
         <CupBracket
           {cup}

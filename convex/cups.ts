@@ -1,8 +1,18 @@
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { requireAdmin } from "./security";
-import { buildCupPlan, type CupPlan } from "./cupEngine";
+import { buildCupPlan, GROUP_LETTERS } from "./cupEngine";
 import { roomAccentColor } from "./roomColors";
+import { effectiveCupName, effectiveSeason, seasonFor } from "./season";
+import {
+  advanceFromMatch,
+  calculateGameweekForActiveCups,
+  calculateRound,
+  persistCupPlan,
+  refreshCupState,
+} from "./cupScoring";
 
 /** Eldre formatnavn -> nye, generiske navn. */
 function normalizeFormat(format: string): string {
@@ -15,52 +25,38 @@ function normalizeFormat(format: string): string {
   return map[format] ?? format;
 }
 
-/**
- * Gjør en generert plan om til cup_matches-rader og kobler nextMatchId i to steg.
- */
-async function persistCupPlan(
-  ctx: any,
-  cupId: any,
-  plan: CupPlan,
-  seededRooms: any[],
-  startGw: number
-) {
-  const now = Date.now();
-  const keyToId = new Map<string, any>();
+/** Legger rom-detaljer på cupen, kampene og gruppetabellene. */
+async function populateCup(ctx: QueryCtx, cup: Doc<"cups">) {
+  const matches = await ctx.db
+    .query("cup_matches")
+    .withIndex("by_cupId", (q) => q.eq("cupId", cup._id))
+    .take(500);
 
-  for (const m of plan.matches) {
-    const id = await ctx.db.insert("cup_matches", {
-      cupId,
-      bracketType: m.bracketType,
-      stage: m.stage,
-      group: m.group,
-      roundNumber: m.roundNumber,
-      roundTitle: m.roundTitle,
-      matchIndex: m.matchIndex,
-      gameweek: startGw + (m.roundNumber - 1),
-      room1Id: m.seed1 != null ? seededRooms[m.seed1]?._id : undefined,
-      room2Id: m.seed2 != null ? seededRooms[m.seed2]?._id : undefined,
-      isLuckyLoser: m.isLuckyLoser || undefined,
-      status: "scheduled",
-      updatedAt: now,
-    });
-    keyToId.set(m.key, id);
-  }
+  const rooms = await ctx.db.query("rooms").collect();
+  const roomMap = new Map(
+    rooms.map((r) => [r._id, { ...r, accentColor: roomAccentColor(r.roomNumber) }])
+  );
+  const room = (id: Id<"rooms"> | undefined) => (id ? roomMap.get(id) ?? null : null);
 
-  for (const m of plan.matches) {
-    const patch: Record<string, any> = {};
-    if (m.nextWinnerKey && keyToId.has(m.nextWinnerKey)) {
-      patch.nextMatchId = keyToId.get(m.nextWinnerKey);
-      patch.nextMatchSlot = m.nextWinnerSlot ?? 1;
-    }
-    if (m.nextLoserKey && keyToId.has(m.nextLoserKey)) {
-      patch.nextLoserMatchId = keyToId.get(m.nextLoserKey);
-      patch.nextLoserMatchSlot = m.nextLoserSlot ?? 1;
-    }
-    if (Object.keys(patch).length > 0) {
-      await ctx.db.patch(keyToId.get(m.key), patch);
-    }
-  }
+  return {
+    ...cup,
+    name: effectiveCupName(cup),
+    season: effectiveSeason(cup),
+    winnerRoom: room(cup.winnerRoomId),
+    runnerUpRoom: room(cup.runnerUpRoomId),
+    thirdPlaceRoom: room(cup.thirdPlaceRoomId),
+    matches: matches.map((m) => ({
+      ...m,
+      room1: room(m.room1Id),
+      room2: room(m.room2Id),
+      winnerRoom: room(m.winnerRoomId),
+      loserRoom: room(m.loserRoomId),
+    })),
+    groupStandings:
+      cup.groupStandings && cup.groupStandings.length > 0
+        ? cup.groupStandings.map((gs) => ({ ...gs, room: room(gs.roomId) }))
+        : null,
+  };
 }
 
 /**
@@ -73,7 +69,7 @@ async function persistCupPlan(
 export const listCups = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("cups").order("desc").collect();
+    return await ctx.db.query("cups").order("desc").take(50);
   },
 });
 
@@ -83,49 +79,13 @@ export const listCups = query({
 export const getActiveCup = query({
   args: {},
   handler: async (ctx) => {
-    let cup = await ctx.db
-      .query("cups")
-      .withIndex("by_status", (q) => q.eq("status", "active"))
-      .first();
-
-    if (!cup) {
-      cup = await ctx.db.query("cups").order("desc").first();
-    }
-
+    const cup =
+      (await ctx.db
+        .query("cups")
+        .withIndex("by_status", (q) => q.eq("status", "active"))
+        .first()) ?? (await ctx.db.query("cups").order("desc").first());
     if (!cup) return null;
-
-    const matches = await ctx.db
-      .query("cup_matches")
-      .withIndex("by_cupId", (q) => q.eq("cupId", cup!._id))
-      .collect();
-
-    const rooms = await ctx.db.query("rooms").collect();
-    const roomMap = new Map(rooms.map((r) => [r._id, { ...r, accentColor: roomAccentColor(r.roomNumber) }]));
-
-    const populatedMatches = matches.map((m) => ({
-      ...m,
-      room1: m.room1Id ? roomMap.get(m.room1Id) || null : null,
-      room2: m.room2Id ? roomMap.get(m.room2Id) || null : null,
-      winnerRoom: m.winnerRoomId ? roomMap.get(m.winnerRoomId) || null : null,
-      loserRoom: m.loserRoomId ? roomMap.get(m.loserRoomId) || null : null,
-    }));
-
-    // Gruppespilltabell med romdetaljer hvis gruppespill
-    let populatedGroupStandings = null;
-    if (cup.groupStandings && cup.groupStandings.length > 0) {
-      populatedGroupStandings = cup.groupStandings.map((gs) => ({
-        ...gs,
-        room: roomMap.get(gs.roomId) || null,
-      }));
-    }
-
-    return {
-      ...cup,
-      winnerRoom: cup.winnerRoomId ? roomMap.get(cup.winnerRoomId) || null : null,
-      runnerUpRoom: cup.runnerUpRoomId ? roomMap.get(cup.runnerUpRoomId) || null : null,
-      matches: populatedMatches,
-      groupStandings: populatedGroupStandings,
-    };
+    return await populateCup(ctx, cup);
   },
 });
 
@@ -135,40 +95,9 @@ export const getActiveCup = query({
 export const getCupDetails = query({
   args: { cupId: v.id("cups") },
   handler: async (ctx, args) => {
-    const cup = await ctx.db.get(args.cupId);
+    const cup = await ctx.db.get("cups", args.cupId);
     if (!cup) return null;
-
-    const matches = await ctx.db
-      .query("cup_matches")
-      .withIndex("by_cupId", (q) => q.eq("cupId", cup._id))
-      .collect();
-
-    const rooms = await ctx.db.query("rooms").collect();
-    const roomMap = new Map(rooms.map((r) => [r._id, { ...r, accentColor: roomAccentColor(r.roomNumber) }]));
-
-    const populatedMatches = matches.map((m) => ({
-      ...m,
-      room1: m.room1Id ? roomMap.get(m.room1Id) || null : null,
-      room2: m.room2Id ? roomMap.get(m.room2Id) || null : null,
-      winnerRoom: m.winnerRoomId ? roomMap.get(m.winnerRoomId) || null : null,
-      loserRoom: m.loserRoomId ? roomMap.get(m.loserRoomId) || null : null,
-    }));
-
-    let populatedGroupStandings = null;
-    if (cup.groupStandings && cup.groupStandings.length > 0) {
-      populatedGroupStandings = cup.groupStandings.map((gs) => ({
-        ...gs,
-        room: roomMap.get(gs.roomId) || null,
-      }));
-    }
-
-    return {
-      ...cup,
-      winnerRoom: cup.winnerRoomId ? roomMap.get(cup.winnerRoomId) || null : null,
-      runnerUpRoom: cup.runnerUpRoomId ? roomMap.get(cup.runnerUpRoomId) || null : null,
-      matches: populatedMatches,
-      groupStandings: populatedGroupStandings,
-    };
+    return await populateCup(ctx, cup);
   },
 });
 
@@ -185,6 +114,7 @@ export const createCupWithBracket = mutation({
     seedMethod: v.string(), // "leaderboard" | "manual" | "random"
     customSeedRoomIds: v.optional(v.array(v.id("rooms"))),
     groupCount: v.optional(v.number()), // antall grupper (kun round_robin/group_stage)
+    autoCalc: v.optional(v.boolean()),
     roundGwMap: v.optional(
       v.array(
         v.object({
@@ -206,17 +136,23 @@ export const createCupWithBracket = mutation({
     const format = normalizeFormat(args.format || "single_elimination");
 
     // 1. Bestem seeding
-    let seededRooms: any[] = [];
+    let seededRooms: Doc<"rooms">[];
     if (args.seedMethod === "manual" && args.customSeedRoomIds && args.customSeedRoomIds.length > 0) {
-      const roomMap = new Map(allRooms.map((r) => [r._id, { ...r, accentColor: roomAccentColor(r.roomNumber) }]));
-      seededRooms = args.customSeedRoomIds
-        .map((id) => roomMap.get(id))
-        .filter((r): r is any => r !== undefined);
-      const seededSet = new Set(args.customSeedRoomIds);
-      const remaining = allRooms.filter((r) => !seededSet.has(r._id));
-      seededRooms = [...seededRooms, ...remaining];
+      const roomById = new Map(allRooms.map((r) => [r._id, r]));
+      const picked = args.customSeedRoomIds
+        .map((id) => roomById.get(id))
+        .filter((r): r is Doc<"rooms"> => r !== undefined);
+      const pickedSet = new Set(args.customSeedRoomIds);
+      seededRooms = [...picked, ...allRooms.filter((r) => !pickedSet.has(r._id))];
+    } else if (args.seedMethod === "manual") {
+      // Standard romrekkefølge (rom 1, rom 2, …)
+      seededRooms = [...allRooms].sort((a, b) => (a.roomNumber || 0) - (b.roomNumber || 0));
     } else if (args.seedMethod === "random") {
-      seededRooms = [...allRooms].sort(() => Math.random() - 0.5);
+      seededRooms = [...allRooms];
+      for (let i = seededRooms.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [seededRooms[i], seededRooms[j]] = [seededRooms[j], seededRooms[i]];
+      }
     } else {
       // Leaderboard seeding (med fallback til roomNumber)
       const allTeams = await ctx.db.query("fpl_teams").collect();
@@ -236,9 +172,6 @@ export const createCupWithBracket = mutation({
     }
 
     const teamCount = seededRooms.length;
-    if (teamCount < 2) {
-      throw new Error("Trenger minst 2 lag for å generere en cup.");
-    }
     const startGw = args.startGameweek;
 
     // Bygg turneringsplanen for det faktiske antallet lag (9, 10, 12, oddetall …).
@@ -256,17 +189,21 @@ export const createCupWithBracket = mutation({
         };
       });
 
-    // Gruppespilltabeller ut fra faktisk gruppeinndeling.
-    let groupStandings: any = undefined;
-    if (plan.groupSizes && plan.groupSizes.length >= 2) {
-      const letters = "ABCDEFGH";
+    // Gruppespilltabeller ut fra faktisk gruppeinndeling (seedene deles ut i samme
+    // slange-rekkefølge som i planen, så vi leser gruppene rett fra kampene).
+    let groupStandings: NonNullable<Doc<"cups">["groupStandings"]> | undefined;
+    if (plan.groupSizes) {
       groupStandings = [];
-      let idx = 0;
-      plan.groupSizes.forEach((sz, gi) => {
-        for (let k = 0; k < sz; k++) {
+      const seen = new Set<string>();
+      for (const m of plan.matches) {
+        if (m.bracketType !== "group" || m.seed1 == null || m.seed2 == null) continue;
+        for (const seed of [m.seed1, m.seed2]) {
+          const room = seededRooms[seed];
+          if (!room || seen.has(room._id)) continue;
+          seen.add(room._id);
           groupStandings.push({
-            group: letters[gi] ?? String(gi + 1),
-            roomId: seededRooms[idx++]._id,
+            group: m.group ?? GROUP_LETTERS[0],
+            roomId: room._id,
             played: 0,
             won: 0,
             drawn: 0,
@@ -275,17 +212,19 @@ export const createCupWithBracket = mutation({
             totalRoomScore: 0,
           });
         }
-      });
+      }
+      groupStandings.sort((a, b) => a.group.localeCompare(b.group));
     }
 
     const cupId = await ctx.db.insert("cups", {
       name: args.name,
-      season: args.season || "2025/2026",
+      season: args.season || seasonFor(),
       status: "active",
       startGameweek: startGw,
       currentRound: 1,
       totalRounds,
       format,
+      autoCalc: args.autoCalc ?? true,
       roundGwMap,
       groupStandings,
       createdAt: Date.now(),
@@ -298,7 +237,6 @@ export const createCupWithBracket = mutation({
   },
 });
 
-
 /**
  * Oppdaterer innstillinger for en Cup (Kun for Administrator)
  */
@@ -309,6 +247,8 @@ export const updateCupSettings = mutation({
     name: v.optional(v.string()),
     status: v.optional(v.string()),
     currentRound: v.optional(v.number()),
+    autoCalc: v.optional(v.boolean()),
+    season: v.optional(v.string()),
     winnerRoomId: v.optional(v.id("rooms")),
     runnerUpRoomId: v.optional(v.id("rooms")),
     thirdPlaceRoomId: v.optional(v.id("rooms")),
@@ -326,7 +266,7 @@ export const updateCupSettings = mutation({
     await requireAdmin(ctx, args.adminUserId);
 
     const { adminUserId, cupId, ...rest } = args;
-    await ctx.db.patch(cupId, {
+    await ctx.db.patch("cups", cupId, {
       ...rest,
       updatedAt: Date.now(),
     });
@@ -335,7 +275,8 @@ export const updateCupSettings = mutation({
 });
 
 /**
- * Oppdaterer eller overstyrer en enkelt match (Kun for Administrator)
+ * Oppdaterer eller overstyrer en enkelt match (Kun for Administrator).
+ * Settes en vinner, sendes han videre i turneringen på samme måte som ved beregning.
  */
 export const updateMatch = mutation({
   args: {
@@ -355,17 +296,36 @@ export const updateMatch = mutation({
     await requireAdmin(ctx, args.adminUserId);
 
     const { adminUserId, matchId, ...rest } = args;
-    await ctx.db.patch(matchId, {
-      ...rest,
-      updatedAt: Date.now(),
-    });
+    const match = await ctx.db.get("cup_matches", matchId);
+    if (!match) throw new Error("Kamp ikke funnet.");
+
+    await ctx.db.patch("cup_matches", matchId, { ...rest, updatedAt: Date.now() });
+
+    const room1 = args.room1Id ?? match.room1Id;
+    const room2 = args.room2Id ?? match.room2Id;
+    if (args.winnerRoomId && args.winnerRoomId !== match.winnerRoomId) {
+      if (args.winnerRoomId !== room1 && args.winnerRoomId !== room2) {
+        throw new Error("Vinneren må være et av de to rommene i kampen.");
+      }
+      const loserId = args.winnerRoomId === room1 ? room2 : room1;
+      await ctx.db.patch("cup_matches", matchId, {
+        loserRoomId: loserId,
+        status: "completed",
+        updatedAt: Date.now(),
+      });
+      const cup = await ctx.db.get("cups", match.cupId);
+      const fresh = await ctx.db.get("cup_matches", matchId);
+      if (cup && fresh) await advanceFromMatch(ctx, cup, fresh, args.winnerRoomId, loserId);
+      await refreshCupState(ctx, match.cupId);
+    }
     return { success: true };
   },
 });
 
 /**
- * Beregner poeng for en hel Cup-runde basert på gjennomsnittet av de to høyeste poengsummene per rom i den aktuelle Gameweeken.
- * Håndterer automatisk Lucky Loser, Double Elimination, Topp 8 og Gruppespill!
+ * Beregner en hel Cup-runde: romsnittet av de to beste spillerne per rom i
+ * rundens gameweek avgjør hver kamp. Vinnere (og tapere i dobbel knockout)
+ * sendes videre, gruppetabeller oppdateres og utslagsfasen fylles når den er klar.
  */
 export const calculateCupRoundScores = mutation({
   args: {
@@ -375,377 +335,19 @@ export const calculateCupRoundScores = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.adminUserId);
+    const res = await calculateRound(ctx, args.cupId, args.roundNumber);
+    return { success: true, ...res };
+  },
+});
 
-    const cup = await ctx.db.get(args.cupId);
-    if (!cup) throw new Error("Cup ikke funnet.");
-
-    const settings = await ctx.db.query("league_settings").first();
-    const deductHits = settings?.deductTransferHits ?? true;
-
-    // Finn alle kamper for denne runden
-    const roundMatches = await ctx.db
-      .query("cup_matches")
-      .withIndex("by_cupId_and_round", (q) =>
-        q.eq("cupId", args.cupId).eq("roundNumber", args.roundNumber)
-      )
-      .collect();
-
-    if (roundMatches.length === 0) {
-      throw new Error(`Ingen kamper funnet for runde ${args.roundNumber}.`);
-    }
-
-    const allTeams = await ctx.db.query("fpl_teams").collect();
-    const allGwScores = await ctx.db.query("gameweek_scores").collect();
-
-    const updatedMatches = [];
-    const completedResults = [];
-
-    for (const match of roundMatches) {
-      // Hopp over kamper som mangler deltakere
-      if (!match.room1Id || !match.room2Id) {
-        continue;
-      }
-
-      const gw = match.gameweek;
-
-      const calculateRoomGwStats = (roomId: any) => {
-        if (!roomId) return { avg: 0, topPlayers: [], allPlayers: [], totalPoints: 0 };
-        const roomTeams = allTeams.filter((t) => t.roomId === roomId);
-        if (roomTeams.length === 0) return { avg: 0, topPlayers: [], allPlayers: [], totalPoints: 0 };
-
-        const teamScores = roomTeams.map((t) => {
-          const scoreRecord = allGwScores.find(
-            (gs) => gs.entryId === t.entryId && gs.gameweek === gw
-          );
-          const rawPts = scoreRecord ? scoreRecord.points : (t.currentGwPoints || 0);
-          const hits = scoreRecord ? scoreRecord.transfersCost : (t.currentGwTransfersCost || 0);
-          const net = deductHits ? rawPts - hits : rawPts;
-
-          return {
-            entryId: t.entryId,
-            name: t.managerName || t.teamName || `Lag ${t.entryId}`,
-            points: net,
-            hits,
-          };
-        });
-
-        teamScores.sort((a, b) => b.points - a.points);
-        const top1 = teamScores[0];
-        const top2 = teamScores[1];
-
-        let avg = 0;
-        if (top1 && top2) {
-          avg = (top1.points + top2.points) / 2;
-        } else if (top1) {
-          avg = top1.points;
-        }
-
-        const totalPoints = teamScores.reduce((acc, c) => acc + c.points, 0);
-
-        return {
-          avg: Math.round(avg * 10) / 10,
-          topPlayers: teamScores.slice(0, 2),
-          allPlayers: teamScores,
-          totalPoints,
-        };
-      };
-
-      const stats1 = calculateRoomGwStats(match.room1Id);
-      const stats2 = calculateRoomGwStats(match.room2Id);
-
-      let winnerId: any = null;
-      let loserId: any = null;
-      let isDraw = false;
-
-      if (stats1.avg > stats2.avg) {
-        winnerId = match.room1Id;
-        loserId = match.room2Id;
-      } else if (stats2.avg > stats1.avg) {
-        winnerId = match.room2Id;
-        loserId = match.room1Id;
-      } else {
-        // Tiebreaker: 1. Toppscorer
-        const top1Pts1 = stats1.topPlayers[0]?.points || 0;
-        const top1Pts2 = stats2.topPlayers[0]?.points || 0;
-        if (top1Pts1 > top1Pts2) {
-          winnerId = match.room1Id;
-          loserId = match.room2Id;
-        } else if (top1Pts2 > top1Pts1) {
-          winnerId = match.room2Id;
-          loserId = match.room1Id;
-        } else {
-          // 2. Total romscore
-          if (stats1.totalPoints > stats2.totalPoints) {
-            winnerId = match.room1Id;
-            loserId = match.room2Id;
-          } else if (stats2.totalPoints > stats1.totalPoints) {
-            winnerId = match.room2Id;
-            loserId = match.room1Id;
-          } else {
-            // Gruppespill kan ha uavgjort
-            if (match.bracketType === "group") {
-              isDraw = true;
-            } else {
-              winnerId = match.room1Id;
-              loserId = match.room2Id;
-            }
-          }
-        }
-      }
-
-      await ctx.db.patch(match._id, {
-        room1Score: stats1.avg,
-        room2Score: stats2.avg,
-        room1TopPlayers: stats1.topPlayers,
-        room2TopPlayers: stats2.topPlayers,
-        winnerRoomId: winnerId,
-        loserRoomId: loserId,
-        status: "completed",
-        updatedAt: Date.now(),
-      });
-
-      completedResults.push({
-        match,
-        winnerId,
-        loserId,
-        isDraw,
-        stats1,
-        stats2,
-      });
-
-      // Standard avansering (for DE og Topp 8 og Quarter-finalr i Lucky Loser)
-      if (cup.format !== "lucky_loser_12" || args.roundNumber > 1) {
-        if (winnerId && match.nextMatchId && match.nextMatchSlot) {
-          const nextMatch = await ctx.db.get(match.nextMatchId);
-          if (nextMatch) {
-            const patchObj: any = { updatedAt: Date.now() };
-            if (match.nextMatchSlot === 1) patchObj.room1Id = winnerId;
-            else patchObj.room2Id = winnerId;
-            await ctx.db.patch(match.nextMatchId, patchObj);
-          }
-        }
-
-        if (loserId && match.nextLoserMatchId && match.nextLoserMatchSlot) {
-          const nextLoserMatch = await ctx.db.get(match.nextLoserMatchId);
-          if (nextLoserMatch) {
-            const patchObj: any = { updatedAt: Date.now() };
-            if (match.nextLoserMatchSlot === 1) patchObj.room1Id = loserId;
-            else patchObj.room2Id = loserId;
-            await ctx.db.patch(match.nextLoserMatchId, patchObj);
-          }
-        }
-      }
-
-      // Registrer 3. plass (Bronse) hvis dette er Taperfinalen (Double Elimination LB Final)
-      if (
-        loserId &&
-        match.bracketType === "losers" &&
-        (match.roundTitle.toLowerCase().includes("taperfinale") || match.nextMatchSlot === 2)
-      ) {
-        await ctx.db.patch(cup._id, {
-          thirdPlaceRoomId: loserId,
-          updatedAt: Date.now(),
-        });
-      }
-
-      // Kår vinner og sølvvinner hvis dette er Grand Final / Finalen
-      const isFinalRound =
-        args.roundNumber === cup.totalRounds ||
-        match.bracketType === "grand_final" ||
-        match.roundTitle.includes("Grand Final") ||
-        match.roundTitle.toLowerCase().includes("finale");
-
-      if (isFinalRound && winnerId) {
-        await ctx.db.patch(cup._id, {
-          winnerRoomId: winnerId,
-          runnerUpRoomId: loserId,
-          status: "completed",
-          updatedAt: Date.now(),
-        });
-      }
-
-      updatedMatches.push({
-        matchId: match._id,
-        roundTitle: match.roundTitle,
-        winnerId,
-        loserId,
-        stats1,
-        stats2,
-      });
-    }
-
-    // SPESIALHÅNDTERING: Lucky Loser 12 (Runde 1)
-    if (cup.format === "lucky_loser_12" && args.roundNumber === 1 && completedResults.length === 6) {
-      // 6 vinnere
-      const winners = completedResults.map((r) => ({
-        roomId: r.winnerId,
-        score: r.winnerId === r.match.room1Id ? r.stats1.avg : r.stats2.avg,
-        topPlayerScore: r.winnerId === r.match.room1Id ? r.stats1.topPlayers[0]?.points || 0 : r.stats2.topPlayers[0]?.points || 0,
-        totalPoints: r.winnerId === r.match.room1Id ? r.stats1.totalPoints : r.stats2.totalPoints,
-        matchIndex: r.match.matchIndex,
-      }));
-
-      // 6 tapere -> sorter for å finne de 2 beste "Lucky Losers"
-      const losers = completedResults.map((r) => ({
-        roomId: r.loserId,
-        score: r.loserId === r.match.room1Id ? r.stats1.avg : r.stats2.avg,
-        topPlayerScore: r.loserId === r.match.room1Id ? r.stats1.topPlayers[0]?.points || 0 : r.stats2.topPlayers[0]?.points || 0,
-        totalPoints: r.loserId === r.match.room1Id ? r.stats1.totalPoints : r.stats2.totalPoints,
-        matchIndex: r.match.matchIndex,
-      }));
-
-      losers.sort((a, b) => b.score - a.score || b.topPlayerScore - a.topPlayerScore || b.totalPoints - a.totalPoints);
-      const luckyLoser1 = losers[0]; // Beste taper
-      const luckyLoser2 = losers[1]; // Nest beste taper
-
-      // Hent Quarter-final-kampene (Runde 2)
-      const qfMatches = await ctx.db
-        .query("cup_matches")
-        .withIndex("by_cupId_and_round", (q) =>
-          q.eq("cupId", args.cupId).eq("roundNumber", 2)
-        )
-        .collect();
-
-      const qfMap = new Map(qfMatches.map((m) => [m.matchIndex, m]));
-
-      // Finn vinnere fra kamp 1..6
-      const winMap = new Map(winners.map((w) => [w.matchIndex, w.roomId]));
-
-      // QF 1: Vinner K1 vs Vinner K6
-      const qf1 = qfMap.get(1);
-      if (qf1) {
-        await ctx.db.patch(qf1._id, {
-          room1Id: winMap.get(1),
-          room2Id: winMap.get(6),
-          updatedAt: Date.now(),
-        });
-      }
-
-      // QF 2: Vinner K2 vs Vinner K5
-      const qf2 = qfMap.get(2);
-      if (qf2) {
-        await ctx.db.patch(qf2._id, {
-          room1Id: winMap.get(2),
-          room2Id: winMap.get(5),
-          updatedAt: Date.now(),
-        });
-      }
-
-      // QF 3: Vinner K3 vs Lucky Loser 2
-      const qf3 = qfMap.get(3);
-      if (qf3) {
-        await ctx.db.patch(qf3._id, {
-          room1Id: winMap.get(3),
-          room2Id: luckyLoser2?.roomId,
-          isLuckyLoser: true,
-          updatedAt: Date.now(),
-        });
-      }
-
-      // QF 4: Vinner K4 vs Lucky Loser 1
-      const qf4 = qfMap.get(4);
-      if (qf4) {
-        await ctx.db.patch(qf4._id, {
-          room1Id: winMap.get(4),
-          room2Id: luckyLoser1?.roomId,
-          isLuckyLoser: true,
-          updatedAt: Date.now(),
-        });
-      }
-    }
-
-    // SPESIALHÅNDTERING: Gruppespill tabelloppdatering & avansering til semi-final
-    if (cup.format === "group_stage_12" && cup.groupStandings) {
-      const standings = [...cup.groupStandings];
-      for (const res of completedResults) {
-        const entry1 = standings.find((s) => s.roomId === res.match.room1Id);
-        const entry2 = standings.find((s) => s.roomId === res.match.room2Id);
-
-        if (entry1 && entry2) {
-          entry1.played += 1;
-          entry2.played += 1;
-          entry1.totalRoomScore += res.stats1.avg;
-          entry2.totalRoomScore += res.stats2.avg;
-
-          if (res.isDraw) {
-            entry1.drawn += 1;
-            entry2.drawn += 1;
-            entry1.points += 1;
-            entry2.points += 1;
-          } else if (res.winnerId === res.match.room1Id) {
-            entry1.won += 1;
-            entry2.lost += 1;
-            entry1.points += 3;
-          } else if (res.winnerId === res.match.room2Id) {
-            entry2.won += 1;
-            entry1.lost += 1;
-            entry2.points += 3;
-          }
-        }
-      }
-
-      await ctx.db.patch(cup._id, {
-        groupStandings: standings,
-        updatedAt: Date.now(),
-      });
-
-      // Etter runde 3 (siste gruppespillrunde), finn topp 2 i gruppe A og B og populer semi-finalne i runde 4!
-      if (args.roundNumber === 3) {
-        const groupAStandings = standings
-          .filter((s) => s.group === "A")
-          .sort((a, b) => b.points - a.points || b.totalRoomScore - a.totalRoomScore);
-        const groupBStandings = standings
-          .filter((s) => s.group === "B")
-          .sort((a, b) => b.points - a.points || b.totalRoomScore - a.totalRoomScore);
-
-        const a1 = groupAStandings[0]?.roomId;
-        const a2 = groupAStandings[1]?.roomId;
-        const b1 = groupBStandings[0]?.roomId;
-        const b2 = groupBStandings[1]?.roomId;
-
-        const semiMatches = await ctx.db
-          .query("cup_matches")
-          .withIndex("by_cupId_and_round", (q) =>
-            q.eq("cupId", args.cupId).eq("roundNumber", 4)
-          )
-          .collect();
-
-        const semi1 = semiMatches.find((m) => m.matchIndex === 1);
-        const semi2 = semiMatches.find((m) => m.matchIndex === 2);
-
-        if (semi1 && a1 && b2) {
-          await ctx.db.patch(semi1._id, {
-            room1Id: a1,
-            room2Id: b2,
-            updatedAt: Date.now(),
-          });
-        }
-
-        if (semi2 && b1 && a2) {
-          await ctx.db.patch(semi2._id, {
-            room1Id: b1,
-            room2Id: a2,
-            updatedAt: Date.now(),
-          });
-        }
-      }
-    }
-
-    // Oppdater gjeldende aktiv runde
-    const nextRoundNumber = args.roundNumber + 1;
-    if (nextRoundNumber <= cup.totalRounds) {
-      await ctx.db.patch(cup._id, {
-        currentRound: nextRoundNumber,
-        updatedAt: Date.now(),
-      });
-    }
-
-    return {
-      success: true,
-      roundNumber: args.roundNumber,
-      updatedMatchesCount: updatedMatches.length,
-      matches: updatedMatches,
-    };
+/**
+ * Kalles av den serverstyrte synken når en gameweek er ferdig synket:
+ * beregner de rundene som spilles i den gameweeken for alle aktive cuper.
+ */
+export const autoCalculateForGameweek = internalMutation({
+  args: { gw: v.number() },
+  handler: async (ctx, args) => {
+    return await calculateGameweekForActiveCups(ctx, args.gw);
   },
 });
 
@@ -761,53 +363,24 @@ export const advanceMatchManually = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.adminUserId);
 
-    const match = await ctx.db.get(args.matchId);
+    const match = await ctx.db.get("cup_matches", args.matchId);
     if (!match) throw new Error("Kamp ikke funnet.");
+    if (args.winnerRoomId !== match.room1Id && args.winnerRoomId !== match.room2Id) {
+      throw new Error("Vinneren må være et av de to rommene i kampen.");
+    }
+    const cup = await ctx.db.get("cups", match.cupId);
+    if (!cup) throw new Error("Cup ikke funnet.");
 
     const loserId = match.room1Id === args.winnerRoomId ? match.room2Id : match.room1Id;
 
-    await ctx.db.patch(match._id, {
+    await ctx.db.patch("cup_matches", match._id, {
       winnerRoomId: args.winnerRoomId,
       loserRoomId: loserId,
       status: "completed",
       updatedAt: Date.now(),
     });
-
-    if (match.nextMatchId && match.nextMatchSlot) {
-      const patchObj: any = { updatedAt: Date.now() };
-      if (match.nextMatchSlot === 1) patchObj.room1Id = args.winnerRoomId;
-      else patchObj.room2Id = args.winnerRoomId;
-      await ctx.db.patch(match.nextMatchId, patchObj);
-    }
-
-    if (loserId && match.nextLoserMatchId && match.nextLoserMatchSlot) {
-      const patchObj: any = { updatedAt: Date.now() };
-      if (match.nextLoserMatchSlot === 1) patchObj.room1Id = loserId;
-      else patchObj.room2Id = loserId;
-      await ctx.db.patch(match.nextLoserMatchId, patchObj);
-    }
-
-    if (
-      match.bracketType === "grand_final" ||
-      match.roundTitle?.includes("Grand Final") ||
-      match.roundTitle?.toLowerCase().includes("finale")
-    ) {
-      await ctx.db.patch(match.cupId, {
-        winnerRoomId: args.winnerRoomId,
-        runnerUpRoomId: loserId,
-        status: "completed",
-        updatedAt: Date.now(),
-      });
-    } else if (
-      loserId &&
-      match.bracketType === "losers" &&
-      (match.roundTitle?.toLowerCase().includes("taperfinale") || match.nextMatchSlot === 2)
-    ) {
-      await ctx.db.patch(match.cupId, {
-        thirdPlaceRoomId: loserId,
-        updatedAt: Date.now(),
-      });
-    }
+    await advanceFromMatch(ctx, cup, match, args.winnerRoomId, loserId);
+    await refreshCupState(ctx, cup._id);
 
     return { success: true };
   },
@@ -827,13 +400,13 @@ export const deleteCup = mutation({
     const matches = await ctx.db
       .query("cup_matches")
       .withIndex("by_cupId", (q) => q.eq("cupId", args.cupId))
-      .collect();
+      .take(500);
 
     for (const m of matches) {
-      await ctx.db.delete(m._id);
+      await ctx.db.delete("cup_matches", m._id);
     }
 
-    await ctx.db.delete(args.cupId);
+    await ctx.db.delete("cups", args.cupId);
     return { success: true };
   },
 });

@@ -80,7 +80,7 @@
             id="reg-code"
             type="text"
             bind:value={inviteCode}
-            placeholder="f.eks. ATL-2025"
+            placeholder={`f.eks. ATL-${new Date().getFullYear()}`}
             class="w-full px-3 py-2 text-xs rounded-xl bg-black/20 border border-white/10 text-white uppercase focus:border-[#9FE88D] focus:outline-none font-mono"
           />
         </div>

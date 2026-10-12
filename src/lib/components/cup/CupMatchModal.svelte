@@ -7,12 +7,9 @@
     Users,
     Sparkles,
     Calendar,
-    Flame,
     CheckCircle2,
-    Clock,
-    AlertCircle,
   } from "lucide-svelte";
-  import { useQuery, useMutation } from "$lib/convex.svelte";
+  import { useQuery } from "$lib/convex.svelte";
   import { api } from "../../../../convex/_generated/api";
 
   let {

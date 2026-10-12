@@ -1059,7 +1059,7 @@ export const seedDefaultData = mutation({
 
     // 3. Opprett standard invitasjonskoder
     await ctx.db.insert("invite_codes", {
-      code: "ATLANTIS-2025",
+      code: `ATLANTIS-${new Date().getFullYear()}`,
       role: "user",
       expiresAt: Date.now() + 90 * 24 * 60 * 60 * 1000,
       maxUses: 100,

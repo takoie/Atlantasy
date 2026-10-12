@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { seasonFor } from "../../../convex/season";
   import {
     Info,
     X,
@@ -150,7 +151,7 @@ Copyright (c) Microsoft Corporation.`,
     },
     {
       name: "Fantasy Premier League Data API",
-      version: "2024/2025",
+      version: seasonFor(),
       license: "Fair Use (Non-commercial)",
       category: "backend",
       author: "The Football Association Premier League Ltd",
