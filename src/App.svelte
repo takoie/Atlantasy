@@ -272,12 +272,21 @@
     }
   }
 
+  // Manuell synk. Den ordinære oppdateringen kjøres av serveren etter siste kamp
+  // i hver runde (convex/autoSync.ts); knappen i sidemenyen er kun for admin.
   async function handleRefreshFpl() {
+    if (!currentUser) return;
     isSyncing = true;
     try {
-      const res = await syncLiveFplAction.execute({});
+      const res = await syncLiveFplAction.execute({ userId: currentUser._id });
       if (res && res.success) {
-        console.log(`FPL synkronisert for GW ${res.gameweek}: ${res.syncedCount} lag.`);
+        if ("skipped" in res) {
+          console.log("FPL ble synket for under 10 minutter siden – bruker eksisterende data.");
+        } else {
+          console.log(`FPL synkronisert for GW ${res.gameweek}: ${res.syncedCount} lag.`);
+        }
+      } else if (res) {
+        console.warn("FPL-synk avvist:", res.error);
       }
     } catch (err) {
       console.warn("FPL Live Sync feilet (bruker eksisterende data):", err);
@@ -285,46 +294,6 @@
       isSyncing = false;
     }
   }
-
-  // Så snart data er lastet: kjør ÉN synk automatisk hvis dataene ikke er ferske.
-  // Kort terskel (90 sek) så det skjer ved hver reelle app-åpning, men en rask
-  // reload / HMR ikke hamrer FPL-API-et.
-  let didStartupSync = $state(false);
-  const STARTUP_STALE_MS = 90 * 1000;
-  $effect(() => {
-    // Vent til settings-spørringen har svart (data er undefined mens den laster).
-    if (didStartupSync || !currentUser || settingsQuery.data === undefined) return;
-    didStartupSync = true;
-    if ((settings?.autoSyncEnabled ?? true) === false) return;
-    const lastSync = settings?.lastSyncedAt ?? 0;
-    if (Date.now() - lastSync > STARTUP_STALE_MS && !isSyncing) {
-      handleRefreshFpl();
-    }
-  });
-
-  // Automatisk periodisk FPL-synkronisering KUN når en bruker er aktiv i appen
-  $effect(() => {
-    if (!currentUser) return;
-
-    const syncIntervalMinutes = settings?.syncIntervalMinutes ?? 10;
-    const isAutoSyncEnabled = settings?.autoSyncEnabled ?? true;
-
-    if (!isAutoSyncEnabled) return;
-
-    const intervalMs = syncIntervalMinutes * 60 * 1000;
-
-    // Sjekk hvert 60. sekund om det er på tide med en ny bakgrunnssynkronisering
-    const intervalId = setInterval(() => {
-      const currentLastSync = settings?.lastSyncedAt ?? 0;
-      if (Date.now() - currentLastSync >= intervalMs && !isSyncing) {
-        handleRefreshFpl();
-      }
-    }, 60 * 1000);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  });
 
   function handleOpenRoomModal(room: any) {
     modalRoom = room;

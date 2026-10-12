@@ -183,6 +183,12 @@ export default defineSchema({
     syncIntervalMinutes: v.number(),
     lastSyncedAt: v.number(),
     adminPin: v.string(),          // Sikret admin-pin
+    // Tilstand for den serverstyrte synken etter siste kamp i runden (autoSync.ts):
+    autoSyncGw: v.optional(v.number()),   // runden som sist ble auto-synket
+    autoSyncStage: v.optional(
+      v.union(v.literal("provisional"), v.literal("final"))
+    ),                                     // høyeste utførte steg for den runden
+    autoSyncWakeAt: v.optional(v.number()), // cronen gjør ingenting før dette tidspunktet (ms)
     // Overstyringer av rundevinner og ledende rom:
     overrideRoundWinnerEntryId: v.optional(v.number()),
     overrideRoundWinnerName: v.optional(v.string()),

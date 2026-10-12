@@ -11,8 +11,11 @@
 import type * as admin from "../admin.js";
 import type * as articles from "../articles.js";
 import type * as auth from "../auth.js";
+import type * as autoSync from "../autoSync.js";
+import type * as autoSyncLogic from "../autoSyncLogic.js";
 import type * as chat from "../chat.js";
 import type * as cupEngine from "../cupEngine.js";
+import type * as crons from "../crons.js";
 import type * as cups from "../cups.js";
 import type * as fpl from "../fpl.js";
 import type * as fplCalendar from "../fplCalendar.js";
@@ -30,8 +33,11 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   articles: typeof articles;
   auth: typeof auth;
+  autoSync: typeof autoSync;
+  autoSyncLogic: typeof autoSyncLogic;
   chat: typeof chat;
   cupEngine: typeof cupEngine;
+  crons: typeof crons;
   cups: typeof cups;
   fpl: typeof fpl;
   fplCalendar: typeof fplCalendar;

@@ -1,6 +1,12 @@
-import { action, mutation } from "./_generated/server";
+import {
+  action,
+  mutation,
+  internalMutation,
+  internalQuery,
+  type ActionCtx,
+} from "./_generated/server";
 import { v } from "convex/values";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import {
   buildGwCalendar,
   monthsFromCalendar,
@@ -8,7 +14,7 @@ import {
   type GwCalendarEntry,
 } from "./fplCalendar";
 
-const FPL_HEADERS = {
+export const FPL_HEADERS = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Atlantasy Desktop FPL Client",
   Accept: "application/json",
 };
@@ -170,7 +176,7 @@ export const fetchFplLeagueStandings = action({
           currentGwTransfersCost: s.hits || 0,
         }));
 
-        await ctx.runMutation(api.fpl.saveLiveFplSyncResult, {
+        await ctx.runMutation(internal.fpl.saveLiveFplSyncResult, {
           currentGameweek: activeGw,
           teamsData,
         });
@@ -194,282 +200,329 @@ export const fetchFplLeagueStandings = action({
   },
 });
 
+export type LiveSyncResult =
+  | { success: true; gameweek: number; syncedCount: number; leagueName?: string }
+  | { success: false; error: string };
+
 /**
- * Action for å synkronisere all live data fra FPL API:
+ * Synkroniserer all live data fra FPL API:
  * 1. Finner gjeldende Gameweek fra bootstrap-static
  * 2. Henter stillingen i den konfigurerte FPL-ligaen (både standings og new_entries)
  * 3. Henter transfer hits (-4p per ekstra bytte) per lag
  * 4. Oppdaterer databasen og beregner romsnitt
+ *
+ * Delt av admin-handlingen (syncLiveFplData) og den serverstyrte synken (autoSync.ts).
+ */
+export async function runLiveFplSync(
+  ctx: ActionCtx,
+  customLeagueId?: number
+): Promise<LiveSyncResult> {
+  try {
+    // 1. Hent ligainnstillinger fra Convex (liga-ID + fallback-gameweek)
+    const settings = await ctx.runQuery(api.admin.getSettings);
+    const targetLeagueId = customLeagueId || settings?.leagueId || 464734;
+
+    // 2. Hent bootstrap-static ÉN gang – gir både aktiv gameweek og spillerkatalogen.
+    //    Alle feltnavn nedenfor leses fra dette live-svaret, ikke fra hardkodede antakelser.
+    //    Faller tilbake til lagret currentGameweek (ikke hardkodet 1) hvis kallet feiler.
+    let activeGw: number = settings?.currentGameweek || 1;
+    const elementsMap = new Map<number, any>();
+    let gwCalendar: GwCalendarEntry[] = [];
+    try {
+      const bootRes = await fetch(
+        "https://fantasy.premierleague.com/api/bootstrap-static/",
+        { headers: FPL_HEADERS }
+      );
+      if (bootRes.ok) {
+        const bootData = await bootRes.json();
+        const currentEvent =
+          bootData.events?.find((e: any) => e.is_current) ||
+          bootData.events?.find((e: any) => e.is_next) ||
+          bootData.events?.[0];
+        if (currentEvent?.id) {
+          activeGw = currentEvent.id;
+        }
+        for (const el of bootData.elements || []) {
+          elementsMap.set(el.id, el);
+        }
+        // Utled måned-tilhørighet per gameweek fra de offisielle fristene.
+        gwCalendar = buildGwCalendar(bootData.events || []);
+      }
+      if (elementsMap.size === 0) {
+        console.warn(
+          "bootstrap-static ga ingen elements – kaptein/benk-berikelse hoppes over i denne synkroniseringen"
+        );
+      }
+    } catch (e) {
+      console.warn("Kunne ikke hente bootstrap-static, bruker fallback GW:", e);
+    }
+
+    const gwMonth = gwMonthMap(gwCalendar);
+    const monthRanges = monthsFromCalendar(gwCalendar).map((m) => ({
+      monthKey: m.monthKey,
+      monthName: m.monthName,
+      gameweekStart: m.gameweekStart,
+      gameweekEnd: m.gameweekEnd,
+      customGwList: m.gwList,
+      isCompleted: m.isCompleted,
+    }));
+
+    // 3. Hent ligastilling og påmeldte fra FPL
+    const standingsRes = await fetch(
+      `https://fantasy.premierleague.com/api/leagues-classic/${targetLeagueId}/standings/`,
+      { headers: FPL_HEADERS }
+    );
+
+    if (!standingsRes.ok) {
+      throw new Error(`FPL League API returnerte status ${standingsRes.status}`);
+    }
+
+    const standingsData = await standingsRes.json();
+    const standingsResults = standingsData.standings?.results || [];
+    const newEntriesResults = standingsData.new_entries?.results || [];
+
+    // Kombiner både standings og new_entries
+    const entryMap = new Map<number, any>();
+    for (const item of standingsResults) {
+      if (!item.entry) continue;
+      const managerName =
+        item.player_name ||
+        `${item.player_first_name || ""} ${item.player_last_name || ""}`.trim() ||
+        "FPL Manager";
+      entryMap.set(item.entry, {
+        entry: item.entry,
+        entry_name: item.entry_name || "FPL Lag",
+        player_name: managerName,
+        total: item.total || 0,
+        event_total: item.event_total || 0,
+      });
+    }
+    for (const item of newEntriesResults) {
+      if (!item.entry || entryMap.has(item.entry)) continue;
+      const managerName =
+        item.player_name ||
+        `${item.player_first_name || ""} ${item.player_last_name || ""}`.trim() ||
+        "FPL Manager";
+      entryMap.set(item.entry, {
+        entry: item.entry,
+        entry_name: item.entry_name || "FPL Lag",
+        player_name: managerName,
+        total: item.total || 0,
+        event_total: item.event_total || 0,
+      });
+    }
+
+    // Hent ekstra sider med new_entries dersom det er flere enn 50 lag
+    if (standingsData.new_entries?.has_next) {
+      let nextPage = 2;
+      let hasMore = true;
+      while (hasMore && nextPage <= 10) {
+        try {
+          const nextRes = await fetch(
+            `https://fantasy.premierleague.com/api/leagues-classic/${targetLeagueId}/standings/?page_new_entries=${nextPage}`,
+            { headers: FPL_HEADERS }
+          );
+          if (nextRes.ok) {
+            const nextData = await nextRes.json();
+            const nextEntries = nextData.new_entries?.results || [];
+            for (const item of nextEntries) {
+              if (!item.entry || entryMap.has(item.entry)) continue;
+              const managerName =
+                item.player_name ||
+                `${item.player_first_name || ""} ${item.player_last_name || ""}`.trim() ||
+                "FPL Manager";
+              entryMap.set(item.entry, {
+                entry: item.entry,
+                entry_name: item.entry_name || "FPL Lag",
+                player_name: managerName,
+                total: item.total || 0,
+                event_total: item.event_total || 0,
+              });
+            }
+            hasMore = nextData.new_entries?.has_next || false;
+            nextPage++;
+          } else {
+            hasMore = false;
+          }
+        } catch {
+          hasMore = false;
+        }
+      }
+    }
+
+    const allCombinedResults = Array.from(entryMap.values());
+
+    // 4. Berik hvert lag med transfer hits, kaptein, benkpoeng og sesonghistorikk
+    //    (picks- + history-endepunktene). Kjøres i batcher for å unngå FPL rate-limiting
+    //    – hele ligaen på én gang ville vært titalls samtidige forespørsler.
+    const enrichedTeams = await mapInBatches(allCombinedResults, 5, async (r: any) => {
+        let hits = 0;
+        let captainName: string | undefined;
+        let captainPoints = 0;
+        let benchPoints = 0;
+        let benchedPlayer: string | undefined;
+        let totalHitsCost = 0;
+        let activeChip: string | undefined;
+        let perGwHistory: Array<{
+          gw: number;
+          points: number;
+          transfersCost: number;
+          benchPoints: number;
+          activeChip?: string;
+        }> = [];
+
+        try {
+          const [picksRes, historyRes] = await Promise.all([
+            fetch(
+              `https://fantasy.premierleague.com/api/entry/${r.entry}/event/${activeGw}/picks/`,
+              { headers: FPL_HEADERS }
+            ),
+            fetch(
+              `https://fantasy.premierleague.com/api/entry/${r.entry}/history/`,
+              { headers: FPL_HEADERS }
+            ),
+          ]);
+
+          if (picksRes.ok) {
+            const picksData = await picksRes.json();
+            // picks kommer sortert på "position" 1–15 (1–11 = banen, 12–15 = benk),
+            // men vi sorterer defensivt i tilfelle FPL endrer rekkefølgen.
+            const picks = [...(picksData.picks || [])].sort(
+              (a: any, b: any) => (a.position || 0) - (b.position || 0)
+            );
+            const captainPick =
+              picks.find((p: any) => p.is_captain) ||
+              picks.find((p: any) => p.is_vice_captain);
+            const captainElement = captainPick
+              ? elementsMap.get(captainPick.element)
+              : undefined;
+            captainName = captainElement?.web_name || undefined;
+            captainPoints = captainElement?.event_points || 0;
+            benchPoints = picksData.entry_history?.points_on_bench || 0;
+
+            // "Benkevarmeren": den benkede spilleren som faktisk scoret mest denne runden.
+            const worstBenchMiss = picks
+              .slice(11)
+              .map((p: any) => elementsMap.get(p.element))
+              .filter(Boolean)
+              .sort((a: any, b: any) => (b.event_points || 0) - (a.event_points || 0))[0];
+            benchedPlayer = worstBenchMiss?.web_name || undefined;
+
+            hits = picksData.entry_history?.event_transfers_cost || 0;
+            activeChip = picksData.active_chip || undefined;
+          }
+
+          if (historyRes.ok) {
+            const historyData = await historyRes.json();
+            const seasonHistory = Array.isArray(historyData.current) ? historyData.current : [];
+            totalHitsCost = seasonHistory.reduce((sum: number, item: any) => sum + (item.event_transfers_cost || 0), 0);
+            // Chip-bruk per runde ligger i history.chips ([{ name, event, time }]),
+            // IKKE i history.current – dette er eneste kilde til historiske chips.
+            const chipByGw = new Map<number, string>();
+            for (const c of Array.isArray(historyData.chips) ? historyData.chips : []) {
+              if (typeof c?.event === "number" && c?.name) {
+                chipByGw.set(c.event, String(c.name));
+              }
+            }
+            // Full per-runde-historikk for backfill av gameweek_scores.
+            perGwHistory = seasonHistory
+              .filter((h: any) => typeof h.event === "number")
+              .map((h: any) => ({
+                gw: h.event,
+                points: h.points || 0,
+                transfersCost: h.event_transfers_cost || 0,
+                benchPoints: h.points_on_bench || 0,
+                activeChip: chipByGw.get(h.event) || undefined,
+              }));
+          }
+        } catch {
+          // Ignorer enkelte picks-/history-feil og fortsett med 0
+        }
+
+        const managerName =
+          r.player_name ||
+          `${r.player_first_name || ""} ${r.player_last_name || ""}`.trim() ||
+          "FPL Manager";
+
+        return {
+          entryId: r.entry,
+          teamName: r.entry_name || "FPL Lag",
+          managerName,
+          totalPoints: r.total || 0,
+          currentGwPoints: r.event_total || 0,
+          currentGwTransfersCost: hits,
+          captainName,
+          captainPoints,
+          benchPoints,
+          benchedPlayer,
+          totalHitsCost,
+          activeChip,
+          perGwHistory,
+        };
+    });
+
+    // 5. Lagre synkroniserte data i Convex databasen
+    await ctx.runMutation(internal.fpl.saveLiveFplSyncResult, {
+      currentGameweek: activeGw,
+      gwMonth,
+      monthRanges,
+      teamsData: enrichedTeams,
+    });
+
+    return {
+      success: true,
+      gameweek: activeGw,
+      syncedCount: enrichedTeams.length,
+      leagueName: standingsData.league?.name,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message || "Feil under synkronisering mot FPL API",
+    };
+  }
+}
+
+/** Minste tid mellom to synker utløst av en vanlig (ikke-admin) bruker. */
+const NON_ADMIN_SYNC_COOLDOWN_MS = 10 * 60 * 1000;
+
+/** Hvem som ber om synk, og når det sist ble synket. */
+export const getSyncAccess = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    const settings = await ctx.db.query("league_settings").first();
+    return {
+      exists: user !== null,
+      isAdmin: user?.role === "admin",
+      lastSyncedAt: settings?.lastSyncedAt ?? 0,
+    };
+  },
+});
+
+/**
+ * Manuell synk fra appen. Administratorer kan alltid synke; vanlige brukere
+ * (f.eks. nye brukere som skal koble FPL-laget sitt) bare hvis forrige synk er
+ * eldre enn 10 minutter. Den ordinære oppdateringen kjøres av autoSync.ts.
  */
 export const syncLiveFplData = action({
   args: {
+    userId: v.optional(v.id("users")),
     customLeagueId: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
-    try {
-      // 1. Hent ligainnstillinger fra Convex (liga-ID + fallback-gameweek)
-      const settings = await ctx.runQuery(api.admin.getSettings);
-      const targetLeagueId = args.customLeagueId || settings?.leagueId || 464734;
-
-      // 2. Hent bootstrap-static ÉN gang – gir både aktiv gameweek og spillerkatalogen.
-      //    Alle feltnavn nedenfor leses fra dette live-svaret, ikke fra hardkodede antakelser.
-      //    Faller tilbake til lagret currentGameweek (ikke hardkodet 1) hvis kallet feiler.
-      let activeGw: number = settings?.currentGameweek || 1;
-      const elementsMap = new Map<number, any>();
-      let gwCalendar: GwCalendarEntry[] = [];
-      try {
-        const bootRes = await fetch(
-          "https://fantasy.premierleague.com/api/bootstrap-static/",
-          { headers: FPL_HEADERS }
-        );
-        if (bootRes.ok) {
-          const bootData = await bootRes.json();
-          const currentEvent =
-            bootData.events?.find((e: any) => e.is_current) ||
-            bootData.events?.find((e: any) => e.is_next) ||
-            bootData.events?.[0];
-          if (currentEvent?.id) {
-            activeGw = currentEvent.id;
-          }
-          for (const el of bootData.elements || []) {
-            elementsMap.set(el.id, el);
-          }
-          // Utled måned-tilhørighet per gameweek fra de offisielle fristene.
-          gwCalendar = buildGwCalendar(bootData.events || []);
-        }
-        if (elementsMap.size === 0) {
-          console.warn(
-            "bootstrap-static ga ingen elements – kaptein/benk-berikelse hoppes over i denne synkroniseringen"
-          );
-        }
-      } catch (e) {
-        console.warn("Kunne ikke hente bootstrap-static, bruker fallback GW:", e);
-      }
-
-      const gwMonth = gwMonthMap(gwCalendar);
-      const monthRanges = monthsFromCalendar(gwCalendar).map((m) => ({
-        monthKey: m.monthKey,
-        monthName: m.monthName,
-        gameweekStart: m.gameweekStart,
-        gameweekEnd: m.gameweekEnd,
-        customGwList: m.gwList,
-        isCompleted: m.isCompleted,
-      }));
-
-      // 3. Hent ligastilling og påmeldte fra FPL
-      const standingsRes = await fetch(
-        `https://fantasy.premierleague.com/api/leagues-classic/${targetLeagueId}/standings/`,
-        { headers: FPL_HEADERS }
-      );
-
-      if (!standingsRes.ok) {
-        throw new Error(`FPL League API returnerte status ${standingsRes.status}`);
-      }
-
-      const standingsData = await standingsRes.json();
-      const standingsResults = standingsData.standings?.results || [];
-      const newEntriesResults = standingsData.new_entries?.results || [];
-
-      // Kombiner både standings og new_entries
-      const entryMap = new Map<number, any>();
-      for (const item of standingsResults) {
-        if (!item.entry) continue;
-        const managerName =
-          item.player_name ||
-          `${item.player_first_name || ""} ${item.player_last_name || ""}`.trim() ||
-          "FPL Manager";
-        entryMap.set(item.entry, {
-          entry: item.entry,
-          entry_name: item.entry_name || "FPL Lag",
-          player_name: managerName,
-          total: item.total || 0,
-          event_total: item.event_total || 0,
-        });
-      }
-      for (const item of newEntriesResults) {
-        if (!item.entry || entryMap.has(item.entry)) continue;
-        const managerName =
-          item.player_name ||
-          `${item.player_first_name || ""} ${item.player_last_name || ""}`.trim() ||
-          "FPL Manager";
-        entryMap.set(item.entry, {
-          entry: item.entry,
-          entry_name: item.entry_name || "FPL Lag",
-          player_name: managerName,
-          total: item.total || 0,
-          event_total: item.event_total || 0,
-        });
-      }
-
-      // Hent ekstra sider med new_entries dersom det er flere enn 50 lag
-      if (standingsData.new_entries?.has_next) {
-        let nextPage = 2;
-        let hasMore = true;
-        while (hasMore && nextPage <= 10) {
-          try {
-            const nextRes = await fetch(
-              `https://fantasy.premierleague.com/api/leagues-classic/${targetLeagueId}/standings/?page_new_entries=${nextPage}`,
-              { headers: FPL_HEADERS }
-            );
-            if (nextRes.ok) {
-              const nextData = await nextRes.json();
-              const nextEntries = nextData.new_entries?.results || [];
-              for (const item of nextEntries) {
-                if (!item.entry || entryMap.has(item.entry)) continue;
-                const managerName =
-                  item.player_name ||
-                  `${item.player_first_name || ""} ${item.player_last_name || ""}`.trim() ||
-                  "FPL Manager";
-                entryMap.set(item.entry, {
-                  entry: item.entry,
-                  entry_name: item.entry_name || "FPL Lag",
-                  player_name: managerName,
-                  total: item.total || 0,
-                  event_total: item.event_total || 0,
-                });
-              }
-              hasMore = nextData.new_entries?.has_next || false;
-              nextPage++;
-            } else {
-              hasMore = false;
-            }
-          } catch {
-            hasMore = false;
-          }
-        }
-      }
-
-      const allCombinedResults = Array.from(entryMap.values());
-
-      // 4. Berik hvert lag med transfer hits, kaptein, benkpoeng og sesonghistorikk
-      //    (picks- + history-endepunktene). Kjøres i batcher for å unngå FPL rate-limiting
-      //    – hele ligaen på én gang ville vært titalls samtidige forespørsler.
-      const enrichedTeams = await mapInBatches(allCombinedResults, 5, async (r: any) => {
-          let hits = 0;
-          let captainName: string | undefined;
-          let captainPoints = 0;
-          let benchPoints = 0;
-          let benchedPlayer: string | undefined;
-          let totalHitsCost = 0;
-          let activeChip: string | undefined;
-          let perGwHistory: Array<{
-            gw: number;
-            points: number;
-            transfersCost: number;
-            benchPoints: number;
-            activeChip?: string;
-          }> = [];
-
-          try {
-            const [picksRes, historyRes] = await Promise.all([
-              fetch(
-                `https://fantasy.premierleague.com/api/entry/${r.entry}/event/${activeGw}/picks/`,
-                { headers: FPL_HEADERS }
-              ),
-              fetch(
-                `https://fantasy.premierleague.com/api/entry/${r.entry}/history/`,
-                { headers: FPL_HEADERS }
-              ),
-            ]);
-
-            if (picksRes.ok) {
-              const picksData = await picksRes.json();
-              // picks kommer sortert på "position" 1–15 (1–11 = banen, 12–15 = benk),
-              // men vi sorterer defensivt i tilfelle FPL endrer rekkefølgen.
-              const picks = [...(picksData.picks || [])].sort(
-                (a: any, b: any) => (a.position || 0) - (b.position || 0)
-              );
-              const captainPick =
-                picks.find((p: any) => p.is_captain) ||
-                picks.find((p: any) => p.is_vice_captain);
-              const captainElement = captainPick
-                ? elementsMap.get(captainPick.element)
-                : undefined;
-              captainName = captainElement?.web_name || undefined;
-              captainPoints = captainElement?.event_points || 0;
-              benchPoints = picksData.entry_history?.points_on_bench || 0;
-
-              // "Benkevarmeren": den benkede spilleren som faktisk scoret mest denne runden.
-              const worstBenchMiss = picks
-                .slice(11)
-                .map((p: any) => elementsMap.get(p.element))
-                .filter(Boolean)
-                .sort((a: any, b: any) => (b.event_points || 0) - (a.event_points || 0))[0];
-              benchedPlayer = worstBenchMiss?.web_name || undefined;
-
-              hits = picksData.entry_history?.event_transfers_cost || 0;
-              activeChip = picksData.active_chip || undefined;
-            }
-
-            if (historyRes.ok) {
-              const historyData = await historyRes.json();
-              const seasonHistory = Array.isArray(historyData.current) ? historyData.current : [];
-              totalHitsCost = seasonHistory.reduce((sum: number, item: any) => sum + (item.event_transfers_cost || 0), 0);
-              // Chip-bruk per runde ligger i history.chips ([{ name, event, time }]),
-              // IKKE i history.current – dette er eneste kilde til historiske chips.
-              const chipByGw = new Map<number, string>();
-              for (const c of Array.isArray(historyData.chips) ? historyData.chips : []) {
-                if (typeof c?.event === "number" && c?.name) {
-                  chipByGw.set(c.event, String(c.name));
-                }
-              }
-              // Full per-runde-historikk for backfill av gameweek_scores.
-              perGwHistory = seasonHistory
-                .filter((h: any) => typeof h.event === "number")
-                .map((h: any) => ({
-                  gw: h.event,
-                  points: h.points || 0,
-                  transfersCost: h.event_transfers_cost || 0,
-                  benchPoints: h.points_on_bench || 0,
-                  activeChip: chipByGw.get(h.event) || undefined,
-                }));
-            }
-          } catch {
-            // Ignorer enkelte picks-/history-feil og fortsett med 0
-          }
-
-          const managerName =
-            r.player_name ||
-            `${r.player_first_name || ""} ${r.player_last_name || ""}`.trim() ||
-            "FPL Manager";
-
-          return {
-            entryId: r.entry,
-            teamName: r.entry_name || "FPL Lag",
-            managerName,
-            totalPoints: r.total || 0,
-            currentGwPoints: r.event_total || 0,
-            currentGwTransfersCost: hits,
-            captainName,
-            captainPoints,
-            benchPoints,
-            benchedPlayer,
-            totalHitsCost,
-            activeChip,
-            perGwHistory,
-          };
-      });
-
-      // 5. Lagre synkroniserte data i Convex databasen
-      await ctx.runMutation(api.fpl.saveLiveFplSyncResult, {
-        currentGameweek: activeGw,
-        gwMonth,
-        monthRanges,
-        teamsData: enrichedTeams,
-      });
-
-      return {
-        success: true,
-        gameweek: activeGw,
-        syncedCount: enrichedTeams.length,
-        leagueName: standingsData.league?.name,
-      };
-    } catch (err: any) {
-      return {
-        success: false,
-        error: err.message || "Feil under synkronisering mot FPL API",
-      };
+  handler: async (ctx, args): Promise<LiveSyncResult | { success: true; skipped: true }> => {
+    if (!args.userId) {
+      return { success: false, error: "Uautorisert: Bruker-ID må oppgis." };
     }
+    const access = await ctx.runQuery(internal.fpl.getSyncAccess, { userId: args.userId });
+    if (!access.exists) {
+      return { success: false, error: "Uautorisert: Bruker ble ikke funnet." };
+    }
+    if (!access.isAdmin && Date.now() - access.lastSyncedAt < NON_ADMIN_SYNC_COOLDOWN_MS) {
+      return { success: true, skipped: true };
+    }
+    // Kun administratorer kan peke synken mot en annen liga.
+    return await runLiveFplSync(ctx, access.isAdmin ? args.customLeagueId : undefined);
   },
 });
 
@@ -668,7 +721,7 @@ export const fetchLiveTeamSquad = action({
 /**
  * Mutation for å lagre live FPL-synkroniseringsresultater i Convex databasen
  */
-export const saveLiveFplSyncResult = mutation({
+export const saveLiveFplSyncResult = internalMutation({
   args: {
     currentGameweek: v.number(),
     // gw (som streng) -> "YYYY-MM". Valgfri: eldre kallere sender den ikke.
