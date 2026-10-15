@@ -42,6 +42,8 @@
   import { seasonFor } from "../../../convex/season";
   import RoomPosterExport from "./RoomPosterExport.svelte";
   import CupPosterExport from "./cup/CupPosterExport.svelte";
+  import CupSeedEditor from "./cup/CupSeedEditor.svelte";
+  import { pointerDrag } from "$lib/utils/pointerDnd";
 
   let {
     isOpen = false,
@@ -346,6 +348,7 @@
     api.cups.calculateCupRoundScores,
   );
   const deleteCupMutation = useMutation(api.cups.deleteCup);
+  const swapMatchRoomsMutation = useMutation(api.cups.swapMatchRooms);
 
   let newCupSeason = $state(seasonFor());
   let newCupName = $state(`Atlantasy Vintercup ${seasonFor()}`);
@@ -359,6 +362,7 @@
   >("single_elimination");
   let newCupGroupCount = $state(2);
   let newCupAutoCalc = $state(true);
+  let newCupSeedOrder = $state<string[]>([]);
   let newCupSeedMethod = $state<"leaderboard" | "manual" | "random">(
     "leaderboard",
   );
@@ -1197,6 +1201,10 @@
         seedMethod: newCupSeedMethod,
         autoCalc: newCupAutoCalc,
         season: newCupSeason.trim() || undefined,
+        customSeedRoomIds:
+          newCupSeedMethod === "manual" && newCupSeedOrder.length > 0
+            ? (newCupSeedOrder as any)
+            : undefined,
       });
       showSuccess(`Cup "${newCupName.trim()}" opprettet!`);
     } catch (err: any) {
@@ -1258,6 +1266,49 @@
     }
   }
 
+  // Dra og slipp: bytt plass på to rom i kamper som ikke er spilt.
+  let dragSlot = $state<{ matchId: string; slot: 1 | 2 } | null>(null);
+  let hoverSlot = $state<string | null>(null);
+
+  let fedSlotKeys = $derived.by(() => {
+    const keys = new Set<string>();
+    for (const m of activeCup?.matches ?? []) {
+      if (m.nextMatchId && m.nextMatchSlot) keys.add(`${m.nextMatchId}:${m.nextMatchSlot}`);
+      if (m.nextLoserMatchId && m.nextLoserMatchSlot) keys.add(`${m.nextLoserMatchId}:${m.nextLoserMatchSlot}`);
+    }
+    return keys;
+  });
+
+  function slotSwappable(match: any, slot: 1 | 2): boolean {
+    if (activeCup?.groupStandings?.length) return false;
+    if (!(slot === 1 ? match.room1Id : match.room2Id)) return false;
+    if ((slot === 1 ? match.qual1 : match.qual2) != null) return false;
+    if (fedSlotKeys.has(`${match._id}:${slot}`)) return false;
+    if (match.status === "completed" && !match.isBye) return false;
+    return match.room1Score === undefined && match.room2Score === undefined;
+  }
+
+  async function swapSlots(fromKey: string, toKey: string) {
+    const [fromId, fromSlot] = fromKey.split(":");
+    const [toId, toSlot] = toKey.split(":");
+    const from = (activeCup?.matches ?? []).find((m: any) => m._id === fromId);
+    const to = (activeCup?.matches ?? []).find((m: any) => m._id === toId);
+    if (!from || !to) return;
+    if (!slotSwappable(from, Number(fromSlot) as 1 | 2) || !slotSwappable(to, Number(toSlot) as 1 | 2)) return;
+    try {
+      await swapMatchRoomsMutation.mutate({
+        adminUserId: currentUser?._id,
+        matchAId: fromId as any,
+        slotA: Number(fromSlot) as 1 | 2,
+        matchBId: toId as any,
+        slotB: Number(toSlot) as 1 | 2,
+      });
+      showSuccess("Byttet plass.");
+    } catch (err: any) {
+      alert(formatConvexError(err, "Kunne ikke bytte plass."));
+    }
+  }
+
   async function handleToggleAutoCalc(cupId: string, enabled: boolean) {
     try {
       await updateCupSettingsMutation.mutate({
@@ -1286,8 +1337,6 @@
       await updateMatchMutation.mutate({
         adminUserId: currentUser?._id,
         matchId: selectedMatchForEdit._id,
-        room1Id: editMatchRoom1Id ? (editMatchRoom1Id as any) : undefined,
-        room2Id: editMatchRoom2Id ? (editMatchRoom2Id as any) : undefined,
         winnerRoomId: editMatchWinnerId
           ? (editMatchWinnerId as any)
           : undefined,
@@ -3491,12 +3540,23 @@
                           >Basert på tabell & romsnitt (Anbefalt)</option
                         >
                         <option value="manual"
-                          >Standard romrekkefølge (Rom 1, Rom 2 …)</option
+                          >Manuelt – dra og slipp lagene selv</option
                         >
                         <option value="random">Helt tilfeldig trekning</option>
                       </select>
                     </div>
                   </div>
+
+                  {#if newCupSeedMethod === "manual"}
+                    <div class="p-3.5 rounded-xl bg-black/20 border border-[#F4C152]/30">
+                      <CupSeedEditor
+                        {rooms}
+                        format={newCupFormat}
+                        groupCount={Number(newCupGroupCount) || 2}
+                        bind:order={newCupSeedOrder}
+                      />
+                    </div>
+                  {/if}
 
                   <label class="flex items-start gap-2.5 p-3 rounded-xl bg-black/20 border border-white/10 cursor-pointer">
                     <input type="checkbox" bind:checked={newCupAutoCalc} class="mt-0.5 accent-[#9FE88D]" />
@@ -3530,7 +3590,7 @@
                       <ul class="space-y-1 text-xs text-[#AEB9CC]">
                         <li>• Winners bracket + taperbrakett. Du må tape to ganger for å ryke ut.</li>
                         <li>• Vinner- og taperbrakett spilles parallelt – taperrunde 1 går i samme gameweek som vinnerbrakettens runde 2.</li>
-                        <li>• Er ikke antallet en toerpotens spilles en play-in-runde først, så taperbraketten blir ren.</li>
+                        <li>• Er ikke antallet en toerpotens får de lavest seedede en innseedingsrunde først – taperne her faller ned i taperbraketten og er ikke ute. Alle lag får to liv.</li>
                         <li>• Avsluttes med en grand final mellom vinner av hver brakett.</li>
                       </ul>
                     {:else if newCupFormat === "round_robin"}
@@ -3744,40 +3804,6 @@
                     >
                       <div>
                         <label
-                          for="edit-match-r1"
-                          class="block font-bold text-white mb-1">Rom 1:</label
-                        >
-                        <select
-                          id="edit-match-r1"
-                          bind:value={editMatchRoom1Id}
-                          class="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
-                        >
-                          <option value="">-- Ingen / Avventer --</option>
-                          {#each rooms as r}
-                            <option value={r._id}>{r.name}</option>
-                          {/each}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label
-                          for="edit-match-r2"
-                          class="block font-bold text-white mb-1">Rom 2:</label
-                        >
-                        <select
-                          id="edit-match-r2"
-                          bind:value={editMatchRoom2Id}
-                          class="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-white focus:border-[#9FE88D] focus:outline-none"
-                        >
-                          <option value="">-- Ingen / Avventer --</option>
-                          {#each rooms as r}
-                            <option value={r._id}>{r.name}</option>
-                          {/each}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label
                           for="edit-match-winner"
                           class="block font-bold text-[#F4C152] mb-1"
                           >Sett Vinner:</label
@@ -3865,7 +3891,7 @@
                       Kamper i Cupen ({activeCup.matches?.length || 0})
                     </h4>
                     <span class="text-[11px] text-[#AEB9CC]">
-                      Trykk "Rediger" for manuell overstyring
+                      Dra et rom over et annet for å bytte plass (kun kamper som ikke er spilt) · "Rediger" for resultat
                     </span>
                   </div>
 
@@ -3921,10 +3947,26 @@
 
                               <div class="flex items-center justify-between gap-2">
                                 <div class="space-y-1 min-w-0">
-                                  {#each [{ room: match.room1, id: match.room1Id, score: match.room1Score, color: "#1eb854" }, ...(match.isBye ? [] : [{ room: match.room2, id: match.room2Id, score: match.room2Score, color: "#38bdf8" }])] as side}
+                                  {#each [{ slot: 1 as const, room: match.room1, id: match.room1Id, score: match.room1Score, color: "#1eb854" }, ...(match.isBye ? [] : [{ slot: 2 as const, room: match.room2, id: match.room2Id, score: match.room2Score, color: "#38bdf8" }])] as side (side.slot)}
+                                    {@const movable = slotSwappable(match, side.slot)}
+                                    {@const slotKey = `${match._id}:${side.slot}`}
                                     <div
-                                      class={`flex items-center gap-1.5 truncate ${match.winnerRoomId && side.id === match.winnerRoomId ? "font-bold text-[#9FE88D]" : "text-white"}`}
+                                      role="listitem"
+                                      data-dnd-target={movable ? slotKey : undefined}
+                                      use:pointerDrag={{
+                                        id: slotKey,
+                                        enabled: movable,
+                                        onStart: () => (dragSlot = { matchId: match._id, slot: side.slot }),
+                                        onHover: (t) => (hoverSlot = t),
+                                        onDrop: (a, b) => swapSlots(a, b),
+                                        onEnd: () => { dragSlot = null; hoverSlot = null; },
+                                      }}
+                                      title={movable ? "Dra over et annet rom for å bytte plass" : ""}
+                                      class={`flex items-center gap-1.5 truncate rounded-md px-1 -mx-1 ${movable ? "cursor-grab active:cursor-grabbing" : ""} ${hoverSlot === slotKey ? "bg-[#9FE88D]/20 ring-1 ring-[#9FE88D]/60" : ""} ${dragSlot?.matchId === match._id && dragSlot?.slot === side.slot ? "opacity-40" : ""} ${match.winnerRoomId && side.id === match.winnerRoomId ? "font-bold text-[#9FE88D]" : "text-white"}`}
                                     >
+                                      {#if movable}
+                                        <GripVertical class="w-3 h-3 text-[#AEB9CC] shrink-0" />
+                                      {/if}
                                       <span
                                         class="w-2 h-2 rounded-full shrink-0"
                                         style={`background-color: ${side.room?.accentColor || side.color}`}

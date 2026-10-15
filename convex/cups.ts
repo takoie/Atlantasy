@@ -323,6 +323,84 @@ export const updateMatch = mutation({
 });
 
 /**
+ * Bytter plass på to rom i bracketen (dra og slipp i admin). Gjelder kun plasser som er
+ * seedet ved opprettelsen i kamper som ikke er spilt – plasser som fylles av avansement,
+ * gruppespill eller lucky loser kan ikke flyttes, og gruppeinndelingen er låst.
+ */
+export const swapMatchRooms = mutation({
+  args: {
+    adminUserId: v.optional(v.id("users")),
+    matchAId: v.id("cup_matches"),
+    slotA: v.union(v.literal(1), v.literal(2)),
+    matchBId: v.id("cup_matches"),
+    slotB: v.union(v.literal(1), v.literal(2)),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminUserId);
+
+    const matchA = await ctx.db.get("cup_matches", args.matchAId);
+    const matchB = await ctx.db.get("cup_matches", args.matchBId);
+    if (!matchA || !matchB) throw new Error("Kamp ikke funnet.");
+    if (matchA.cupId !== matchB.cupId) throw new Error("Kampene tilhører ulike cuper.");
+
+    const cup = await ctx.db.get("cups", matchA.cupId);
+    if (!cup) throw new Error("Cup ikke funnet.");
+    if (cup.groupStandings?.length) {
+      throw new Error("Gruppeinndelingen kan ikke endres etter opprettelse. Slett og lag cupen på nytt.");
+    }
+
+    const all = await ctx.db
+      .query("cup_matches")
+      .withIndex("by_cupId", (q) => q.eq("cupId", cup._id))
+      .take(500);
+    const fedFrom = (m: Doc<"cup_matches">, slot: number) =>
+      all.some(
+        (o) =>
+          (o.nextMatchId === m._id && o.nextMatchSlot === slot) ||
+          (o.nextLoserMatchId === m._id && o.nextLoserMatchSlot === slot)
+      );
+
+    const check = (m: Doc<"cup_matches">, slot: 1 | 2) => {
+      const room = slot === 1 ? m.room1Id : m.room2Id;
+      const qual = slot === 1 ? m.qual1 : m.qual2;
+      if (!room) throw new Error("Det er ikke noe rom på den plassen.");
+      if (qual != null || fedFrom(m, slot)) {
+        throw new Error("Plassen fylles av tidligere kamper og kan ikke flyttes.");
+      }
+      const played = m.status === "completed" && !m.isBye;
+      if (played || m.room1Score !== undefined || m.room2Score !== undefined) {
+        throw new Error("Kampen er allerede spilt og kan ikke endres.");
+      }
+      return room;
+    };
+    const roomA = check(matchA, args.slotA);
+    const roomB = check(matchB, args.slotB);
+    if (roomA === roomB) return { success: true };
+
+    const now = Date.now();
+    const put = (m: Doc<"cup_matches">, slot: 1 | 2, room: Id<"rooms">) => ({
+      ...(slot === 1 ? { room1Id: room } : { room2Id: room }),
+      // Walkover er avgjort på forhånd, så vinneren følger plassen.
+      ...(m.isBye ? { winnerRoomId: room } : {}),
+      updatedAt: now,
+    });
+
+    if (matchA._id === matchB._id) {
+      // Bytte innad i samme kamp.
+      await ctx.db.patch("cup_matches", matchA._id, {
+        room1Id: matchA.room2Id,
+        room2Id: matchA.room1Id,
+        updatedAt: now,
+      });
+    } else {
+      await ctx.db.patch("cup_matches", matchA._id, put(matchA, args.slotA, roomB));
+      await ctx.db.patch("cup_matches", matchB._id, put(matchB, args.slotB, roomA));
+    }
+    return { success: true };
+  },
+});
+
+/**
  * Beregner en hel Cup-runde: romsnittet av de to beste spillerne per rom i
  * rundens gameweek avgjør hver kamp. Vinnere (og tapere i dobbel knockout)
  * sendes videre, gruppetabeller oppdateres og utslagsfasen fylles når den er klar.

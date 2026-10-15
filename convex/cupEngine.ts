@@ -359,28 +359,30 @@ export function roundRobin(teamCount: number, groupCount = 1): CupPlan {
 /* Double elimination (vinner- + taperbrakett + storfinale), med byes  */
 /* ------------------------------------------------------------------ */
 
-export function doubleElimination(teamCount: number): CupPlan {
-  // For at taperbraketten skal bli ren uansett antall lag: spill en play-in-runde
-  // som reduserer feltet til nærmeste lavere toerpotens. Play-in-tapere er ute.
-  const base = Math.max(2, 2 ** Math.floor(Math.log2(teamCount)));
-  const playIn = teamCount - base; // antall play-in-kamper
-  const W = log2(base);
+type Src =
+  | { kind: "seed"; seed: number }
+  | { kind: "winner" | "loser"; key: string }
+  | { kind: "empty" };
+
+/**
+ * Full dobbel knockout for en toerpotens-brakett (`size` plasser) uten play-in.
+ * Plasser over antall lag blir byes og fjernes av `doubleElimination`.
+ */
+function fullDoubleBracket(size: number): PlanMatch[] {
+  const W = log2(size);
   const matches: PlanMatch[] = [];
 
-  // Omgangen en vinnerbrakett-runde spilles i.
-  const wbGlobal = (r: number) => r + (playIn > 0 ? 1 : 0);
-
-  // --- Winners bracket (ren toerpotens på `base` slots) ---
-  const wbSlots = seedSlots(base);
+  // --- Winners bracket ---
+  const wbSlots = seedSlots(size);
   const wbKey = (r: number, m: number) => `WB-R${r}-M${m}`;
   for (let r = 1; r <= W; r++) {
-    const count = base / 2 ** r;
+    const count = size / 2 ** r;
     for (let m = 0; m < count; m++) {
       matches.push({
         key: wbKey(r, m + 1),
         bracketType: "winners",
         stage: "bracket",
-        roundNumber: wbGlobal(r),
+        roundNumber: r,
         roundTitle: `Vinnerbrakett – ${roundTitleFor(count, r)}`,
         matchIndex: m + 1,
         seed1: r === 1 ? wbSlots[m * 2] - 1 : null,
@@ -390,58 +392,17 @@ export function doubleElimination(teamCount: number): CupPlan {
       });
     }
   }
-
-  // --- Play-in: de laveste 2*playIn seedene spiller om plassene ---
-  if (playIn > 0) {
-    const posOfSeed = (s: number) => wbSlots.findIndex((x) => x - 1 === s);
-    for (let k = 0; k < playIn; k++) {
-      const hi = base - playIn + k; // seed som ellers ville stått i bracketen
-      const lo = teamCount - 1 - k;
-      const pos = posOfSeed(hi);
-      const wbMatch = wbKey(1, Math.floor(pos / 2) + 1);
-      const wbSlot: 1 | 2 = pos % 2 === 0 ? 1 : 2;
-      const target = matches.find((mm) => mm.key === wbMatch)!;
-      if (wbSlot === 1) target.seed1 = null;
-      else target.seed2 = null;
-      matches.push({
-        key: `PI-M${k + 1}`,
-        bracketType: "knockout",
-        stage: "knockout",
-        roundNumber: 1,
-        roundTitle: "Play-in",
-        matchIndex: k + 1,
-        seed1: hi,
-        seed2: lo,
-        nextWinnerKey: wbMatch,
-        nextWinnerSlot: wbSlot,
-      });
-    }
-  }
-
-  const wbByRound = (globalR: number) =>
-    matches.filter(
-      (m) => m.bracketType === "winners" && m.roundNumber === globalR
-    );
+  const wbRound = (r: number) =>
+    matches.filter((m) => m.bracketType === "winners" && m.roundNumber === r);
 
   // --- Losers bracket: 2*(W-1) runder, vekselvis major/minor ---
-  // Kjører parallelt med vinnerbraketten: en taperrunde spilles så snart
-  // forrige taperrunde og vinnerrunden som mater den er ferdig.
   const lbKey = (r: number, m: number) => `LB-R${r}-M${m}`;
   const lbRounds = Math.max(0, 2 * (W - 1));
   let lbPrev: string[] = [];
-  let lbPrevSlot = 0;
-
   for (let lr = 1; lr <= lbRounds; lr++) {
     const isMajor = lr === 1 || lr % 2 === 0;
-    let count: number;
-    if (lr === 1) count = base / 4;
-    else if (isMajor) count = lbPrev.length;
-    else count = Math.ceil(lbPrev.length / 2);
+    const count = lr === 1 ? size / 4 : isMajor ? lbPrev.length : Math.ceil(lbPrev.length / 2);
     if (count < 1) continue;
-
-    // Vinnerrunden som sender tapere inn i denne taperrunden (om noen).
-    const feedR = lr === 1 ? 1 : isMajor ? lr / 2 + 1 : null;
-    const slot = Math.max(lbPrevSlot, feedR ? wbGlobal(feedR) : 0) + 1;
 
     const created: string[] = [];
     for (let m = 0; m < count; m++) {
@@ -450,11 +411,8 @@ export function doubleElimination(teamCount: number): CupPlan {
         key: lbKey(lr, m + 1),
         bracketType: "losers",
         stage: "bracket",
-        roundNumber: slot,
-        roundTitle:
-          lr === lbRounds
-            ? "Taperbrakett – Finale"
-            : `Taperbrakett – Runde ${lr}`,
+        roundNumber: lr,
+        roundTitle: lr === lbRounds ? "Taperbrakett – Finale" : `Taperbrakett – Runde ${lr}`,
         matchIndex: m + 1,
         seed1: null,
         seed2: null,
@@ -462,10 +420,8 @@ export function doubleElimination(teamCount: number): CupPlan {
       });
     }
 
-    // Forrige LB-nivå inn i dette.
     lbPrev.forEach((prevKey, i) => {
       const target = created[isMajor ? i : Math.floor(i / 2)];
-      if (!target) return;
       const pm = matches.find((x) => x.key === prevKey)!;
       pm.nextWinnerKey = target;
       pm.nextWinnerSlot = isMajor ? 1 : ((i % 2 === 0 ? 1 : 2) as 1 | 2);
@@ -473,45 +429,38 @@ export function doubleElimination(teamCount: number): CupPlan {
 
     // Nedrykkere fra vinnerbraketten.
     if (lr === 1) {
-      wbByRound(wbGlobal(1)).forEach((wm, i) => {
-        const t = created[Math.floor(i / 2)];
-        if (!t) return;
-        wm.nextLoserKey = t;
+      wbRound(1).forEach((wm, i) => {
+        wm.nextLoserKey = created[Math.floor(i / 2)];
         wm.nextLoserSlot = (i % 2 === 0 ? 1 : 2) as 1 | 2;
       });
-    } else if (isMajor && feedR) {
-      wbByRound(wbGlobal(feedR)).forEach((wm, i) => {
+    } else if (isMajor) {
+      wbRound(lr / 2 + 1).forEach((wm, i) => {
         if (created[i]) {
           wm.nextLoserKey = created[i];
           wm.nextLoserSlot = 2;
         }
       });
     }
-
     lbPrev = created;
-    lbPrevSlot = slot;
   }
 
   // --- Grand Final ---
   const grandKey = "GF-1";
-  const grandRound = Math.max(wbGlobal(W), lbPrevSlot) + 1;
   matches.push({
     key: grandKey,
     bracketType: "grand_final",
     stage: "bracket",
-    roundNumber: grandRound,
+    roundNumber: W + lbRounds + 1,
     roundTitle: "Grand Final",
     matchIndex: 1,
     seed1: null,
     seed2: null,
     role: "final",
   });
-  const wbFinal = matches.find((m) => m.key === wbKey(W, 1));
-  if (wbFinal) {
-    wbFinal.nextWinnerKey = grandKey;
-    wbFinal.nextWinnerSlot = 1;
-  }
-  if (lbRounds === 0 && wbFinal) {
+  const wbFinal = matches.find((m) => m.key === wbKey(W, 1))!;
+  wbFinal.nextWinnerKey = grandKey;
+  wbFinal.nextWinnerSlot = 1;
+  if (lbRounds === 0) {
     wbFinal.nextLoserKey = grandKey;
     wbFinal.nextLoserSlot = 2;
   } else if (lbPrev.length === 1) {
@@ -519,8 +468,126 @@ export function doubleElimination(teamCount: number): CupPlan {
     lbFinal.nextWinnerKey = grandKey;
     lbFinal.nextWinnerSlot = 2;
   }
+  return matches;
+}
 
-  return { format: "double_elimination", matches, totalRounds: grandRound };
+/**
+ * Dobbel knockout for et vilkårlig antall lag: ALLE lag får to liv.
+ *
+ * Vi bygger en full brakett for neste toerpotens (10 lag -> 16 plasser) og fjerner
+ * byene: en kamp med én deltaker blir en walkover og kobles bort, en kamp uten
+ * deltakere forsvinner. Det som gjenstår er en ren dobbel knockout der ingen faller
+ * ut etter første tap – også de som taper den første "innseedingsrunden" havner i
+ * taperbraketten. Omgangene (gameweeks) settes ut fra avhengigheter, så taperbrakett
+ * og vinnerbrakett spilles parallelt.
+ */
+export function doubleElimination(teamCount: number): CupPlan {
+  const size = Math.max(2, nextPow2(teamCount));
+  const full = fullDoubleBracket(size);
+
+  // Inngangene til hver kamp: seed (R1) eller vinner/taper fra en annen kamp.
+  const inputs = new Map<string, [Src, Src]>();
+  for (const m of full) {
+    const seedSrc = (s: number | null): Src =>
+      s != null && s < teamCount ? { kind: "seed", seed: s } : { kind: "empty" };
+    inputs.set(m.key, [seedSrc(m.seed1), seedSrc(m.seed2)]);
+  }
+  for (const m of full) {
+    if (m.nextWinnerKey) {
+      inputs.get(m.nextWinnerKey)![(m.nextWinnerSlot ?? 1) - 1] = { kind: "winner", key: m.key };
+    }
+    if (m.nextLoserKey) {
+      inputs.get(m.nextLoserKey)![(m.nextLoserSlot ?? 1) - 1] = { kind: "loser", key: m.key };
+    }
+  }
+
+  type Reduced = { real: boolean; a: Src; b: Src; winner: Src; loser: Src };
+  const memo = new Map<string, Reduced>();
+  const EMPTY: Src = { kind: "empty" };
+  const resolve = (src: Src): Src => {
+    if (src.kind === "seed" || src.kind === "empty") return src;
+    const r = reduce(src.key);
+    return src.kind === "winner" ? r.winner : r.loser;
+  };
+  const reduce = (key: string): Reduced => {
+    const hit = memo.get(key);
+    if (hit) return hit;
+    const [ia, ib] = inputs.get(key)!;
+    const a = resolve(ia);
+    const b = resolve(ib);
+    let out: Reduced;
+    if (a.kind !== "empty" && b.kind !== "empty") {
+      out = { real: true, a, b, winner: { kind: "winner", key }, loser: { kind: "loser", key } };
+    } else if (a.kind !== "empty" || b.kind !== "empty") {
+      // Walkover: den ene deltakeren går rett videre, ingen taper.
+      out = { real: false, a, b, winner: a.kind !== "empty" ? a : b, loser: EMPTY };
+    } else {
+      out = { real: false, a, b, winner: EMPTY, loser: EMPTY };
+    }
+    memo.set(key, out);
+    return out;
+  };
+
+  const real = full.filter((m) => reduce(m.key).real).map((m) => ({ ...m }));
+  const realByKey = new Map(real.map((m) => [m.key, m]));
+
+  // Koble om: nye veier går direkte fra ekte kamp til ekte kamp.
+  for (const m of real) {
+    m.nextWinnerKey = m.nextLoserKey = null;
+    m.nextWinnerSlot = m.nextLoserSlot = null;
+    m.seed1 = m.seed2 = null;
+  }
+  for (const m of real) {
+    const r = reduce(m.key);
+    [r.a, r.b].forEach((src, i) => {
+      const slot = (i + 1) as 1 | 2;
+      if (src.kind === "seed") {
+        if (slot === 1) m.seed1 = src.seed;
+        else m.seed2 = src.seed;
+      } else if (src.kind === "winner" || src.kind === "loser") {
+        const from = realByKey.get(src.key)!;
+        if (src.kind === "winner") {
+          from.nextWinnerKey = m.key;
+          from.nextWinnerSlot = slot;
+        } else {
+          from.nextLoserKey = m.key;
+          from.nextLoserSlot = slot;
+        }
+      }
+    });
+  }
+
+  // Omgang = lengste kjede av kamper som må spilles før. Gir parallelle brakketter.
+  const feeders = new Map<string, string[]>();
+  for (const m of real) {
+    for (const k of [m.nextWinnerKey, m.nextLoserKey]) {
+      if (!k) continue;
+      feeders.set(k, [...(feeders.get(k) ?? []), m.key]);
+    }
+  }
+  const slotMemo = new Map<string, number>();
+  const slotOf = (key: string): number => {
+    const hit = slotMemo.get(key);
+    if (hit) return hit;
+    const s = 1 + Math.max(0, ...(feeders.get(key) ?? []).map(slotOf));
+    slotMemo.set(key, s);
+    return s;
+  };
+
+  // Navn og nummerering: første vinnerrunde kalles innseeding når den ikke er full.
+  const partialFirstRound = size > teamCount;
+  const counters = new Map<string, number>();
+  const matches = real.map((m) => {
+    const isFirstWb = m.bracketType === "winners" && m.key.startsWith("WB-R1-");
+    const title = isFirstWb && partialFirstRound ? "Vinnerbrakett – Innseeding" : m.roundTitle;
+    const group = `${m.bracketType}|${title}`;
+    const idx = (counters.get(group) ?? 0) + 1;
+    counters.set(group, idx);
+    return { ...m, roundTitle: title, roundNumber: slotOf(m.key), matchIndex: idx };
+  });
+
+  const totalRounds = Math.max(...matches.map((m) => m.roundNumber));
+  return { format: "double_elimination", matches, totalRounds };
 }
 
 /* ------------------------------------------------------------------ */
