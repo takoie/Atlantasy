@@ -337,20 +337,20 @@
     margin-bottom: 2.8%;
   }
   .p-title {
-    font: 400 1px/0.86 "Bebas Neue", Impact, sans-serif;
+    font: 700 1px/0.86 "Public Sans", sans-serif;
     font-size: clamp(28px, 8.6cqw, 50px);
     letter-spacing: 0.03em;
     color: #eef1f5;
   }
   .p-event {
-    font: 400 1px/0.9 "Bebas Neue", Impact, sans-serif;
+    font: 700 1px/0.9 "Public Sans", sans-serif;
     font-size: clamp(18px, 5.6cqw, 32px);
     letter-spacing: 0.02em;
     color: #9fe88d;
     margin-top: 0.3cqw;
   }
   .p-sub {
-    font: 600 1px/1 "JetBrains Mono", monospace;
+    font: 600 1px/1 "Public Sans", sans-serif;
     font-size: clamp(9px, 2cqw, 13px);
     color: #9aa5b4;
     letter-spacing: 0.07em;
@@ -387,7 +387,7 @@
     background: linear-gradient(90deg, rgba(219, 138, 58, 0.15), rgba(219, 138, 58, 0.02));
   }
   .p-rank {
-    font: 400 1px/1 "Bebas Neue", Impact, sans-serif;
+    font: 700 1px/1 "Public Sans", sans-serif;
     font-size: calc(clamp(19px, 4.8cqw, 27px) * var(--density, 1));
     width: 1.6em;
     flex: none;
@@ -427,7 +427,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font: 700 1px/1 "JetBrains Mono", monospace;
+    font: 700 1px/1 "Public Sans", sans-serif;
     font-size: calc(1.83cqw * var(--density, 1));
     letter-spacing: -0.02em;
     flex: none;
@@ -443,7 +443,7 @@
   }
   .p-name {
     display: block;
-    font: 700 1px/1.2 "Inter", sans-serif;
+    font: 700 1px/1.2 "Public Sans", sans-serif;
     font-size: calc(2.9cqw * var(--density, 1));
     color: #eef1f5;
   }
@@ -455,7 +455,7 @@
     margin-top: calc(0.4cqw * var(--density, 1));
   }
   .gwchip {
-    font: 500 1px/1.5 "JetBrains Mono", monospace;
+    font: 500 1px/1.5 "Public Sans", sans-serif;
     font-size: calc(1.6cqw * var(--density, 1));
     color: #eef1f5;
     background: rgba(255, 255, 255, 0.07);
@@ -477,7 +477,7 @@
   }
   .p-season {
     display: block;
-    font: 500 1px/1 "JetBrains Mono", monospace;
+    font: 500 1px/1 "Public Sans", sans-serif;
     font-size: calc(1.8cqw * var(--density, 1));
     color: #66707d;
     letter-spacing: 0.02em;
@@ -496,7 +496,7 @@
     gap: 1px;
   }
   .p-points {
-    font: 700 1px/1 "JetBrains Mono", monospace;
+    font: 700 1px/1 "Public Sans", sans-serif;
     font-size: calc(clamp(18px, 4.8cqw, 25px) * var(--density, 1));
     color: #eef1f5;
   }

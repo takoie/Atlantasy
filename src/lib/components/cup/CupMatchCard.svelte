@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Crown } from "lucide-svelte";
+  import { Crown, TrendingUp } from "lucide-svelte";
 
   type Accent = "default" | "winners" | "losers" | "final";
 
@@ -32,11 +32,15 @@
 
   let completed = $derived(match.status === "completed");
   let isDraw = $derived(completed && !match.winnerRoomId && !match.isBye);
+  // Foreløpige poeng (server fyller `live` for uferdige kamper i en gameweek som har startet).
+  let live = $derived(!completed && !match.isBye ? (match.live ?? null) : null);
+  let lead = $derived(live && live.leader !== 0 ? Math.abs(live.score1 - live.score2) : 0);
   let rows = $derived([
     {
       room: match.room1,
       roomId: match.room1Id,
-      score: match.room1Score,
+      score: live ? live.score1 : match.room1Score,
+      leading: live?.leader === 1,
       hint: hint1,
       fallbackColor: "#1eb854",
     },
@@ -46,12 +50,15 @@
           {
             room: match.room2,
             roomId: match.room2Id,
-            score: match.room2Score,
+            score: live ? live.score2 : match.room2Score,
+            leading: live?.leader === 2,
             hint: hint2,
             fallbackColor: "#38bdf8",
           },
         ]),
   ]);
+
+  const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 </script>
 
 <button
@@ -72,7 +79,13 @@
             : "text-[#AEB9CC] bg-black/20"
       }`}
     >
-      {match.isBye ? "Videre" : isDraw ? "Uavgjort" : completed ? "Ferdig" : isCurrent ? "Neste" : "Kommende"}
+      {#if live}
+        <span class="inline-flex items-center gap-1">
+          <span class="live-dot w-1.5 h-1.5 rounded-full bg-[#70E1F8]"></span>Live
+        </span>
+      {:else}
+        {match.isBye ? "Videre" : isDraw ? "Uavgjort" : completed ? "Ferdig" : isCurrent ? "Neste" : "Kommende"}
+      {/if}
     </span>
   </div>
 
@@ -80,10 +93,17 @@
     {#each rows as row}
       {@const won = !!match.winnerRoomId && row.roomId === match.winnerRoomId}
       <div
-        class={`flex items-center justify-between gap-2 p-1.5 rounded-lg ${
-          won ? "bg-[#9FE88D]/15 text-white font-bold" : "text-[#E2E8F0]"
+        class={`relative flex items-center justify-between gap-2 p-1.5 rounded-lg ${
+          won
+            ? "bg-[#9FE88D]/15 text-white font-bold"
+            : row.leading
+              ? "bg-[#70E1F8]/15 text-white font-bold shadow-[inset_0_0_0_1px_rgba(112,225,248,0.35)]"
+              : "text-[#E2E8F0]"
         }`}
       >
+        {#if row.leading}
+          <span class="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-[#70E1F8]"></span>
+        {/if}
         <div class="flex items-center gap-2 min-w-0">
           {#if row.room}
             <span
@@ -103,10 +123,44 @@
         <div class="flex items-center gap-1.5 shrink-0">
           {#if won && !match.isBye}
             <Crown class="w-3 h-3 text-[#F4C152]" />
+          {:else if row.leading}
+            <span class="flex items-center gap-1 text-[10px] font-bold text-[#70E1F8]" title="Leder foreløpig">
+              <TrendingUp class="w-3 h-3" />+{fmt(lead)}
+            </span>
+            <span class="w-px h-3.5 bg-[#70E1F8]/40 mx-1" aria-hidden="true"></span>
           {/if}
-          <span class="font-mono text-xs font-bold">{row.score !== undefined ? row.score : "-"}</span>
+          <span
+            class={`font-mono text-xs font-bold ${live ? (row.leading ? "text-[#70E1F8]" : "text-[#AEB9CC]") : ""}`}
+            title={live ? "Foreløpig poengsum" : undefined}
+          >
+            {row.score !== undefined ? fmt(row.score) : "-"}
+          </span>
         </div>
       </div>
     {/each}
   </div>
 </button>
+
+<style>
+  .live-dot {
+    animation: live-pulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes live-pulse {
+    0%,
+    100% {
+      opacity: 1;
+      box-shadow: 0 0 0 0 rgba(112, 225, 248, 0.6);
+    }
+    50% {
+      opacity: 0.55;
+      box-shadow: 0 0 0 4px rgba(112, 225, 248, 0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .live-dot {
+      animation: none;
+    }
+  }
+</style>

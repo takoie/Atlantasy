@@ -20,6 +20,8 @@ import type * as cupScoring from "../cupScoring.js";
 import type * as cups from "../cups.js";
 import type * as fpl from "../fpl.js";
 import type * as fplCalendar from "../fplCalendar.js";
+import type * as playerMath from "../playerMath.js";
+import type * as players from "../players.js";
 import type * as roomColors from "../roomColors.js";
 import type * as rooms from "../rooms.js";
 import type * as season from "../season.js";
@@ -44,6 +46,8 @@ declare const fullApi: ApiFromModules<{
   cups: typeof cups;
   fpl: typeof fpl;
   fplCalendar: typeof fplCalendar;
+  playerMath: typeof playerMath;
+  players: typeof players;
   roomColors: typeof roomColors;
   rooms: typeof rooms;
   season: typeof season;

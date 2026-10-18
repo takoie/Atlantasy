@@ -12,8 +12,12 @@
     Timer,
     Info,
     Shirt,
+    ChevronDown,
+    UserSearch,
+    Coins,
   } from "lucide-svelte";
   import { onMount, onDestroy } from "svelte";
+  import { slide } from "svelte/transition";
 
   let {
     activeView = "leaderboard",
@@ -23,7 +27,7 @@
     currentUser = null,
     deadlineEpoch = null,
     deadlineLabel = "GW 1",
-    unreadChatCount = 0,
+    cupBadge = null,
     onSelectView = (_view: string) => {},
     onOpenAdmin = () => {},
     onRefreshFpl = () => {},
@@ -39,7 +43,7 @@
     currentUser?: any;
     deadlineEpoch?: number | null;
     deadlineLabel?: string;
-    unreadChatCount?: number;
+    cupBadge?: string | null;
     onSelectView?: (view: string) => void;
     onOpenAdmin?: () => void;
     onRefreshFpl?: () => void;
@@ -128,15 +132,20 @@
       label: "Cup",
       icon: Swords,
       color: "text-[#F4C152]",
-      badge: "Cup",
+      badge: null, // vises dynamisk som "Runde x av y" når cupen er aktiv
     },
-    {
-      id: "insights",
-      label: "Ligainnsikt",
-      icon: Sparkles,
-      color: "text-[#F4C152]",
-      badge: null,
-    },
+  ];
+
+  // Analyse er en gruppe med egne valg, så folk finner dem direkte i menyen.
+  const analysisItems = [
+    { id: "insights", label: "Ligainnsikt", icon: Sparkles, color: "text-[#F4C152]", badge: null },
+    { id: "players", label: "Spilleranalyse", icon: UserSearch, color: "text-[#70E1F8]", badge: null },
+    { id: "prices", label: "Priser", icon: Coins, color: "text-[#9FE88D]", badge: null },
+  ];
+  let analysisActive = $derived(analysisItems.some((i) => i.id === activeView));
+
+  // Sjeldnere brukte moduler ligger i en sammenleggbar skuff under skillet.
+  const moreItems = [
     {
       id: "chat",
       label: "Chat",
@@ -159,7 +168,73 @@
       badge: null,
     },
   ];
+  const moreIds = moreItems.map((i) => i.id);
+
+  const MORE_KEY = "atlantasy_sidebar_more_open";
+  let moreOpen = $state(false);
+
+  onMount(() => {
+    try {
+      moreOpen = localStorage.getItem(MORE_KEY) === "1";
+    } catch {
+      /* localStorage utilgjengelig */
+    }
+  });
+
+  function toggleMore() {
+    moreOpen = !moreOpen;
+    try {
+      localStorage.setItem(MORE_KEY, moreOpen ? "1" : "0");
+    } catch {
+      /* ignorer */
+    }
+  }
+
+  // Åpne skuffen automatisk når man navigerer til en modul inni den.
+  $effect(() => {
+    if (moreIds.includes(activeView)) moreOpen = true;
+  });
 </script>
+
+{#snippet navButton(item: (typeof navItems)[number] | (typeof moreItems)[number] | (typeof analysisItems)[number])}
+      {@const isActive = activeView === item.id}
+      {@const badge = item.id === "cup" ? cupBadge : item.badge}
+      <button
+        onclick={() => onSelectView(item.id)}
+        class={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-semibold transition-all group ${
+          isActive
+            ? "bg-white/[0.06] border border-[#9FE88D]/45 text-white shadow-sm"
+            : "text-[#AEB9CC] hover:bg-white/[0.045] hover:text-white border border-transparent"
+        }`}
+      >
+        <div class="flex items-center gap-3 min-w-0">
+          <div
+            class={`p-1.5 rounded-lg transition-colors ${
+              isActive
+                ? "bg-[#9FE88D]/20 text-[#9FE88D]"
+                : "bg-white/[0.04] text-[#AEB9CC] group-hover:text-white"
+            }`}
+          >
+            <item.icon class="w-4 h-4" />
+          </div>
+
+          <span class="font-bold text-sm truncate leading-tight">
+            {item.label}
+          </span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          {#if badge}
+            <span class="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#9FE88D]/20 text-[#9FE88D] border border-[#9FE88D]/40 whitespace-nowrap">
+              {badge}
+            </span>
+          {/if}
+          {#if isActive}
+            <div class="w-1.5 h-1.5 rounded-full bg-[#9FE88D]"></div>
+          {/if}
+        </div>
+      </button>
+{/snippet}
 
 <aside class="w-64 sm:w-72 flex flex-col justify-between select-none shrink-0 z-30 font-sans h-full bg-transparent">
   <!-- Statisk Toppseksjon: Live Deadline Countdown Banner -->
@@ -204,54 +279,73 @@
       </span>
 
       <div class="space-y-1 pt-0.5">
-        {#each navItems as item}
-          {@const isActive = activeView === item.id}
-          <button
-            onclick={() => onSelectView(item.id)}
-            class={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-semibold transition-all group ${
-              isActive
-                ? "bg-white/[0.06] border border-[#9FE88D]/45 text-white shadow-sm"
-                : "text-[#AEB9CC] hover:bg-white/[0.045] hover:text-white border border-transparent"
+        {#each navItems as item (item.id)}
+          {@render navButton(item)}
+        {/each}
+
+        <!-- Analyse: gruppe med egne undervalg -->
+        <div class="pt-0.5">
+          <div
+            class={`flex items-center gap-3 px-3 py-2 text-sm font-bold ${
+              analysisActive ? "text-white" : "text-[#AEB9CC]"
             }`}
           >
-            <div class="flex items-center gap-3 min-w-0">
-              <div
-                class={`p-1.5 rounded-lg transition-colors ${
+            <div
+              class={`p-1.5 rounded-lg ${
+                analysisActive ? "bg-[#9FE88D]/20 text-[#9FE88D]" : "bg-white/[0.04] text-[#AEB9CC]"
+              }`}
+            >
+              <Sparkles class="w-4 h-4" />
+            </div>
+            <span class="leading-tight">Analyse</span>
+          </div>
+          <div class="ml-[1.625rem] pl-3 border-l border-white/10 space-y-0.5">
+            {#each analysisItems as item (item.id)}
+              {@const isActive = activeView === item.id}
+              <button
+                type="button"
+                onclick={() => onSelectView(item.id)}
+                class={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] font-semibold transition-colors border ${
                   isActive
-                    ? "bg-[#9FE88D]/20 text-[#9FE88D]"
-                    : "bg-white/[0.04] text-[#AEB9CC] group-hover:text-white"
+                    ? "bg-white/[0.06] border-[#9FE88D]/45 text-white"
+                    : "text-[#AEB9CC] hover:bg-white/[0.045] hover:text-white border-transparent"
                 }`}
               >
-                <item.icon class="w-4 h-4" />
-              </div>
-
-              <span class="font-bold text-sm truncate leading-tight">
-                {item.label}
-              </span>
-            </div>
-
-            <div class="flex items-center gap-2">
-              {#if item.id === "chat"}
-                {#if unreadChatCount > 0}
-                  <span class="text-[11px] font-bold px-1.5 py-0.2 rounded-full bg-[#FB6F84] text-white border border-[#FB6F84]/50 shadow-sm animate-pulse flex items-center gap-1">
-                    <span>+{unreadChatCount > 99 ? "99" : unreadChatCount}</span>
-                  </span>
-                {:else}
-                  <span class="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#9FE88D]/20 text-[#9FE88D] border border-[#9FE88D]/40">
-                    Live
-                  </span>
+                <item.icon class={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-[#9FE88D]" : ""}`} />
+                <span class="truncate">{item.label}</span>
+                {#if isActive}
+                  <span class="ml-auto w-1.5 h-1.5 rounded-full bg-[#9FE88D]"></span>
                 {/if}
-              {:else if item.badge}
-                <span class="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#9FE88D]/20 text-[#9FE88D] border border-[#9FE88D]/40">
-                  {item.badge}
-                </span>
-              {/if}
-              {#if isActive}
-                <div class="w-1.5 h-1.5 rounded-full bg-[#9FE88D]"></div>
-              {/if}
-            </div>
-          </button>
-        {/each}
+              </button>
+            {/each}
+          </div>
+        </div>
+      </div>
+
+      <!-- Skille + skuff for sjeldnere brukte moduler -->
+      <div class="pt-2">
+        <button
+          type="button"
+          onclick={toggleMore}
+          aria-expanded={moreOpen}
+          aria-controls="sidebar-more"
+          class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] uppercase font-bold tracking-wider text-[#AEB9CC] hover:text-white hover:bg-white/[0.04] transition-colors"
+        >
+          <span class="h-px flex-1 bg-white/10"></span>
+          <span class="flex items-center gap-1.5">
+            Mer
+          </span>
+          <ChevronDown class={`w-3.5 h-3.5 transition-transform ${moreOpen ? "rotate-180" : ""}`} />
+          <span class="h-px flex-1 bg-white/10"></span>
+        </button>
+
+        {#if moreOpen}
+          <div id="sidebar-more" class="space-y-1 pt-1" transition:slide={{ duration: 160 }}>
+            {#each moreItems as item (item.id)}
+              {@render navButton(item)}
+            {/each}
+          </div>
+        {/if}
       </div>
     </nav>
   </div>
@@ -337,7 +431,7 @@
     <!-- Versjon, Lisenser & Oppdateringssjekk -->
     <div class="flex items-center justify-between px-1 text-[11px] text-[#AEB9CC]">
       <div class="flex items-center gap-1.5">
-        <span class="font-mono text-white/80">v1.2.1</span>
+        <span class="font-mono text-white/80">v1.3.0</span>
         <button
           type="button"
           onclick={onOpenLicenses}

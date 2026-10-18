@@ -10,7 +10,9 @@ import {
   advanceFromMatch,
   calculateGameweekForActiveCups,
   calculateRound,
+  decide,
   persistCupPlan,
+  roomStatsFor,
   refreshCupState,
 } from "./cupScoring";
 
@@ -38,6 +40,41 @@ async function populateCup(ctx: QueryCtx, cup: Doc<"cups">) {
   );
   const room = (id: Id<"rooms"> | undefined) => (id ? roomMap.get(id) ?? null : null);
 
+  // Foreløpige poeng for kamper som ikke er ferdig, men der gameweeken har startet.
+  // Bruker samme regnestykke som den endelige rundeberegningen, så live-leder og
+  // sluttresultat stemmer overens.
+  const liveByMatch = new Map<
+    Id<"cup_matches">,
+    { score1: number; score2: number; leader: 1 | 2 | 0 }
+  >();
+  const settings = await ctx.db.query("league_settings").first();
+  const currentGw = settings?.currentGameweek;
+  const deductHits = settings?.deductTransferHits ?? true;
+  const pending = matches.filter(
+    (m) =>
+      m.status !== "completed" &&
+      !m.isBye &&
+      m.room1Id &&
+      m.room2Id &&
+      currentGw !== undefined &&
+      m.gameweek <= currentGw
+  );
+  if (pending.length > 0) {
+    const teams = await ctx.db.query("fpl_teams").collect();
+    for (const gw of new Set(pending.map((m) => m.gameweek))) {
+      const gwScores = await ctx.db
+        .query("gameweek_scores")
+        .withIndex("by_gameweek", (q) => q.eq("gameweek", gw))
+        .collect();
+      const scoreByEntry = new Map(gwScores.map((s) => [s.entryId, s]));
+      for (const m of pending.filter((p) => p.gameweek === gw)) {
+        const s1 = roomStatsFor(m.room1Id!, teams, scoreByEntry, deductHits);
+        const s2 = roomStatsFor(m.room2Id!, teams, scoreByEntry, deductHits);
+        liveByMatch.set(m._id, { score1: s1.avg, score2: s2.avg, leader: decide(s1, s2) });
+      }
+    }
+  }
+
   return {
     ...cup,
     name: effectiveCupName(cup),
@@ -47,6 +84,7 @@ async function populateCup(ctx: QueryCtx, cup: Doc<"cups">) {
     thirdPlaceRoom: room(cup.thirdPlaceRoomId),
     matches: matches.map((m) => ({
       ...m,
+      live: liveByMatch.get(m._id) ?? null,
       room1: room(m.room1Id),
       room2: room(m.room2Id),
       winnerRoom: room(m.winnerRoomId),

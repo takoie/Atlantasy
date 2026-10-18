@@ -21,6 +21,8 @@
 
   body {
     @apply text-[#E2E8F0] antialiased select-none font-sans overflow-hidden;
+    /* Jevn tallbredde, så tall i tabeller og tellere ikke hopper */
+    font-variant-numeric: tabular-nums;
     margin: 0;
     padding: 0;
     height: 100vh;

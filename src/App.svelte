@@ -3,7 +3,7 @@
   import WallOfFameBanner from "$lib/components/WallOfFameBanner.svelte";
   import Leaderboard from "$lib/components/Leaderboard.svelte";
   import IndividualLeaderboard from "$lib/components/IndividualLeaderboard.svelte";
-  import LeagueStatsPanel from "$lib/components/LeagueStatsPanel.svelte";
+  import AnalysisView from "$lib/components/AnalysisView.svelte";
   import ChatDrawer from "$lib/components/ChatDrawer.svelte";
   import RoomDetailModal from "$lib/components/RoomDetailModal.svelte";
   import AdminModal from "$lib/components/AdminModal.svelte";
@@ -44,6 +44,12 @@
   const usersQuery = useQuery(api.auth.listUsers);
   const articlesQuery = useQuery(api.articles.listArticles);
   const allTeamsQuery = useQuery(api.rooms.getAllFplTeams);
+  // Samme spørring som Cup-visningen bruker, så Convex deler abonnementet.
+  const activeCupQuery = useQuery(api.cups.getActiveCup);
+  let cupBadge = $derived.by(() => {
+    const cup = activeCupQuery.data;
+    return cup && cup.status === "active" ? `Runde ${cup.currentRound} av ${cup.totalRounds}` : null;
+  });
 
   // Reaktiv State med Svelte 5 Runes
   let activeView = $state("leaderboard"); // "leaderboard" | "wall_of_fame" | "news"
@@ -150,42 +156,11 @@
   }));
   let messages = $derived(chatQuery.data ?? []);
 
-  // Tidsstempel for når brukeren sist åpnet chatten (hentes fra localStorage)
-  let lastVisitedChatTime = $state<number>(Date.now());
-
-  const unreadChatQuery = useQuery(api.chat.getUnreadCount, () => ({
-    since: lastVisitedChatTime,
-    roomId: (currentUser?.roomId ?? undefined) as any,
-  }));
-
-  let unreadChatCount = $derived(
-    activeView === "chat" || isChatOpen ? 0 : (unreadChatQuery.data ?? 0)
-  );
-
-  // Nullstill uleste meldinger når brukeren går inn på chat-modulen
-  $effect(() => {
-    if (activeView === "chat" || isChatOpen) {
-      const now = Date.now();
-      lastVisitedChatTime = now;
-      localStorage.setItem("atlantasy_last_visited_chat", String(now));
-    }
-  });
-
   let isConvexConnected = $derived(
     !roomsQuery.error && roomsQuery.data !== undefined
   );
 
   onMount(async () => {
-    // Hent tidsstempel for sist besøkte chat
-    const savedChatTime = localStorage.getItem("atlantasy_last_visited_chat");
-    if (savedChatTime) {
-      lastVisitedChatTime = parseInt(savedChatTime, 10);
-    } else {
-      const now = Date.now();
-      lastVisitedChatTime = now;
-      localStorage.setItem("atlantasy_last_visited_chat", String(now));
-    }
-
     // Sjekk om brukeren allerede har fullført onboarding / lagret profil
     const savedUserId = localStorage.getItem("atlantasy_current_user_id");
     if (savedUserId) {
@@ -350,11 +325,11 @@
     <!-- Venstremeny (Sidebar) -->
     <Sidebar
       {activeView}
+      {cupBadge}
       currentGw={settings?.currentGameweek ?? 1}
       {isConvexConnected}
       {isSyncing}
       {currentUser}
-      {unreadChatCount}
       deadlineEpoch={nextDeadlineInfo?.deadlineEpoch}
       deadlineLabel={nextDeadlineInfo?.name ? (nextDeadlineInfo.name.match(/GW\s*\d+/i)?.[0] || `GW ${settings?.currentGameweek ?? 1}`) : `GW ${settings?.currentGameweek ?? 1}`}
       onSelectView={(view) => {
@@ -436,9 +411,9 @@
         />
 
       <!-- 4. Ligainnsikt & Høydepunkter (Fullskjerm / Dedikert Side) -->
-      {:else if activeView === "insights"}
-        <LeagueStatsPanel
-          isFullPage={true}
+      {:else if activeView === "insights" || activeView === "players" || activeView === "prices"}
+        <AnalysisView
+          tab={activeView === "players" ? "players" : activeView === "prices" ? "prices" : "league"}
           {funStats}
           timeframe={insightsTimeframe}
           onChangeTimeframe={(t) => (insightsTimeframe = t)}
@@ -734,7 +709,7 @@
   <UpdateModal
     bind:isOpen={isUpdateModalOpen}
     bind:this={updateModalRef}
-    currentVersion="1.2.1"
+    currentVersion="1.3.0"
     autoCheck={true}
   />
 

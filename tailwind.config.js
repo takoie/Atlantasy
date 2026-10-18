@@ -38,21 +38,11 @@ export default {
           danger: '#FB6F84',   // Dim Error / Transfer hits
         },
       },
+      // Én font i hele appen. Public Sans har vanlig null (uten strek) som skilles tydelig fra 8.
       fontFamily: {
-        sans: [
-          'Inter',
-          'ui-sans-serif',
-          'system-ui',
-          '-apple-system',
-          'BlinkMacSystemFont',
-          '"Segoe UI"',
-          'Roboto',
-          '"Helvetica Neue"',
-          'Arial',
-          'sans-serif',
-        ],
-        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
-        display: ['Bebas Neue', 'Impact', '"Arial Narrow"', 'sans-serif'],
+        sans: ['"Public Sans"', 'ui-sans-serif', 'system-ui', '"Segoe UI"', 'Roboto', 'Arial', 'sans-serif'],
+        mono: ['"Public Sans"', 'ui-sans-serif', 'system-ui', '"Segoe UI"', 'Roboto', 'Arial', 'sans-serif'],
+        display: ['"Public Sans"', 'ui-sans-serif', 'system-ui', '"Segoe UI"', 'Roboto', 'Arial', 'sans-serif'],
       },
       boxShadow: {
         'dim': '0 4px 20px -2px rgba(0, 0, 0, 0.45)',

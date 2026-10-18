@@ -294,5 +294,79 @@ export default defineSchema({
     .index("by_cupId", ["cupId"])
     .index("by_cupId_and_round", ["cupId", "roundNumber"])
     .index("by_cupId_and_bracket", ["cupId", "bracketType"]),
-});
 
+  // ---------------------------------------------------------------------------
+  // Spilleranalyse: kopi av FPL-spillerkatalogen (bootstrap-static), synket av cron
+  // ---------------------------------------------------------------------------
+  fpl_clubs: defineTable({
+    clubId: v.number(),
+    name: v.string(),
+    shortName: v.string(),
+  }).index("by_clubId", ["clubId"]),
+
+  fpl_players: defineTable({
+    elementId: v.number(),
+    webName: v.string(),
+    fullName: v.string(),
+    clubId: v.number(),
+    position: v.number(),              // 1 GKP, 2 DEF, 3 MID, 4 FWD
+    cost: v.number(),                  // tidels millioner (now_cost: 157 = £15.7m)
+    costChangeStart: v.number(),
+    costChangeEvent: v.number(),
+    selectedBy: v.number(),            // prosent
+    transfersInEvent: v.number(),
+    transfersOutEvent: v.number(),
+    totalPoints: v.number(),
+    eventPoints: v.number(),
+    form: v.number(),
+    pointsPerGame: v.number(),
+    epNext: v.number(),
+    minutes: v.number(),
+    starts: v.number(),
+    goals: v.number(),
+    assists: v.number(),
+    cleanSheets: v.number(),
+    bonus: v.number(),
+    xg: v.number(),
+    xa: v.number(),
+    xgi: v.number(),
+    xgc: v.number(),
+    xgPer90: v.number(),
+    xaPer90: v.number(),
+    xgiPer90: v.number(),
+    xgcPer90: v.number(),
+    ict: v.number(),
+    defCon: v.number(),                // defensive contribution
+    defConPer90: v.number(),
+    status: v.string(),                // a | d | i | s | u | n
+    news: v.string(),
+    chanceNextRound: v.optional(v.number()),
+    priceChangePercent: v.number(),    // >= 100 = stiger, <= -100 = faller
+    priceProjections: v.array(
+      v.object({
+        offset: v.number(),            // 0 = i natt, 1 = neste natt, ...
+        percent: v.number(),
+        likelihood: v.number(),        // -5 (sikker fall) .. 5 (sikker stigning)
+      })
+    ),
+  }).index("by_elementId", ["elementId"]),
+
+  // Logg over faktiske prisendringer, oppdaget ved at now_cost endrer seg mellom synker
+  fpl_price_changes: defineTable({
+    elementId: v.number(),
+    webName: v.string(),
+    clubId: v.number(),
+    position: v.number(),
+    oldCost: v.number(),
+    newCost: v.number(),
+    at: v.number(),
+  }).index("by_at", ["at"]),
+
+  // Enkelt statusdokument for spillersynken
+  fpl_players_sync: defineTable({
+    lastSyncedAt: v.number(),
+    lastAttemptAt: v.number(),
+    lastError: v.optional(v.string()),
+    playerCount: v.number(),
+  }),
+});

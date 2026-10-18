@@ -332,7 +332,7 @@
     background: var(--bg);
     color: var(--fg);
     border-radius: 4px;
-    font-family: "Inter", sans-serif;
+    font-family: "Public Sans", sans-serif;
     position: relative;
     overflow: hidden;
   }
@@ -379,13 +379,13 @@
     min-width: 0;
   }
   .cp-brand-top {
-    font: 400 1px/1 "Bebas Neue", Impact, sans-serif;
+    font: 700 1px/1 "Public Sans", sans-serif;
     font-size: 1.5cqw;
     letter-spacing: 0.2em;
     color: var(--accent);
   }
   .cp-title {
-    font: 400 1px/0.95 "Bebas Neue", Impact, sans-serif;
+    font: 700 1px/0.95 "Public Sans", sans-serif;
     font-size: 4.4cqw;
     letter-spacing: 0.02em;
   }
@@ -395,7 +395,7 @@
     align-items: flex-end;
     text-align: right;
     gap: 0.3cqw;
-    font: 600 1px/1.2 "JetBrains Mono", monospace;
+    font: 600 1px/1.2 "Public Sans", sans-serif;
     font-size: 1.05cqw;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -433,7 +433,7 @@
     justify-content: space-around;
   }
   .cp-celltitle {
-    font: 700 1px/1 "Inter", sans-serif;
+    font: 700 1px/1 "Public Sans", sans-serif;
     font-size: calc(0.85 * var(--u));
     color: var(--muted);
     text-transform: uppercase;
@@ -461,7 +461,7 @@
     line-height: 1.15;
   }
   .cp-gw {
-    font: 700 1px/1 "JetBrains Mono", monospace;
+    font: 700 1px/1 "Public Sans", sans-serif;
     font-size: calc(1 * var(--u));
     color: var(--gold);
     white-space: nowrap;
@@ -548,7 +548,7 @@
     font-size: calc(0.85 * var(--u));
   }
   .cp-score {
-    font: 700 1px/1 "JetBrains Mono", monospace;
+    font: 700 1px/1 "Public Sans", sans-serif;
     font-size: calc(0.95 * var(--u));
     flex: none;
   }

@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Atlantasy",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "identifier": "com.atlantasy.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -26,7 +26,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' ipc: tauri: http://ipc.localhost http://tauri.localhost; connect-src 'self' ipc: tauri: http://ipc.localhost http://tauri.localhost http://*.localhost ws://*.localhost https://*.convex.cloud wss://*.convex.cloud https://*.convex.site wss://*.convex.site http://127.0.0.1:* ws://127.0.0.1:* http://localhost:* ws://localhost:* https://fantasy.premierleague.com https://github.com https://api.github.com https://*.github.com https://objects.githubusercontent.com https://*.githubusercontent.com https://tenor.googleapis.com https://*.tenor.com https://media.tenor.com https://api.giphy.com https://*.giphy.com https://media.giphy.com; img-src 'self' https: http: data: blob: https://*.convex.cloud https://*.convex.site https://api.dicebear.com https://resources.premierleague.com https://images.unsplash.com https://*.tenor.com https://media.tenor.com https://*.giphy.com https://media.giphy.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; media-src 'self' https://*.convex.cloud https://*.convex.site https://*.tenor.com https://media.tenor.com https://*.giphy.com https://media.giphy.com;"
+      "csp": "default-src 'self' ipc: tauri: http://ipc.localhost http://tauri.localhost; connect-src 'self' ipc: tauri: http://ipc.localhost http://tauri.localhost http://*.localhost ws://*.localhost https://*.convex.cloud wss://*.convex.cloud https://*.convex.site wss://*.convex.site http://127.0.0.1:* ws://127.0.0.1:* http://localhost:* ws://localhost:* https://fantasy.premierleague.com https://github.com https://api.github.com https://*.github.com https://objects.githubusercontent.com https://*.githubusercontent.com https://tenor.googleapis.com https://*.tenor.com https://media.tenor.com https://api.giphy.com https://*.giphy.com https://media.giphy.com; img-src 'self' https: http: data: blob: https://*.convex.cloud https://*.convex.site https://api.dicebear.com https://resources.premierleague.com https://images.unsplash.com https://*.tenor.com https://media.tenor.com https://*.giphy.com https://media.giphy.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data:; media-src 'self' https://*.convex.cloud https://*.convex.site https://*.tenor.com https://media.tenor.com https://*.giphy.com https://media.giphy.com;"
     }
   },
   "bundle": {

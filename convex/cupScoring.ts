@@ -102,7 +102,7 @@ export function matchRole(m: Match, cup: Cup): MatchRole | undefined {
 /* Poengberegning                                                      */
 /* ------------------------------------------------------------------ */
 
-function roomStatsFor(
+export function roomStatsFor(
   roomId: RoomId,
   teams: Doc<"fpl_teams">[],
   scoreByEntry: Map<number, Doc<"gameweek_scores">>,
@@ -133,7 +133,7 @@ function roomStatsFor(
 }
 
 /** Romsnitt først, deretter beste enkeltspiller, deretter samlet romscore. */
-function decide(a: RoomStats, b: RoomStats): 1 | 2 | 0 {
+export function decide(a: RoomStats, b: RoomStats): 1 | 2 | 0 {
   if (a.avg !== b.avg) return a.avg > b.avg ? 1 : 2;
   const a1 = a.topPlayers[0]?.points ?? 0;
   const b1 = b.topPlayers[0]?.points ?? 0;

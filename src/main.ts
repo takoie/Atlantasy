@@ -1,3 +1,9 @@
+// Fonten ligger i appen (ikke Google Fonts), så den alltid lastes – også offline og i Tauri.
+import '@fontsource/public-sans/400.css';
+import '@fontsource/public-sans/500.css';
+import '@fontsource/public-sans/600.css';
+import '@fontsource/public-sans/700.css';
+import '@fontsource/public-sans/800.css';
 import './app.css';
 import { mount } from 'svelte';
 import App from './App.svelte';
