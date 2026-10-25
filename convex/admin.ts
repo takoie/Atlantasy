@@ -46,10 +46,18 @@ export const updateSettings = mutation({
       });
     }
 
-    await ctx.db.patch(existing._id, {
-      ...settingsArgs,
-      lastSyncedAt: Date.now(),
-    });
+    // Bare endrede felt skrives. En uendret skriving til league_settings ville likevel
+    // laget alle spørringer som leser innstillingene på nytt (unødvendig dataforbruk).
+    // `lastSyncedAt` er tidspunktet for siste FPL-synk og skal ikke røres her.
+    const changes = Object.fromEntries(
+      Object.entries(settingsArgs).filter(
+        ([key, value]) =>
+          value !== undefined && (existing as Record<string, unknown>)[key] !== value
+      )
+    );
+    if (Object.keys(changes).length > 0) {
+      await ctx.db.patch(existing._id, changes);
+    }
     return existing._id;
   },
 });

@@ -586,11 +586,13 @@ export const batchSaveRoomAssignments = mutation({
     await requireAdmin(ctx, args.adminUserId);
     const assignedEntryIds = new Set(args.assignments.map((a) => a.entryId));
 
+    // Lag som ikke lenger er plassert i et rom flyttes bare ut av rommet. Raden og poengene
+    // beholdes, ellers må hele ligaen synkes på nytt fra FPL.
     if (args.clearUnassigned) {
       const allExisting = await ctx.db.query("fpl_teams").collect();
       for (const t of allExisting) {
-        if (!assignedEntryIds.has(t.entryId)) {
-          await ctx.db.delete(t._id);
+        if (t.roomId && !assignedEntryIds.has(t.entryId)) {
+          await ctx.db.patch(t._id, { roomId: undefined });
         }
       }
     }
@@ -602,16 +604,15 @@ export const batchSaveRoomAssignments = mutation({
         .first();
 
       if (existing) {
-        await ctx.db.patch(existing._id, {
-          roomId: item.roomId,
-          teamName: item.teamName,
-          managerName: item.managerName,
-          totalPoints: item.totalPoints ?? existing.totalPoints,
-          currentGwPoints: item.currentGwPoints ?? existing.currentGwPoints,
-          currentGwTransfersCost:
-            item.currentGwTransfersCost ?? existing.currentGwTransfersCost,
-          lastUpdated: Date.now(),
-        });
+        // Poeng kommer fra FPL-synken, så klientens (muligens utdaterte) tall brukes ikke.
+        // Skriver bare det som faktisk er endret, så uendrede lag ikke trigger oppdateringer.
+        const changes: { roomId?: typeof item.roomId; teamName?: string; managerName?: string } = {};
+        if (existing.roomId !== item.roomId) changes.roomId = item.roomId;
+        if (existing.teamName !== item.teamName) changes.teamName = item.teamName;
+        if (existing.managerName !== item.managerName) changes.managerName = item.managerName;
+        if (Object.keys(changes).length > 0) {
+          await ctx.db.patch(existing._id, { ...changes, lastUpdated: Date.now() });
+        }
       } else {
         await ctx.db.insert("fpl_teams", {
           entryId: item.entryId,

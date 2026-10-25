@@ -175,7 +175,7 @@
         onkeydown={(e) => (e.key === "Enter" || e.key === " ") && toggleExpand(room._id, e as unknown as MouseEvent)}
         class={`p-2.5 sm:p-3 rounded-xl border transition-all cursor-pointer shadow-sm ${
           index === 0
-            ? "bg-white/[0.04] border-[#F4C152]/60 hover:border-[#F4C152] ring-1 ring-[#F4C152]/20"
+            ? "gold-leader bg-white/[0.04] border-transparent"
             : index === 1
             ? "bg-white/[0.04] border-[#CBD5E1]/40 hover:border-[#CBD5E1] ring-1 ring-[#CBD5E1]/10"
             : index === 2
@@ -189,7 +189,7 @@
           <div class="flex items-center gap-2.5 min-w-0">
             <div class="w-6 text-center font-mono font-bold text-xs shrink-0">
               {#if index === 0}
-                <span class="text-lg inline-block drop-shadow-sm">🥇</span>
+                <span class="gold-medal text-lg inline-block">🥇</span>
               {:else if index === 1}
                 <span class="text-lg inline-block drop-shadow-sm">🥈</span>
               {:else if index === 2}
@@ -206,7 +206,11 @@
               {room.tag ?? `A${room.roomNumber ?? index + 1}`}
             </span>
 
-            <span class="font-bold text-white text-xs sm:text-sm truncate hover:text-[#9FE88D] transition-colors min-w-0">
+            <span
+              class={`font-bold text-xs sm:text-sm truncate transition-colors min-w-0 ${
+                index === 0 ? "gold-text" : "text-white hover:text-[#9FE88D]"
+              }`}
+            >
               {room.name}
             </span>
           </div>
@@ -390,3 +394,137 @@
     {/each}
   </div>
 </div>
+
+<style>
+  @property --gold-angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  /* Lederrommet: gullkant med roterende glans, svak glød og en lysstripe som sveiper over kortet. */
+  .gold-leader {
+    position: relative;
+    background-image: linear-gradient(
+      115deg,
+      rgba(244, 193, 82, 0.12) 0%,
+      rgba(244, 193, 82, 0.03) 38%,
+      transparent 65%
+    );
+    box-shadow:
+      0 0 0 1px rgba(244, 193, 82, 0.08),
+      0 6px 24px -10px rgba(244, 193, 82, 0.55);
+    animation: gold-glow 3.6s ease-in-out infinite;
+  }
+
+  /* Selve kanten: en gradientring (maskert til bare å vise de 1,5px ytterst). */
+  .gold-leader::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    padding: 1.5px;
+    border-radius: inherit;
+    background: conic-gradient(
+      from var(--gold-angle),
+      #8a6414,
+      #f4c152 18%,
+      #fff1b8 28%,
+      #f4c152 38%,
+      #8a6414 55%,
+      #b98a22 72%,
+      #ffe08a 84%,
+      #8a6414
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: gold-spin 5s linear infinite;
+    pointer-events: none;
+  }
+
+  /* Lysstripe som glir over kortet med jevne mellomrom. */
+  .gold-leader::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      105deg,
+      transparent 42%,
+      rgba(255, 236, 170, 0.14) 50%,
+      transparent 58%
+    );
+    background-size: 250% 100%;
+    background-position: 150% 0;
+    animation: gold-sheen 6s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .gold-text {
+    background: linear-gradient(100deg, #ffe08a 0%, #f4c152 40%, #fff6cf 55%, #f4c152 70%, #d99a2b 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: gold-text-shift 6s ease-in-out infinite;
+  }
+
+  .gold-medal {
+    filter: drop-shadow(0 0 6px rgba(244, 193, 82, 0.75));
+  }
+
+  @keyframes gold-spin {
+    to {
+      --gold-angle: 360deg;
+    }
+  }
+
+  @keyframes gold-glow {
+    0%,
+    100% {
+      box-shadow:
+        0 0 0 1px rgba(244, 193, 82, 0.08),
+        0 6px 22px -10px rgba(244, 193, 82, 0.4);
+    }
+    50% {
+      box-shadow:
+        0 0 0 1px rgba(244, 193, 82, 0.14),
+        0 6px 30px -8px rgba(244, 193, 82, 0.7);
+    }
+  }
+
+  @keyframes gold-sheen {
+    0%,
+    55% {
+      background-position: 150% 0;
+    }
+    100% {
+      background-position: -50% 0;
+    }
+  }
+
+  @keyframes gold-text-shift {
+    0%,
+    100% {
+      background-position: 0% 0;
+    }
+    50% {
+      background-position: 100% 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gold-leader,
+    .gold-leader::before,
+    .gold-leader::after,
+    .gold-text {
+      animation: none;
+    }
+  }
+</style>

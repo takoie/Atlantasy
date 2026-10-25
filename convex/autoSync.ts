@@ -2,7 +2,13 @@ import { internalAction, internalMutation, internalQuery } from "./_generated/se
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { FPL_HEADERS, runLiveFplSync } from "./fpl";
-import { decideAutoSync, type FixtureLite } from "./autoSyncLogic";
+import {
+  decideAutoSync,
+  lastKickoffMs,
+  morningSyncMs,
+  POST_KICKOFF_BUFFER_MS,
+  type FixtureLite,
+} from "./autoSyncLogic";
 
 const FPL_API = "https://fantasy.premierleague.com/api";
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -25,7 +31,9 @@ export const getState = internalQuery({
 export const saveState = internalMutation({
   args: {
     gw: v.optional(v.number()),
-    stage: v.optional(v.union(v.literal("provisional"), v.literal("final"))),
+    stage: v.optional(
+      v.union(v.literal("provisional"), v.literal("final"), v.literal("morning"))
+    ),
     wakeAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -43,8 +51,11 @@ export const saveState = internalMutation({
 
 /**
  * Kjøres av cron (crons.ts). Synker FPL-data automatisk etter siste kamp i hver
- * gameweek – først når alle kamper er ferdigspilt, og igjen når FPL har bekreftet
- * poengene (bonus). Mellom kampene avsluttes tickene umiddelbart via `autoSyncWakeAt`.
+ * gameweek – først når alle kamper er ferdigspilt, igjen når FPL har bekreftet
+ * poengene (bonus), og en siste gang kl. 08:00 norsk tid morgenen etter, når FPL har
+ * satt inn benkespillerne. Cupen beregnes først i den siste synken, slik at rundene
+ * avgjøres på endelige poeng. Mellom stegene avsluttes tickene umiddelbart via
+ * `autoSyncWakeAt`.
  */
 export const tick = internalAction({
   args: {},
@@ -94,22 +105,36 @@ export const tick = internalAction({
         console.log(
           `Auto-synk GW ${current.id} (${decision.stage}): ${result.syncedCount} lag synket.`
         );
+        // Etter "final" venter vi på morgensynken (08:00); etter den er runden ferdig.
+        const lastKickoff = lastKickoffMs(fixtures);
+        const morningAt =
+          lastKickoff === null
+            ? sleepUntilNextRound
+            : Math.min(morningSyncMs(lastKickoff + POST_KICKOFF_BUFFER_MS), sleepUntilNextRound);
         await ctx.runMutation(internal.autoSync.saveState, {
           gw: current.id,
           stage: decision.stage,
-          wakeAt: decision.stage === "final" ? sleepUntilNextRound : 0,
+          wakeAt:
+            decision.stage === "morning"
+              ? sleepUntilNextRound
+              : decision.stage === "final"
+                ? morningAt
+                : 0,
         });
-        // Cupen følger gameweeken: beregn rundene som spilles i denne GW-en. Feiler det,
-        // skal synken likevel stå som utført (admin kan beregne manuelt).
-        try {
-          const cups = await ctx.runMutation(internal.cups.autoCalculateForGameweek, {
-            gw: current.id,
-          });
-          for (const c of cups) {
-            console.log(`Cup-beregning GW ${current.id}: runde ${c.rounds.join(", ")}.`);
+        // Cupen følger gameweeken, men først når poengene er endelige (etter at
+        // benkespillerne er byttet inn) – ellers avgjøres runden på feil grunnlag.
+        // Feiler beregningen, skal synken likevel stå som utført (admin kan beregne manuelt).
+        if (decision.stage === "morning") {
+          try {
+            const cups = await ctx.runMutation(internal.cups.autoCalculateForGameweek, {
+              gw: current.id,
+            });
+            for (const c of cups) {
+              console.log(`Cup-beregning GW ${current.id}: runde ${c.rounds.join(", ")}.`);
+            }
+          } catch (err: any) {
+            console.warn("Cup-beregning feilet:", err?.message ?? err);
           }
-        } catch (err: any) {
-          console.warn("Cup-beregning feilet:", err?.message ?? err);
         }
       } else if (decision.kind === "done") {
         await ctx.runMutation(internal.autoSync.saveState, { wakeAt: sleepUntilNextRound });
