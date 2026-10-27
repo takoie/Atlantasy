@@ -2,13 +2,7 @@ import { internalAction, internalMutation, internalQuery } from "./_generated/se
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { FPL_HEADERS, runLiveFplSync } from "./fpl";
-import {
-  decideAutoSync,
-  lastKickoffMs,
-  morningSyncMs,
-  POST_KICKOFF_BUFFER_MS,
-  type FixtureLite,
-} from "./autoSyncLogic";
+import { decideAutoSync, isRoundFinal, type FixtureLite } from "./autoSyncLogic";
 
 const FPL_API = "https://fantasy.premierleague.com/api";
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -52,8 +46,9 @@ export const saveState = internalMutation({
 /**
  * Kjøres av cron (crons.ts). Synker FPL-data automatisk etter siste kamp i hver
  * gameweek – først når alle kamper er ferdigspilt, igjen når FPL har bekreftet
- * poengene (bonus), og en siste gang kl. 08:00 norsk tid morgenen etter, når FPL har
- * satt inn benkespillerne. Cupen beregnes først i den siste synken, slik at rundene
+ * poengene (bonus), og en siste gang når FPL har gjort sluttoppdateringen (benkespillerne
+ * satt inn, poeng justert). Tidspunktet varierer, så vi følger `finished`/`data_checked`
+ * på runden i stedet for et fast klokkeslett. Cupen beregnes først i den siste synken, slik at rundene
  * avgjøres på endelige poeng. Mellom stegene avsluttes tickene umiddelbart via
  * `autoSyncWakeAt`.
  */
@@ -91,6 +86,7 @@ export const tick = internalAction({
         fixtures,
         now,
         gw: current.id,
+        roundFinal: isRoundFinal(current),
         doneGw: state.gw,
         doneStage: state.stage,
       });
@@ -105,21 +101,11 @@ export const tick = internalAction({
         console.log(
           `Auto-synk GW ${current.id} (${decision.stage}): ${result.syncedCount} lag synket.`
         );
-        // Etter "final" venter vi på morgensynken (08:00); etter den er runden ferdig.
-        const lastKickoff = lastKickoffMs(fixtures);
-        const morningAt =
-          lastKickoff === null
-            ? sleepUntilNextRound
-            : Math.min(morningSyncMs(lastKickoff + POST_KICKOFF_BUFFER_MS), sleepUntilNextRound);
+        // Etter "morning" er runden ferdig; før det sjekker vi på nytt hver tick.
         await ctx.runMutation(internal.autoSync.saveState, {
           gw: current.id,
           stage: decision.stage,
-          wakeAt:
-            decision.stage === "morning"
-              ? sleepUntilNextRound
-              : decision.stage === "final"
-                ? morningAt
-                : 0,
+          wakeAt: decision.stage === "morning" ? sleepUntilNextRound : 0,
         });
         // Cupen følger gameweeken, men først når poengene er endelige (etter at
         // benkespillerne er byttet inn) – ellers avgjøres runden på feil grunnlag.

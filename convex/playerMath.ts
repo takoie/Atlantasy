@@ -6,6 +6,23 @@
 
 export type PriceProjection = { offset: number; percent: number; likelihood: number };
 
+/**
+ * Felter som endrer seg hele tiden (overføringstellere og prisprognoser). De ligger IKKE i
+ * spillerraden: da ville ~80 % av 669 rader blitt skrevet om ved hver synk. I stedet lagres
+ * bare de relevante spillerne i ett lite dokument (`fpl_price_movers`).
+ */
+export type Mover = {
+  elementId: number;
+  webName: string;
+  clubId: number;
+  position: number;
+  cost: number;
+  transfersInEvent: number;
+  transfersOutEvent: number;
+  priceChangePercent: number;
+  priceProjections: PriceProjection[];
+};
+
 export type PlayerRow = {
   elementId: number;
   webName: string;
@@ -16,8 +33,6 @@ export type PlayerRow = {
   costChangeStart: number;
   costChangeEvent: number;
   selectedBy: number;
-  transfersInEvent: number;
-  transfersOutEvent: number;
   totalPoints: number;
   eventPoints: number;
   form: number;
@@ -43,8 +58,6 @@ export type PlayerRow = {
   status: string;
   news: string;
   chanceNextRound?: number;
-  priceChangePercent: number;
-  priceProjections: PriceProjection[];
 };
 
 /** FPL leverer mange tall som strenger ("5.67"), andre som null. */
@@ -70,8 +83,6 @@ export function toPlayerRow(el: any): PlayerRow {
     costChangeStart: num(el.cost_change_start),
     costChangeEvent: num(el.cost_change_event),
     selectedBy: num(el.selected_by_percent),
-    transfersInEvent: num(el.transfers_in_event),
-    transfersOutEvent: num(el.transfers_out_event),
     totalPoints: num(el.total_points),
     eventPoints: num(el.event_points),
     form: num(el.form),
@@ -97,6 +108,19 @@ export function toPlayerRow(el: any): PlayerRow {
     status: String(el.status ?? "a"),
     news: String(el.news ?? ""),
     ...(typeof chance === "number" ? { chanceNextRound: chance } : {}),
+  };
+}
+
+/** Bootstrap-static `elements[]`-oppføring -> flyktige felt (pris- og overføringsdata). */
+export function toMover(el: any): Mover {
+  return {
+    elementId: num(el.id),
+    webName: String(el.web_name ?? ""),
+    clubId: num(el.team),
+    position: num(el.element_type),
+    cost: num(el.now_cost),
+    transfersInEvent: num(el.transfers_in_event),
+    transfersOutEvent: num(el.transfers_out_event),
     priceChangePercent: num(el.price_change_percent),
     priceProjections: Array.isArray(el.price_change_projections)
       ? el.price_change_projections.map((p: any) => ({
@@ -108,17 +132,43 @@ export function toPlayerRow(el: any): PlayerRow {
   };
 }
 
+/** Antall spillere per toppliste i Prisfanen (stigere, fallere, mest inn, mest ut). */
+export const MOVER_LIST_SIZE = 12;
+
+const tonightLikelihood = (m: Mover) => m.priceProjections.find((x) => x.offset === 0)?.likelihood ?? 0;
+
+/**
+ * Spillerne Prisfanen faktisk viser: topp stigere og fallere i natt (samme rekkefølge som
+ * fanen bruker), og de mest overførte inn og ut. Alt annet er irrelevant og lagres ikke.
+ */
+export function selectMovers(all: Mover[]): Mover[] {
+  const risers = all
+    .filter((m) => priceDirection(m) === "rise")
+    .sort((a, b) => tonightLikelihood(b) - tonightLikelihood(a) || b.priceChangePercent - a.priceChangePercent);
+  const fallers = all
+    .filter((m) => priceDirection(m) === "fall")
+    .sort((a, b) => tonightLikelihood(a) - tonightLikelihood(b) || a.priceChangePercent - b.priceChangePercent);
+  const top = (key: "transfersInEvent" | "transfersOutEvent") =>
+    [...all].sort((a, b) => b[key] - a[key]).slice(0, MOVER_LIST_SIZE);
+
+  const picked = new Map<number, Mover>();
+  for (const m of [
+    ...risers.slice(0, MOVER_LIST_SIZE),
+    ...fallers.slice(0, MOVER_LIST_SIZE),
+    ...top("transfersInEvent"),
+    ...top("transfersOutEvent"),
+  ]) {
+    picked.set(m.elementId, m);
+  }
+  return [...picked.values()].sort((a, b) => a.elementId - b.elementId);
+}
+
 /** Sant hvis lagret rad må oppdateres – unngår unødvendige skriv (og klient-reruns). */
 export function rowChanged(stored: PlayerRow, next: PlayerRow): boolean {
-  const keys = new Set([...Object.keys(stored), ...Object.keys(next)]) as Set<keyof PlayerRow>;
+  // Union av nøklene fanger også felt som er fjernet fra skjemaet (gamle rader) eller droppet av FPL.
+  const keys = new Set([...Object.keys(stored), ...Object.keys(next)]);
   for (const key of keys) {
-    const a = stored[key];
-    const b = next[key];
-    if (key === "priceProjections") {
-      if (JSON.stringify(a ?? []) !== JSON.stringify(b ?? [])) return true;
-    } else if (a !== b) {
-      return true;
-    }
+    if ((stored as Record<string, unknown>)[key] !== (next as Record<string, unknown>)[key]) return true;
   }
   return false;
 }

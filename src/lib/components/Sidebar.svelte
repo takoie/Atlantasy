@@ -353,26 +353,28 @@
   <!-- Bunnseksjon: Admin, Synkronisering & Brukerstatus -->
   <div class="p-4 border-t border-white/[0.05] space-y-3">
     <!-- Handlinger -->
-    {#if currentUser?.role === "admin"}
-      <div class="grid grid-cols-2 gap-2">
+    {#if currentUser}
+      <div class={`grid gap-2 ${currentUser.role === "admin" ? "grid-cols-2" : "grid-cols-1"}`}>
         <button
           onclick={onRefreshFpl}
           disabled={isSyncing}
-          class="px-3 py-2.5 rounded-xl bg-white/[0.045] hover:bg-white/[0.09] text-[#E2E8F0] border border-white/[0.06] text-xs font-bold transition-colors flex items-center justify-center gap-2"
-          title="Tving frem synkronisering av runderesultater fra Fantasy Premier League (kjøres ellers automatisk etter siste kamp i hver runde)"
+          class="px-3 py-2.5 rounded-xl bg-white/[0.045] hover:bg-white/[0.09] text-[#E2E8F0] border border-white/[0.06] text-xs font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+          title="Hent oppdaterte runderesultater fra Fantasy Premier League (kjøres ellers automatisk etter siste kamp i hver runde)"
         >
           <RefreshCw class={`w-4 h-4 text-[#9FE88D] ${isSyncing ? "animate-spin" : ""}`} />
           <span>{isSyncing ? "Synker..." : "Synk FPL"}</span>
         </button>
 
-        <button
-          onclick={onOpenAdmin}
-          class="px-3 py-2.5 rounded-xl bg-white/[0.045] hover:bg-white/[0.09] text-[#E2E8F0] border border-white/[0.06] text-xs font-bold transition-colors flex items-center justify-center gap-2"
-          title="Åpne administratorpanelet"
-        >
-          <Shield class="w-4 h-4 text-[#F4C152]" />
-          <span>Admin</span>
-        </button>
+        {#if currentUser.role === "admin"}
+          <button
+            onclick={onOpenAdmin}
+            class="px-3 py-2.5 rounded-xl bg-white/[0.045] hover:bg-white/[0.09] text-[#E2E8F0] border border-white/[0.06] text-xs font-bold transition-colors flex items-center justify-center gap-2"
+            title="Åpne administratorpanelet"
+          >
+            <Shield class="w-4 h-4 text-[#F4C152]" />
+            <span>Admin</span>
+          </button>
+        {/if}
       </div>
     {/if}
 
@@ -431,7 +433,7 @@
     <!-- Versjon, Lisenser & Oppdateringssjekk -->
     <div class="flex items-center justify-between px-1 text-[11px] text-[#AEB9CC]">
       <div class="flex items-center gap-1.5">
-        <span class="font-mono text-white/80">v1.4.0</span>
+        <span class="font-mono text-white/80">v1.5.0</span>
         <button
           type="button"
           onclick={onOpenLicenses}

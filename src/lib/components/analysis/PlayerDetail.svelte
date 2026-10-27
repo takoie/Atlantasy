@@ -22,11 +22,14 @@
     clubName = "",
     clubShort = (_id: number) => "",
     onClose = () => {},
+    embedded = false,
   }: {
     player: any;
     clubName?: string;
     clubShort?: (id: number) => string;
     onClose?: () => void;
+    /** Inni et annet panel: ingen egen ramme eller topptekst (navn og klubb vises utenfor). */
+    embedded?: boolean;
   } = $props();
 
   const historyAction = useAction(api.players.playerHistory);
@@ -66,30 +69,32 @@
   };
 </script>
 
-<aside class="rounded-2xl bg-white/[0.05] border border-white/10 p-4 space-y-4 min-w-0">
-  <div class="flex items-start justify-between gap-2">
-    <div class="min-w-0">
-      <h3 class="text-base font-bold text-white truncate">{player.fullName}</h3>
-      <p class="text-xs text-[#AEB9CC]">
-        {clubName} · {POSITION_LABELS[player.position]} · {formatPrice(player.cost)}
-      </p>
+<aside class={embedded ? "space-y-4 min-w-0" : "rounded-2xl bg-white/[0.05] border border-white/10 p-4 space-y-4 min-w-0"}>
+  {#if !embedded}
+    <div class="flex items-start justify-between gap-2">
+      <div class="min-w-0">
+        <h3 class="text-base font-bold text-white truncate">{player.fullName}</h3>
+        <p class="text-xs text-[#AEB9CC]">
+          {clubName} · {POSITION_LABELS[player.position]} · {formatPrice(player.cost)}
+        </p>
+      </div>
+      <button
+        type="button"
+        onclick={onClose}
+        class="p-1 rounded-lg text-[#AEB9CC] hover:text-white hover:bg-white/10 transition-colors shrink-0"
+        aria-label="Lukk spillerdetaljer"
+      >
+        <X class="w-4 h-4" />
+      </button>
     </div>
-    <button
-      type="button"
-      onclick={onClose}
-      class="p-1 rounded-lg text-[#AEB9CC] hover:text-white hover:bg-white/10 transition-colors shrink-0"
-      aria-label="Lukk spillerdetaljer"
-    >
-      <X class="w-4 h-4" />
-    </button>
-  </div>
+  {/if}
 
-  {#if player.news}
+  {#if player.news && !embedded}
     <div class="flex items-start gap-2 text-xs p-2 rounded-lg bg-[#F4C152]/10 border border-[#F4C152]/30 text-[#F4C152]">
       <AlertTriangle class="w-3.5 h-3.5 mt-0.5 shrink-0" />
       <span>{player.news}</span>
     </div>
-  {:else}
+  {:else if !player.news}
     <p class="text-xs text-[#AEB9CC]">{statusLabel[player.status] ?? player.status}</p>
   {/if}
 

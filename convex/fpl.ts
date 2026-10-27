@@ -13,6 +13,9 @@ import {
   gwMonthMap,
   type GwCalendarEntry,
 } from "./fplCalendar";
+import { toPlayerRow } from "./playerMath";
+import { changedFields, hasChanges } from "./changedFields";
+import { displayedPoints, resolveSquad } from "./squadMath";
 
 export const FPL_HEADERS = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Atlantasy Desktop FPL Client",
@@ -484,7 +487,7 @@ export async function runLiveFplSync(
 }
 
 /** Minste tid mellom to synker utløst av en vanlig (ikke-admin) bruker. */
-const NON_ADMIN_SYNC_COOLDOWN_MS = 10 * 60 * 1000;
+const NON_ADMIN_SYNC_COOLDOWN_MS = 30 * 60 * 1000;
 
 /** Hvem som ber om synk, og når det sist ble synket. */
 export const getSyncAccess = internalQuery({
@@ -503,7 +506,7 @@ export const getSyncAccess = internalQuery({
 /**
  * Manuell synk fra appen. Administratorer kan alltid synke; vanlige brukere
  * (f.eks. nye brukere som skal koble FPL-laget sitt) bare hvis forrige synk er
- * eldre enn 10 minutter. Den ordinære oppdateringen kjøres av autoSync.ts.
+ * eldre enn 30 minutter. Den ordinære oppdateringen kjøres av autoSync.ts.
  */
 export const syncLiveFplData = action({
   args: {
@@ -573,13 +576,16 @@ export const fetchLiveTeamSquad = action({
         gw = currentEvent?.id || 1;
       }
 
-      // 2. Hent managerens picks + rundens kamper (for motstander per spiller)
-      const [picksRes, fixturesRes] = await Promise.all([
+      // 2. Hent managerens picks, rundens kamper og live-poeng (poeng + poengfordeling per spiller)
+      const [picksRes, fixturesRes, liveRes] = await Promise.all([
         fetch(
           `https://fantasy.premierleague.com/api/entry/${args.entryId}/event/${gw}/picks/`,
           { headers: FPL_HEADERS }
         ),
         fetch(`https://fantasy.premierleague.com/api/fixtures/?event=${gw}`, {
+          headers: FPL_HEADERS,
+        }),
+        fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`, {
           headers: FPL_HEADERS,
         }),
       ]);
@@ -588,47 +594,92 @@ export const fetchLiveTeamSquad = action({
         throw new Error(`Picks feilet med status ${picksRes.status}`);
       }
 
-      // Bygg motstander-oppslag: klubb-id -> liste med { kort, hjemme, vanskelighet }
-      const oppByTeam = new Map<
-        number,
-        Array<{ short: string; isHome: boolean; difficulty: number }>
-      >();
-      if (fixturesRes.ok) {
+      // Kamper per klubb-id, med motstander, status og resultat.
+      type TeamFixture = {
+        id: number;
+        opponent: string;
+        opponentName: string;
+        isHome: boolean;
+        difficulty: number;
+        started: boolean;
+        finished: boolean;
+        kickoff: string | null;
+        scoreFor: number | null;
+        scoreAgainst: number | null;
+      };
+      const fixturesByTeam = new Map<number, TeamFixture[]>();
+      const fixturesOk = fixturesRes.ok;
+      if (fixturesOk) {
         const fixtures = await fixturesRes.json();
         for (const f of Array.isArray(fixtures) ? fixtures : []) {
           const home = teamsMap.get(f.team_h);
           const away = teamsMap.get(f.team_a);
-          if (home && away) {
-            const hList = oppByTeam.get(f.team_h) ?? [];
-            hList.push({
-              short: away.short_name,
-              isHome: true,
-              difficulty: f.team_h_difficulty ?? 3,
-            });
-            oppByTeam.set(f.team_h, hList);
-            const aList = oppByTeam.get(f.team_a) ?? [];
-            aList.push({
-              short: home.short_name,
-              isHome: false,
-              difficulty: f.team_a_difficulty ?? 3,
-            });
-            oppByTeam.set(f.team_a, aList);
-          }
+          if (!home || !away) continue;
+          const base = {
+            id: f.id,
+            started: !!f.started,
+            finished: !!(f.finished || f.finished_provisional),
+            kickoff: f.kickoff_time ?? null,
+          };
+          const hList = fixturesByTeam.get(f.team_h) ?? [];
+          hList.push({
+            ...base,
+            opponent: away.short_name,
+            opponentName: away.name,
+            isHome: true,
+            difficulty: f.team_h_difficulty ?? 3,
+            scoreFor: f.team_h_score ?? null,
+            scoreAgainst: f.team_a_score ?? null,
+          });
+          fixturesByTeam.set(f.team_h, hList);
+          const aList = fixturesByTeam.get(f.team_a) ?? [];
+          aList.push({
+            ...base,
+            opponent: home.short_name,
+            opponentName: home.name,
+            isHome: false,
+            difficulty: f.team_a_difficulty ?? 3,
+            scoreFor: f.team_a_score ?? null,
+            scoreAgainst: f.team_h_score ?? null,
+          });
+          fixturesByTeam.set(f.team_a, aList);
         }
       }
       const opponentLabel = (teamId: number): string => {
-        const list = oppByTeam.get(teamId);
+        const list = fixturesByTeam.get(teamId);
         if (!list || list.length === 0) return "–";
-        return list
-          .map((o) => `${o.short} (${o.isHome ? "H" : "A"})`)
-          .join(" · ");
+        return list.map((o) => `${o.opponent} (${o.isHome ? "H" : "A"})`).join(" · ");
       };
+
+      // Live-poeng per spiller for AKKURAT denne runden (bootstrap `event_points` gjelder
+      // bare inneværende runde).
+      const liveByElement = new Map<number, any>();
+      const liveOk = liveRes.ok;
+      if (liveOk) {
+        const liveData = await liveRes.json();
+        for (const e of liveData.elements || []) liveByElement.set(e.id, e);
+      }
 
       const picksData = await picksRes.json();
       // Sorter defensivt på "position" (1–15) slik at idx < 11 alltid er banen.
       const rawPicks = [...(picksData.picks || [])].sort(
         (a: any, b: any) => (a.position || 0) - (b.position || 0)
       );
+
+      // Uten live-data vet vi ikke hvem som har spilt – da skal ikke visekapteinen overta.
+      const minutesOf = (id: number) =>
+        liveOk ? (liveByElement.get(id)?.stats?.minutes ?? 0) : 90;
+      const fixturesDone = (id: number) => {
+        if (!fixturesOk) return false;
+        const list = fixturesByTeam.get(elementsMap.get(id)?.team) ?? [];
+        return list.every((f) => f.finished);
+      };
+      const squad = resolveSquad({
+        picks: rawPicks,
+        automaticSubs: picksData.automatic_subs ?? [],
+        minutesOf,
+        fixturesDone,
+      });
 
       const posLabels: Record<number, string> = {
         1: "GKP",
@@ -637,40 +688,66 @@ export const fetchLiveTeamSquad = action({
         4: "FWD",
       };
 
-      const pitch: any[] = [];
-      const bench: any[] = [];
-
-      rawPicks.forEach((p: any, idx: number) => {
-        const el = elementsMap.get(p.element) || {};
+      const cards = squad.map((r) => {
+        const el = elementsMap.get(r.element) || {};
         const teamObj = teamsMap.get(el.team) || {};
-        const posType = posLabels[el.element_type] || "MID";
+        const live = liveByElement.get(r.element);
+        const rawPoints: number = live?.stats?.total_points ?? el.event_points ?? 0;
 
-        const playerCard = {
-          id: p.element,
+        // Poengfordeling per kamp (live `explain`), koblet mot rundens kamper for klubben.
+        const explainByFixture = new Map<number, any[]>();
+        for (const x of live?.explain || []) explainByFixture.set(x.fixture, x.stats || []);
+        const fixtures = (fixturesByTeam.get(el.team) ?? []).map((f) => ({
+          opponent: f.opponent,
+          opponentName: f.opponentName,
+          isHome: f.isHome,
+          difficulty: f.difficulty,
+          started: f.started,
+          finished: f.finished,
+          kickoff: f.kickoff,
+          scoreFor: f.scoreFor,
+          scoreAgainst: f.scoreAgainst,
+          stats: (explainByFixture.get(f.id) ?? []).map((s: any) => ({
+            identifier: String(s.identifier),
+            value: Number(s.value) || 0,
+            points: Number(s.points) || 0,
+          })),
+        }));
+
+        return {
+          id: r.element,
           name: el.web_name || "Spiller",
           club: teamObj.short_name || "PL",
+          clubName: teamObj.name || "",
           crest: teamObj.code
             ? `https://resources.premierleague.com/premierleague/badges/70/t${teamObj.code}.png`
             : "",
-          pos: posType,
-          points: el.event_points || 0,
-          isCaptain: p.is_captain,
-          isVice: p.is_vice_captain,
-          multiplier: p.multiplier,
+          pos: posLabels[el.element_type] || "MID",
+          rawPoints,
+          // Det spilleren faktisk bidrar med i laget: råpoeng × (kaptein 2×/3×, benk 0×).
+          points: displayedPoints(rawPoints, r.multiplier),
+          counts: r.multiplier > 0,
+          isCaptain: r.isCaptain,
+          isVice: r.isVice,
+          multiplier: r.multiplier,
+          viceActivated: r.viceActivated ?? false,
+          captainOut: r.captainOut ?? false,
+          autoSub: r.autoSub ?? null,
+          minutes: live?.stats?.minutes ?? 0,
           opponent: el.team ? opponentLabel(el.team) : "–",
           fixture: teamObj.name || "",
+          fixtures,
+          detail: el.id ? toPlayerRow(el) : null,
         };
-
-        if (idx < 11) {
-          pitch.push(playerCard);
-        } else {
-          bench.push({
-            ...playerCard,
-            isSub: true,
-            subOrder: idx - 10,
-          });
-        }
       });
+
+      const pitch = cards.filter((_, i) => squad[i].onPitch);
+      const bench = cards
+        .map((c, i) => ({ ...c, isSub: true, subOrder: squad[i].position - 11 }))
+        .filter((_, i) => !squad[i].onPitch);
+      const squadPoints = cards.reduce((sum, c) => (c.counts ? sum + c.points : sum), 0);
+      const clubShorts: Record<string, string> = {};
+      for (const [id, t] of teamsMap) clubShorts[String(id)] = t.short_name;
 
       // 3. Hent entry history
       let historyList: any[] = [];
@@ -701,8 +778,11 @@ export const fetchLiveTeamSquad = action({
 
       return {
         success: true,
+        gameweek: gw,
         pitch,
         bench,
+        squadPoints,
+        clubShorts,
         history: historyList,
         chips: chipsList,
         activeChip: picksData.active_chip,
@@ -812,40 +892,44 @@ export const saveLiveFplSyncResult = internalMutation({
     // GW-er som trenger ny rom-snitt-beregning (inneværende + evt. backfilte).
     const touchedGws = new Set<number>([args.currentGameweek]);
 
-    // 2. Oppdater / opprett fpl_teams
+    // 2. Oppdater / opprett fpl_teams. Skriver bare det som faktisk er endret: hver skriving
+    //    koster båndbredde og får alle klienter som leser tabellene (ledertavler, statistikk)
+    //    til å lese dem på nytt.
     for (const item of args.teamsData) {
       const existing = await ctx.db
         .query("fpl_teams")
         .withIndex("by_entryId", (q) => q.eq("entryId", item.entryId))
         .first();
 
+      const teamFields = {
+        teamName: item.teamName,
+        managerName: item.managerName,
+        totalPoints: item.totalPoints,
+        currentGwPoints: item.currentGwPoints,
+        currentGwTransfersCost: item.currentGwTransfersCost,
+        captainName: item.captainName,
+        captainPoints: item.captainPoints,
+        benchPoints: item.benchPoints,
+        benchedPlayer: item.benchedPlayer,
+        totalHitsCost: item.totalHitsCost,
+      };
+
+      // Historikk-backfill (én oppslag per tidligere runde per lag) kjøres bare én gang per
+      // lag per runde. Mangler FPL-historikken i denne synken prøver vi igjen neste gang.
+      const backfill =
+        existing?.historySyncedGw !== args.currentGameweek && (item.perGwHistory?.length ?? 0) > 0;
+      const historyMark = backfill ? { historySyncedGw: args.currentGameweek } : {};
+
       if (existing) {
-        await ctx.db.patch(existing._id, {
-          teamName: item.teamName,
-          managerName: item.managerName,
-          totalPoints: item.totalPoints,
-          currentGwPoints: item.currentGwPoints,
-          currentGwTransfersCost: item.currentGwTransfersCost,
-          captainName: item.captainName,
-          captainPoints: item.captainPoints,
-          benchPoints: item.benchPoints,
-          benchedPlayer: item.benchedPlayer,
-          totalHitsCost: item.totalHitsCost,
-          lastUpdated: Date.now(),
-        });
+        const changes = { ...changedFields(existing, teamFields), ...historyMark };
+        if (hasChanges(changes)) {
+          await ctx.db.patch(existing._id, { ...changes, lastUpdated: Date.now() });
+        }
       } else {
         await ctx.db.insert("fpl_teams", {
           entryId: item.entryId,
-          teamName: item.teamName,
-          managerName: item.managerName,
-          totalPoints: item.totalPoints,
-          currentGwPoints: item.currentGwPoints,
-          currentGwTransfersCost: item.currentGwTransfersCost,
-          captainName: item.captainName,
-          captainPoints: item.captainPoints,
-          benchPoints: item.benchPoints,
-          benchedPlayer: item.benchedPlayer,
-          totalHitsCost: item.totalHitsCost,
+          ...teamFields,
+          ...historyMark,
           active: true,
           lastUpdated: Date.now(),
         });
@@ -870,22 +954,25 @@ export const saveLiveFplSyncResult = internalMutation({
         captainPoints: item.captainPoints,
         activeChip: item.activeChip,
         source: "live",
-        lastCalculated: Date.now(),
       };
 
       if (existingGw) {
-        await ctx.db.patch(existingGw._id, liveRow);
+        const changes = changedFields(existingGw, liveRow);
+        if (hasChanges(changes)) {
+          await ctx.db.patch(existingGw._id, { ...changes, lastCalculated: Date.now() });
+        }
       } else {
         await ctx.db.insert("gameweek_scores", {
           entryId: item.entryId,
           gameweek: args.currentGameweek,
           ...liveRow,
+          lastCalculated: Date.now(),
         });
       }
 
       // Backfill: tidligere spilte runder som mangler en rad (poeng/hits/benk +
       // chip-bruk fra history-endepunktet – kaptein finnes ikke der).
-      for (const h of item.perGwHistory ?? []) {
+      for (const h of backfill ? (item.perGwHistory ?? []) : []) {
         if (h.gw >= args.currentGameweek) continue;
         const existingHist = await ctx.db
           .query("gameweek_scores")
@@ -992,7 +1079,6 @@ export const saveLiveFplSyncResult = internalMutation({
           top2EntryId: top2?.entryId || 0,
           top2Points: top2?.net || 0,
           deductedHits: deductHits,
-          lastCalculated: Date.now(),
         };
 
         const existingRoomScore = await ctx.db
@@ -1003,12 +1089,16 @@ export const saveLiveFplSyncResult = internalMutation({
           .first();
 
         if (existingRoomScore) {
-          await ctx.db.patch(existingRoomScore._id, row);
+          const changes = changedFields(existingRoomScore, row);
+          if (hasChanges(changes)) {
+            await ctx.db.patch(existingRoomScore._id, { ...changes, lastCalculated: Date.now() });
+          }
         } else {
           await ctx.db.insert("room_gameweek_scores", {
             roomId: room._id,
             gameweek: gw,
             ...row,
+            lastCalculated: Date.now(),
           });
         }
       }

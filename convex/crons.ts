@@ -8,6 +8,8 @@ const crons = cronJobs();
 crons.interval("auto-synk etter siste kamp i runden", { minutes: 15 }, internal.autoSync.tick, {});
 
 // Holder spillerkatalogen (xG, priser, eierandeler) til Analyse-fanene oppdatert.
-crons.interval("synk FPL-spillerdata", { minutes: 30 }, internal.players.sync, {});
+// Hver synk leser og skriver nesten hele tabellen (overføringstellerne endrer seg hele tiden),
+// så intervallet er det som styrer databasebruken. Hver 3. time er nok for prisendringer og xG.
+crons.interval("synk FPL-spillerdata", { hours: 3 }, internal.players.sync, {});
 
 export default crons;

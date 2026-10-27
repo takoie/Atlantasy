@@ -4,10 +4,14 @@
 
   let {
     players = [],
+    movers = [],
     clubs = [],
     changes = [],
   }: {
+    /** Hele katalogen: brukes til prisendring siden sesongstart. */
     players?: any[];
+    /** Overføringstellere og prisprognoser for de relevante spillerne (fpl_price_movers). */
+    movers?: any[];
     clubs?: { clubId: number; name: string; shortName: string }[];
     changes?: any[];
   } = $props();
@@ -19,7 +23,7 @@
 
   // Prognose for i natt, sortert etter hvor sikker den er og hvor nær grensen (±100 %) spilleren er.
   let risers = $derived(
-    players
+    movers
       .filter((p) => priceDirection(p) === "rise")
       .sort(
         (a, b) =>
@@ -30,7 +34,7 @@
       .slice(0, LIST_SIZE)
   );
   let fallers = $derived(
-    players
+    movers
       .filter((p) => priceDirection(p) === "fall")
       .sort(
         (a, b) =>
@@ -50,8 +54,8 @@
   );
 
   // Mest overførte inn og ut denne runden.
-  let mostIn = $derived([...players].sort((a, b) => b.transfersInEvent - a.transfersInEvent).slice(0, 8));
-  let mostOut = $derived([...players].sort((a, b) => b.transfersOutEvent - a.transfersOutEvent).slice(0, 8));
+  let mostIn = $derived([...movers].sort((a, b) => b.transfersInEvent - a.transfersInEvent).slice(0, 8));
+  let mostOut = $derived([...movers].sort((a, b) => b.transfersOutEvent - a.transfersOutEvent).slice(0, 8));
 
   const compact = (n: number) =>
     n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(n >= 100_000 ? 0 : 1)}k` : String(n);

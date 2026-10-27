@@ -7,7 +7,10 @@ import {
   pointsPerMillion,
   priceDirection,
   rowChanged,
+  selectMovers,
+  toMover,
   toPlayerRow,
+  type Mover,
 } from "./playerMath";
 
 const element = {
@@ -73,7 +76,8 @@ describe("toPlayerRow", () => {
     expect(row.fullName).toBe("Erling Haaland");
     expect(row.xgi).toBe(6.58);
     expect(row.selectedBy).toBe(76.7);
-    expect(row.priceProjections[1]).toEqual({ offset: 1, percent: 58.3, likelihood: 3 });
+    expect("priceProjections" in row).toBe(false);
+    expect("transfersInEvent" in row).toBe(false);
   });
 
   it("utelater chanceNextRound når FPL sender null", () => {
@@ -89,15 +93,24 @@ describe("rowChanged", () => {
     expect(rowChanged(a, toPlayerRow({ ...element, expected_goals: "5.80" }))).toBe(true);
   });
 
-  it("oppdager endret prisprognose og at et valgfritt felt forsvinner", () => {
+  it("oppdager at et valgfritt felt forsvinner", () => {
     const a = toPlayerRow({ ...element, chance_of_playing_next_round: 50 });
     expect(rowChanged(a, toPlayerRow({ ...element, chance_of_playing_next_round: null }))).toBe(true);
-    const b = toPlayerRow(element);
-    const changed = {
+  });
+
+  it("ignorerer overføringstellere og prisprognoser, som ikke lagres i raden", () => {
+    const a = toPlayerRow(element);
+    const churned = {
       ...element,
+      transfers_in_event: element.transfers_in_event + 5000,
       price_change_projections: [{ offset: 0, projected_percent: "40.0", likelihood: 3 }],
     };
-    expect(rowChanged(b, toPlayerRow(changed))).toBe(true);
+    expect(rowChanged(a, toPlayerRow(churned))).toBe(false);
+  });
+
+  it("regner en lagret rad med gamle flyktige felt som endret, så de ryddes bort én gang", () => {
+    const legacy = { ...toPlayerRow(element), transfersInEvent: 1, priceProjections: [] };
+    expect(rowChanged(legacy as any, toPlayerRow(element))).toBe(true);
   });
 });
 
@@ -141,5 +154,43 @@ describe("formatPrice", () => {
   it("viser tidels millioner som £m", () => {
     expect(formatPrice(157)).toBe("£15.7m");
     expect(formatPrice(40)).toBe("£4.0m");
+  });
+});
+
+describe("toMover / selectMovers", () => {
+  const mover = (id: number, over: Partial<Mover> = {}): Mover => ({
+    elementId: id,
+    webName: `P${id}`,
+    clubId: 1,
+    position: 3,
+    cost: 60,
+    transfersInEvent: 0,
+    transfersOutEvent: 0,
+    priceChangePercent: 0,
+    priceProjections: [{ offset: 0, percent: 0, likelihood: 0 }],
+    ...over,
+  });
+
+  it("mapper flyktige felt fra FPL", () => {
+    const m = toMover(element);
+    expect(m.transfersInEvent).toBe(42957);
+    expect(m.priceProjections[1]).toEqual({ offset: 1, percent: 58.3, likelihood: 3 });
+  });
+
+  it("beholder bare stigere, fallere og de mest overførte", () => {
+    const all = Array.from({ length: 300 }, (_, i) => mover(i + 1));
+    all[10] = mover(11, { priceProjections: [{ offset: 0, percent: 90, likelihood: 5 }] });
+    all[20] = mover(21, { priceProjections: [{ offset: 0, percent: -90, likelihood: -4 }] });
+    all[30] = mover(31, { transfersInEvent: 90_000 });
+    all[40] = mover(41, { transfersOutEvent: 80_000 });
+
+    const ids = selectMovers(all).map((m) => m.elementId);
+    expect(ids).toEqual(expect.arrayContaining([11, 21, 31, 41]));
+    expect(ids.length).toBeLessThan(40);
+  });
+
+  it("returnerer hver spiller bare én gang, sortert på id", () => {
+    const all = [mover(5, { transfersInEvent: 9, transfersOutEvent: 9 }), mover(2)];
+    expect(selectMovers(all).map((m) => m.elementId)).toEqual([2, 5]);
   });
 });

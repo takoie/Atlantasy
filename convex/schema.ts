@@ -51,6 +51,8 @@ export default defineSchema({
     benchPoints: v.optional(v.number()),
     benchedPlayer: v.optional(v.string()),
     totalHitsCost: v.optional(v.number()),
+    // Siste runde der historikken (tidligere runder) ble backfylt for dette laget.
+    historySyncedGw: v.optional(v.number()),
     lastUpdated: v.number(),
   })
     .index("by_entryId", ["entryId"])
@@ -314,8 +316,6 @@ export default defineSchema({
     costChangeStart: v.number(),
     costChangeEvent: v.number(),
     selectedBy: v.number(),            // prosent
-    transfersInEvent: v.number(),
-    transfersOutEvent: v.number(),
     totalPoints: v.number(),
     eventPoints: v.number(),
     form: v.number(),
@@ -341,14 +341,12 @@ export default defineSchema({
     status: v.string(),                // a | d | i | s | u | n
     news: v.string(),
     chanceNextRound: v.optional(v.number()),
-    priceChangePercent: v.number(),    // >= 100 = stiger, <= -100 = faller
-    priceProjections: v.array(
-      v.object({
-        offset: v.number(),            // 0 = i natt, 1 = neste natt, ...
-        percent: v.number(),
-        likelihood: v.number(),        // -5 (sikker fall) .. 5 (sikker stigning)
-      })
-    ),
+    // Flyttet til fpl_price_movers (endres hele tiden). Valgfrie bare slik at rader skrevet før
+    // flyttingen er gyldige til neste synk skriver dem om uten feltene.
+    transfersInEvent: v.optional(v.number()),
+    transfersOutEvent: v.optional(v.number()),
+    priceChangePercent: v.optional(v.number()),
+    priceProjections: v.optional(v.array(v.any())),
   }).index("by_elementId", ["elementId"]),
 
   // Logg over faktiske prisendringer, oppdaget ved at now_cost endrer seg mellom synker
@@ -361,6 +359,27 @@ export default defineSchema({
     newCost: v.number(),
     at: v.number(),
   }).index("by_at", ["at"]),
+
+  // Ett dokument med spillerne Prisfanen viser (stigere, fallere, mest overført). Overførings-
+  // tellere og prisprognoser endrer seg hele tiden, så de ligger her og ikke i fpl_players.
+  fpl_price_movers: defineTable({
+    at: v.number(),
+    players: v.array(
+      v.object({
+        elementId: v.number(),
+        webName: v.string(),
+        clubId: v.number(),
+        position: v.number(),
+        cost: v.number(),
+        transfersInEvent: v.number(),
+        transfersOutEvent: v.number(),
+        priceChangePercent: v.number(),
+        priceProjections: v.array(
+          v.object({ offset: v.number(), percent: v.number(), likelihood: v.number() })
+        ),
+      })
+    ),
+  }),
 
   // Enkelt statusdokument for spillersynken
   fpl_players_sync: defineTable({

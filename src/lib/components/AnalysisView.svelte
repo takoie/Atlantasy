@@ -27,15 +27,19 @@
   // Spillerdata hentes først når en av spillerfanene åpnes (ikke ved hver visning av Analyse).
   let needsPlayers = $derived(activeTab !== "league");
   const playersQuery = useQuery(api.players.listPlayers, () => (needsPlayers ? {} : undefined));
+  const moversQuery = useQuery(api.players.listPriceMovers, () =>
+    activeTab === "prices" ? {} : undefined
+  );
   const changesQuery = useQuery(api.players.recentPriceChanges, () =>
     activeTab === "prices" ? { limit: 80 } : undefined
   );
+  const syncStatusQuery = useQuery(api.players.syncStatus, () => (needsPlayers ? {} : undefined));
   const refreshAction = useAction(api.players.refresh);
 
   let players = $derived(playersQuery.data?.players ?? []);
   let clubs = $derived(playersQuery.data?.clubs ?? []);
-  let syncedAt = $derived(playersQuery.data?.syncedAt ?? null);
-  let lastError = $derived(playersQuery.data?.lastError ?? null);
+  let syncedAt = $derived(syncStatusQuery.data?.syncedAt ?? null);
+  let lastError = $derived(syncStatusQuery.data?.lastError ?? null);
 
   // Første gang katalogen er tom: be serveren synke nå i stedet for å vente på cron.
   let triedInitialRefresh = false;
@@ -92,7 +96,7 @@
     {:else if activeTab === "players"}
       <PlayerAnalysis {players} {clubs} />
     {:else}
-      <PriceTracker {players} {clubs} changes={changesQuery.data ?? []} />
+      <PriceTracker {players} {clubs} movers={moversQuery.data?.players ?? []} changes={changesQuery.data ?? []} />
     {/if}
   </div>
 </div>

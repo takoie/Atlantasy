@@ -13,12 +13,21 @@ import {
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { FPL_HEADERS } from "./fpl";
-import { detectPriceChange, num, rowChanged, toPlayerRow, type PlayerRow } from "./playerMath";
+import {
+  detectPriceChange,
+  num,
+  rowChanged,
+  selectMovers,
+  toMover,
+  toPlayerRow,
+  type PlayerRow,
+} from "./playerMath";
 
 const FPL_API = "https://fantasy.premierleague.com/api";
-const BATCH_SIZE = 120;
+/** Hver batch er én commit som får abonnenter av `listPlayers` til å lese tabellen på nytt. */
+const BATCH_SIZE = 250;
 /** Manuell oppdatering fra klienten ignoreres hvis siste synk er nyere enn dette. */
-const MIN_REFRESH_MS = 5 * 60 * 1000;
+const MIN_REFRESH_MS = 30 * 60 * 1000;
 
 const playerRowValidator = v.object({
   elementId: v.number(),
@@ -30,8 +39,6 @@ const playerRowValidator = v.object({
   costChangeStart: v.number(),
   costChangeEvent: v.number(),
   selectedBy: v.number(),
-  transfersInEvent: v.number(),
-  transfersOutEvent: v.number(),
   totalPoints: v.number(),
   eventPoints: v.number(),
   form: v.number(),
@@ -57,6 +64,16 @@ const playerRowValidator = v.object({
   status: v.string(),
   news: v.string(),
   chanceNextRound: v.optional(v.number()),
+});
+
+const moverValidator = v.object({
+  elementId: v.number(),
+  webName: v.string(),
+  clubId: v.number(),
+  position: v.number(),
+  cost: v.number(),
+  transfersInEvent: v.number(),
+  transfersOutEvent: v.number(),
   priceChangePercent: v.number(),
   priceProjections: v.array(
     v.object({ offset: v.number(), percent: v.number(), likelihood: v.number() })
@@ -132,6 +149,17 @@ export const upsertPlayers = internalMutation({
   },
 });
 
+/** Erstatter pris-/overføringsdokumentet. Ett dokument på ca. 10 KB, i stedet for 669 spillerrader. */
+export const saveMovers = internalMutation({
+  args: { at: v.number(), players: v.array(moverValidator) },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.query("fpl_price_movers").first();
+    if (existing) await ctx.db.replace("fpl_price_movers", existing._id, args);
+    else await ctx.db.insert("fpl_price_movers", args);
+    return null;
+  },
+});
+
 export const recordSync = internalMutation({
   args: {
     at: v.number(),
@@ -186,6 +214,11 @@ async function runSync(ctx: ActionCtx) {
       totals.priceChanges += r.priceChanges;
     }
 
+    await ctx.runMutation(internal.players.saveMovers, {
+      at,
+      players: selectMovers(elements.map(toMover)),
+    });
+
     await ctx.runMutation(internal.players.recordSync, { at, ok: true, playerCount: rows.length });
     return { ok: true as const, ...totals };
   } catch (e: any) {
@@ -224,19 +257,46 @@ export const refresh = action({
 /* Spørringer                                                          */
 /* ------------------------------------------------------------------ */
 
-/** Alle spillere + klubber. Filtrering og sortering skjer i klienten. */
+/**
+ * Alle spillere + klubber. Filtrering og sortering skjer i klienten. Synkstatus ligger i
+ * `syncStatus`: statusdokumentet skrives ved hver synk, og leste vi det her ville hele listen
+ * (ca. 300 KB) blitt lest på nytt etter hver synk selv om ingen spiller har endret seg.
+ */
 export const listPlayers = query({
   args: {},
   handler: async (ctx) => {
     const players = await ctx.db.query("fpl_players").take(1000);
     const clubs = await ctx.db.query("fpl_clubs").take(40);
-    const sync = await ctx.db.query("fpl_players_sync").first();
     return {
-      players: players.map(({ _id, _creationTime, ...p }) => p),
+      // Tomme standardverdier for feltene som er flyttet til fpl_price_movers, slik at
+      // klienter fra før flyttingen (v1.4.0 og eldre) ikke krasjer i Prisfanen. Kan fjernes
+      // når de fleste har oppdatert.
+      players: players.map(({ _id, _creationTime, ...p }) => ({
+        transfersInEvent: 0,
+        transfersOutEvent: 0,
+        priceChangePercent: 0,
+        priceProjections: [],
+        ...p,
+      })),
       clubs: clubs.map(({ _id, _creationTime, ...c }) => c),
-      syncedAt: sync?.lastSyncedAt ?? null,
-      lastError: sync?.lastError ?? null,
     };
+  },
+});
+
+export const syncStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    const sync = await ctx.db.query("fpl_players_sync").first();
+    return { syncedAt: sync?.lastSyncedAt ?? null, lastError: sync?.lastError ?? null };
+  },
+});
+
+/** Prisfanens topplister (stigere, fallere, mest overført). */
+export const listPriceMovers = query({
+  args: {},
+  handler: async (ctx) => {
+    const doc = await ctx.db.query("fpl_price_movers").first();
+    return { players: doc?.players ?? [], at: doc?.at ?? null };
   },
 });
 

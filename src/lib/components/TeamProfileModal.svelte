@@ -16,18 +16,9 @@
   import { useQuery, useMutation, useAction } from "$lib/convex.svelte";
   import { api } from "../../../convex/_generated/api";
   import { openExternalUrl } from "$lib/utils/openUrl";
-
-  interface PitchPlayer {
-    id?: number;
-    name: string;
-    pos: "GKP" | "DEF" | "MID" | "FWD";
-    points: number;
-    isCaptain?: boolean;
-    isViceCaptain?: boolean;
-    club?: string;
-    crest?: string;
-    opponent?: string;
-  }
+  import SquadPitch from "./squad/SquadPitch.svelte";
+  import SquadPlayerSheet from "./squad/SquadPlayerSheet.svelte";
+  import type { SquadLoadState, SquadPlayer } from "./squad/squadTypes";
 
   interface HistoryEntry {
     gw: number;
@@ -60,8 +51,8 @@
     teamValue: string;
     bank?: string;
     totalTransfers: number;
-    pitch?: PitchPlayer[];
-    bench?: PitchPlayer[];
+    pitch?: SquadPlayer[];
+    bench?: SquadPlayer[];
     history?: HistoryEntry[];
     chips?: ChipEntry[];
     activeChip?: string | null;
@@ -115,7 +106,14 @@
   const generateUploadUrlMutation = useMutation(api.auth.generateAvatarUploadUrl);
   const saveUploadedAvatarMutation = useMutation(api.auth.saveUploadedAvatar);
 
-  let liveSquad = $state<Partial<TeamProfileData> | null>(null);
+  let liveSquad = $state<
+    | (Partial<TeamProfileData> & {
+        gameweek?: number;
+        squadPoints?: number;
+        clubShorts?: Record<string, string>;
+      })
+    | null
+  >(null);
   let profile = $derived(
     (profileQuery.data as TeamProfileData | undefined)
       ? {
@@ -125,37 +123,64 @@
       : null
   );
   let activeTab = $state<"pitch" | "trophies" | "stats" | "chips">("pitch");
+  let squadState = $state<SquadLoadState>("loading");
+  let squadReload = $state(0);
+  let selectedPlayerId = $state<number | null>(null);
+  let tabScroller = $state<HTMLDivElement | null>(null);
 
   $effect(() => {
     if (!isOpen || !entryId) {
       liveSquad = null;
+      selectedPlayerId = null;
       return;
     }
 
+    squadReload; // gir "Prøv igjen" en måte å kjøre effekten på nytt
+    squadState = "loading";
+    selectedPlayerId = null;
     let cancelled = false;
     fetchLiveSquadAction
       .execute({ entryId })
       .then((result: any) => {
-        if (!cancelled && result?.success) {
+        if (cancelled) return;
+        if (result?.success) {
           liveSquad = {
             pitch: result.pitch ?? [],
             bench: result.bench ?? [],
+            gameweek: result.gameweek,
+            squadPoints: result.squadPoints,
+            clubShorts: result.clubShorts ?? {},
             // history kommer fra getTeamProfile (liga-relativ rank), ikke fra live-action.
             chips: result.chips ?? [],
             activeChip: result.activeChip,
             eventTransfersCost: result.eventTransfersCost,
             pointsOnBench: result.pointsOnBench,
           };
+          squadState = "ready";
+        } else {
+          liveSquad = null;
+          squadState = "error";
         }
       })
       .catch(() => {
-        if (!cancelled) liveSquad = null;
+        if (cancelled) return;
+        liveSquad = null;
+        squadState = "error";
       });
 
     return () => {
       cancelled = true;
     };
   });
+
+  let selectedPlayer = $derived(
+    [...(profile?.pitch ?? []), ...(profile?.bench ?? [])].find((p) => p.id === selectedPlayerId) ?? null
+  );
+
+  function selectPlayer(p: SquadPlayer) {
+    selectedPlayerId = p.id;
+    tabScroller?.scrollTo({ top: 0 });
+  }
 
   // Redigeringsstate
   let isEditingProfile = $state(false);
@@ -299,13 +324,6 @@
     }
   }
 
-  // Effektive $derived-oppdelinger for fotballbanen
-  let goalkeepers = $derived(profile?.pitch?.filter((p) => p.pos === "GKP") ?? []);
-  let defenders = $derived(profile?.pitch?.filter((p) => p.pos === "DEF") ?? []);
-  let midfielders = $derived(profile?.pitch?.filter((p) => p.pos === "MID") ?? []);
-  let forwards = $derived(profile?.pitch?.filter((p) => p.pos === "FWD") ?? []);
-  let benchPlayers = $derived(profile?.bench ?? []);
-
   // Dynamisk beregning av maks poeng for proporsjonale søyler i grafen
   let maxHistoryPoints = $derived(
     Math.max(...(profile?.history?.map((h) => h.points) ?? [100]), 60)
@@ -345,6 +363,8 @@
     if (event.key === "Escape" && isOpen) {
       if (isEditingProfile) {
         isEditingProfile = false;
+      } else if (selectedPlayerId !== null) {
+        selectedPlayerId = null;
       } else {
         onClose();
       }
@@ -375,7 +395,7 @@
       aria-modal="true"
       aria-labelledby="modal-manager-title"
       tabindex="-1"
-      class="relative z-10 bg-white/[0.055] backdrop-blur-sm border border-white/10 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-[#E2E8F0] font-sans"
+      class="relative z-10 bg-white/[0.055] backdrop-blur-sm border border-white/10 rounded-2xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-[#E2E8F0] font-sans"
     >
       <!-- Toppheader med avatar, managerinfo, rom og redigeringsknapp -->
       <div class="p-4 sm:p-5 bg-black/20 border-b border-white/10 flex flex-wrap items-center justify-between gap-3 shrink-0">
@@ -583,125 +603,33 @@
       </div>
 
       <!-- Faner Innhold -->
-      <div class="p-4 sm:p-5 overflow-y-auto flex-1 custom-scrollbar">
+      <div bind:this={tabScroller} class="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar">
         <!-- FANE 1: LAGOLLSTILLING -->
         {#if activeTab === "pitch"}
-          <div class="space-y-4">
-            {#snippet playerChip(p: any, bg: string, fg: string)}
-              <div class="flex flex-col items-center min-w-0 w-full px-0.5">
-                <div
-                  class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl font-black flex items-center justify-center text-[11px] shadow-md border-2 border-white/25 overflow-hidden"
-                  style={`background-color:${bg};color:${fg}`}
-                >
-                  {#if p.crest}
-                    <img
-                      src={p.crest}
-                      alt={p.club ?? ""}
-                      class="w-6 h-6 sm:w-7 sm:h-7 object-contain drop-shadow"
-                      loading="lazy"
-                      onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
-                    />
-                  {:else}
-                    {p.name.slice(0, 3).toUpperCase()}
-                  {/if}
-                </div>
-                <span class="mt-1 text-[10px] sm:text-[11px] font-bold text-white bg-black/55 px-1.5 py-0.5 rounded-full backdrop-blur-sm truncate max-w-full">
-                  {p.name}
-                </span>
-                {#if p.opponent}
-                  <span class="mt-0.5 text-[9px] font-mono font-semibold text-white/85 bg-black/45 px-1 rounded truncate max-w-full">
-                    {p.opponent}
-                  </span>
-                {/if}
-                <span class="mt-0.5 text-[10px] font-mono font-bold text-[#9FE88D] bg-black/70 px-1.5 rounded">
-                  {p.points} pts
-                </span>
-              </div>
-            {/snippet}
-
-            <div
-              class="relative overflow-hidden rounded-2xl border border-white/10 shadow-inner p-3 sm:p-5"
-              style="background-color:#2f8a43;background-image:repeating-linear-gradient(180deg,rgba(255,255,255,0.055) 0px,rgba(255,255,255,0.055) 30px,transparent 30px,transparent 60px);"
-            >
-              <!-- Banemarkering (FPL-stil) -->
-              <svg
-                class="pointer-events-none absolute inset-0 h-full w-full"
-                viewBox="0 0 100 130"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              >
-                <g fill="none" stroke="#ffffff" stroke-opacity="0.4" stroke-width="0.5">
-                  <rect x="2" y="2" width="96" height="126" />
-                  <line x1="2" y1="65" x2="98" y2="65" />
-                  <circle cx="50" cy="65" r="11" />
-                  <rect x="26" y="2" width="48" height="16" />
-                  <rect x="40" y="2" width="20" height="6" />
-                  <rect x="26" y="112" width="48" height="16" />
-                  <rect x="40" y="122" width="20" height="6" />
-                </g>
-                <circle cx="50" cy="65" r="0.9" fill="#ffffff" fill-opacity="0.5" />
-              </svg>
-
-              <div class="relative z-10 flex flex-col gap-4 sm:gap-6">
-                <!-- Keeper -->
-                <div class="grid grid-flow-col auto-cols-fr place-items-center gap-1">
-                  {#each goalkeepers as p}
-                    {@render playerChip(p, "#F4C152", "#16380c")}
-                  {:else}
-                    <p class="col-span-full text-xs text-white/70 italic">Ingen spillere i lineupen</p>
-                  {/each}
-                </div>
-
-                <!-- Forsvar -->
-                <div class="grid grid-flow-col auto-cols-fr place-items-center gap-1">
-                  {#each defenders as p}
-                    {@render playerChip(p, "#38bdf8", "#082f49")}
-                  {/each}
-                </div>
-
-                <!-- Midtbane -->
-                <div class="grid grid-flow-col auto-cols-fr place-items-center gap-1">
-                  {#each midfielders as p}
-                    {@render playerChip(p, "#9FE88D", "#14532d")}
-                  {/each}
-                </div>
-
-                <!-- Angrep -->
-                <div class="grid grid-flow-col auto-cols-fr place-items-center gap-1">
-                  {#each forwards as p}
-                    {@render playerChip(p, "#FB6F84", "#4c0519")}
-                  {/each}
-                </div>
-              </div>
+          <div class={selectedPlayer ? "lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start lg:gap-8" : ""}>
+            <div class={selectedPlayer ? "hidden min-w-0 lg:block" : ""}>
+              <SquadPitch
+                pitch={profile?.pitch ?? []}
+                bench={profile?.bench ?? []}
+                state={squadState}
+                selectedId={selectedPlayerId}
+                gameweek={liveSquad?.gameweek ?? null}
+                squadPoints={liveSquad?.squadPoints ?? null}
+                activeChip={profile?.activeChip ?? null}
+                onSelect={selectPlayer}
+                onRetry={() => squadReload++}
+              />
             </div>
-
-            <!-- Benk -->
-            <div class="p-3.5 rounded-2xl bg-black/20 border border-white/10 space-y-2">
-              <span class="text-xs font-bold text-[#AEB9CC] uppercase tracking-wider block">Substitutes / Benk</span>
-              <div class="flex items-center justify-around flex-wrap gap-2">
-                {#each benchPlayers as p, i}
-                  <div class="flex flex-col items-center text-center">
-                    <span class="text-[9px] text-[#AEB9CC] font-bold">{i === 0 ? "GKP" : `Sub ${i}`}</span>
-                    {#if p.crest}
-                      <img
-                        src={p.crest}
-                        alt={p.club ?? ""}
-                        class="w-5 h-5 object-contain my-0.5"
-                        loading="lazy"
-                        onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
-                      />
-                    {/if}
-                    <span class="text-xs font-semibold text-white truncate max-w-[100px]">{p.name}</span>
-                    {#if p.opponent}
-                      <span class="text-[9px] font-mono text-[#AEB9CC] truncate max-w-[100px]">{p.opponent}</span>
-                    {/if}
-                    <span class="text-[10px] font-mono text-[#AEB9CC]">({p.points}p)</span>
-                  </div>
-                {:else}
-                  <span class="text-xs text-[#AEB9CC] italic">Ingen spillere på benken</span>
-                {/each}
+            {#if selectedPlayer}
+              <div class="min-w-0">
+                <SquadPlayerSheet
+                  player={selectedPlayer}
+                  gameweek={liveSquad?.gameweek ?? null}
+                  clubShorts={liveSquad?.clubShorts ?? {}}
+                  onBack={() => (selectedPlayerId = null)}
+                />
               </div>
-            </div>
+            {/if}
           </div>
 
         <!-- FANE 2: TROFEER OG POKALER (CUP OG MÅNEDENS ENER TOPP 3) -->

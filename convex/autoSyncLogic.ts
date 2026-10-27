@@ -4,14 +4,29 @@
  * Synken kjøres etter siste kamp i hver gameweek, i tre steg:
  *   1. "provisional" – alle kamper er ferdigspilt (fixture.finished_provisional)
  *   2. "final"       – FPL har bekreftet poengene inkl. bonus (fixture.finished)
- *   3. "morning"     – kl. 08:00 norsk tid morgenen etter siste kamp. Da har FPL satt
- *                      inn benkespillerne (auto-subs), så poengene er endelige. Først
- *                      nå beregnes cuprundene og lagene flyttes videre.
+ *   3. "morning"     – FPL har gjort sluttoppdateringen av runden: benkespillerne er satt
+ *                      inn (auto-subs) og poengene justert. FPL oppgir ikke tidspunktet,
+ *                      men flagger det på runden i bootstrap-static (`finished` og
+ *                      `data_checked`), så vi sjekker flaggene hver tick. Først nå
+ *                      beregnes cuprundene og lagene flyttes videre. Kommer ikke flaggene,
+ *                      synker vi likevel et døgn etter kl. 08:00 norsk tid morgenen etter
+ *                      siste kamp, så runden aldri blir hengende.
  *
  * Ingen I/O her – alt tar rådata inn og returnerer en beslutning, så det er lett å teste.
  */
 
 export type AutoSyncStage = "provisional" | "final" | "morning";
+
+/** Minimal event-form fra `events` i `bootstrap-static/` i FPL-APIet. */
+export type EventLite = {
+  finished: boolean;
+  data_checked: boolean;
+};
+
+/** FPL er ferdig med runden når poengene er kontrollert og runden er avsluttet. */
+export function isRoundFinal(event: EventLite): boolean {
+  return event.finished === true && event.data_checked === true;
+}
 
 /** Minimal fixture-form fra `fixtures/?event=<GW>` i FPL-APIet. */
 export type FixtureLite = {
@@ -23,11 +38,14 @@ export type FixtureLite = {
 /** Ventetid etter siste avspark før vi i det hele tatt sjekker om kampene er ferdige. */
 export const POST_KICKOFF_BUFFER_MS = 105 * 60 * 1000;
 
-/** Klokkeslettet (norsk tid) for den endelige synken morgenen etter siste kamp. */
+/** Klokkeslettet (norsk tid) morgenen etter siste kamp som reservetiden regnes fra. */
 export const MORNING_SYNC_HOUR = 8;
 const MORNING_SYNC_TIMEZONE = "Europe/Oslo";
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
+
+/** Hvor lenge etter kl. 08:00-morgenen vi venter på FPL-flaggene før vi synker uansett. */
+export const MORNING_FALLBACK_DELAY_MS = DAY_MS;
 
 const STAGE_RANK: Record<AutoSyncStage, number> = { provisional: 1, final: 2, morning: 3 };
 
@@ -92,11 +110,13 @@ export function decideAutoSync(input: {
   fixtures: FixtureLite[];
   now: number;
   gw: number;
+  /** FPL har gjort sluttoppdateringen av runden (se `isRoundFinal`). */
+  roundFinal: boolean;
   /** Runden og steget som sist ble synket automatisk. */
   doneGw: number | null;
   doneStage: AutoSyncStage | null;
 }): AutoSyncDecision {
-  const { fixtures, now, gw, doneGw, doneStage } = input;
+  const { fixtures, now, gw, roundFinal, doneGw, doneStage } = input;
 
   const doneRank = doneGw === gw && doneStage ? STAGE_RANK[doneStage] : 0;
   if (doneRank >= STAGE_RANK.morning) return { kind: "done" };
@@ -111,8 +131,10 @@ export function decideAutoSync(input: {
   const allProvisional = fixtures.every((f) => f.finished || f.finished_provisional);
 
   // Morgensynken er siste steg og kommer uansett hvilke av de to første som ble utført.
-  const morningAt = morningSyncMs(earliestCheck);
-  if (allProvisional && now >= morningAt) return { kind: "sync", stage: "morning" };
+  const fallbackAt = morningSyncMs(earliestCheck) + MORNING_FALLBACK_DELAY_MS;
+  if (allProvisional && (roundFinal || now >= fallbackAt)) {
+    return { kind: "sync", stage: "morning" };
+  }
 
   const target: AutoSyncStage | null = allFinal
     ? "final"
@@ -121,7 +143,6 @@ export function decideAutoSync(input: {
       : null;
 
   if (target && STAGE_RANK[target] > doneRank) return { kind: "sync", stage: target };
-  // Etter "final" er det ingenting å gjøre før morgensynken.
-  if (doneRank >= STAGE_RANK.final) return { kind: "wait", wakeAt: morningAt };
+  // Flaggene kan komme når som helst, så ingen wakeAt: hver tick sjekker på nytt.
   return { kind: "wait" };
 }

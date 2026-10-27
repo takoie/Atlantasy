@@ -248,7 +248,8 @@
   }
 
   // Manuell synk. Den ordinære oppdateringen kjøres av serveren etter siste kamp
-  // i hver runde (convex/autoSync.ts); knappen i sidemenyen er kun for admin.
+  // i hver runde (convex/autoSync.ts); knappen i sidemenyen er for alle innloggede brukere.
+  // Serveren hopper over synken hvis den er kjørt for under 30 minutter siden (unntatt for admin).
   async function handleRefreshFpl() {
     if (!currentUser) return;
     isSyncing = true;
@@ -256,7 +257,7 @@
       const res = await syncLiveFplAction.execute({ userId: currentUser._id });
       if (res && res.success) {
         if ("skipped" in res) {
-          console.log("FPL ble synket for under 10 minutter siden – bruker eksisterende data.");
+          console.log("FPL ble synket for under 30 minutter siden – bruker eksisterende data.");
         } else {
           console.log(`FPL synkronisert for GW ${res.gameweek}: ${res.syncedCount} lag.`);
         }
@@ -709,7 +710,7 @@
   <UpdateModal
     bind:isOpen={isUpdateModalOpen}
     bind:this={updateModalRef}
-    currentVersion="1.4.0"
+    currentVersion="1.5.0"
     autoCheck={true}
   />
 
